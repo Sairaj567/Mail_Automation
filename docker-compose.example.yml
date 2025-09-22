@@ -1,0 +1,92 @@
+version: "3.8"
+
+services:
+  traefik:
+    image: traefik
+    restart: always
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.filename=/etc/traefik/traefik-dynamic.yaml
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.mytlschallenge.acme.tlschallenge=true
+      - --certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}
+      - --certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - traefik_data:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik-dynamic.yaml:/etc/traefik/traefik-dynamic.yaml:ro
+
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mailsdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mailsdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mailsdb
+      NODE_ENV: production
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET}
+    command: sh -c "npx prisma migrate deploy && node server.js"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend.rule=Host(`api.${DOMAIN_NAME}`)
+      - traefik.http.routers.backend.entrypoints=websecure
+      - traefik.http.routers.backend.tls.certresolver=mytlschallenge
+      - traefik.http.services.backend.loadbalancer.server.port=3000
+      - traefik.http.middlewares.backend-rl.ratelimit.average=60
+      - traefik.http.middlewares.backend-rl.ratelimit.burst=30
+      - traefik.http.routers.backend.middlewares=backend-rl@docker
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    environment:
+      N8N_HOST: ${SUBDOMAIN}.${DOMAIN_NAME}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: https
+      NODE_ENV: production
+      WEBHOOK_URL: https://${SUBDOMAIN}.${DOMAIN_NAME}/
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
+      - traefik.http.routers.n8n.entrypoints=websecure
+      - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
+      - traefik.http.middlewares.n8n-rl.ratelimit.average=30
+      - traefik.http.middlewares.n8n-rl.ratelimit.burst=15
+      - traefik.http.routers.n8n.middlewares=n8n-rl@docker
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  traefik_data:
+  postgres_data:
+  n8n_data:

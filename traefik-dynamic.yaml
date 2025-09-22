@@ -1,0 +1,22 @@
+http:
+  middlewares:
+    securityHeaders:
+      headers:
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+
+  routers:
+    # Example if you want to map root to backend health (optional)
+    # root:
+    #   rule: "HostRegexp(`{any:.+}`) && Path(`/health`)"
+    #   service: backend
+
+  services:
+    backend:
+      loadBalancer:
+        servers:
+          - url: "http://backend:3000"
