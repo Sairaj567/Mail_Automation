@@ -2,12 +2,6 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const mongoose = require('mongoose');
-
-// Import models
-const Job = require('../models/Job');
-const Application = require('../models/Application');
-const StudentProfile = require('../models/StudentProfile');
 const studentController = require('../controllers/studentController');
 
 // Configure multer for file uploads
@@ -61,241 +55,22 @@ router.post('/apply-job', requireStudent, upload.fields([
 ]), studentController.applyForJob);
 
 // Dashboard
-router.get('/dashboard', requireStudent, async (req, res) => {
-    try {
-        const studentId = req.session.user.id;
-        const isDemoUser = !mongoose.Types.ObjectId.isValid(studentId);
-        
-        if (isDemoUser) {
-            // Return demo data for temporary users
-            const demoJobs = await Job.find({ isActive: true }).limit(5);
-            const demoApplications = demoJobs.slice(0, 3).map(job => ({
-                job: job,
-                status: ['applied', 'under_review', 'shortlisted'][Math.floor(Math.random() * 3)],
-                appliedDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000)
-            }));
-
-            res.render('pages/student/dashboard', {
-                title: 'Student Dashboard - Placement Portal',
-                user: req.session.user,
-                stats: {
-                    totalJobs: demoJobs.length,
-                    applications: 8,
-                    pendingApplications: 5,
-                    interviews: 2
-                },
-                recentApplications: demoApplications,
-                profile: { profileCompletion: 65 },
-                isDemo: true
-            });
-        } else {
-            // Real user data
-            const totalJobs = await Job.countDocuments({ isActive: true });
-            const applications = await Application.countDocuments({ student: studentId });
-            const pendingApplications = await Application.countDocuments({ 
-                student: studentId, 
-                status: { $in: ['applied', 'under_review', 'shortlisted'] } 
-            });
-            const interviews = await Application.countDocuments({ 
-                student: studentId, 
-                status: 'interview' 
-            });
-
-            const recentApplications = await Application.find({ student: studentId })
-                .populate('job')
-                .sort({ appliedDate: -1 })
-                .limit(3);
-
-            const profile = await StudentProfile.findOne({ user: studentId });
-
-            res.render('pages/student/dashboard', {
-                title: 'Student Dashboard - Placement Portal',
-                user: req.session.user,
-                stats: {
-                    totalJobs,
-                    applications,
-                    pendingApplications,
-                    interviews
-                },
-                recentApplications,
-                profile: profile || { profileCompletion: 0 },
-                isDemo: false
-            });
-        }
-    } catch (error) {
-        console.error('Dashboard error:', error);
-        res.status(500).render('error', {
-            title: 'Server Error',
-            message: 'Failed to load dashboard'
-        });
-    }
-});
+router.get('/dashboard', requireStudent, studentController.getDashboard);
 
 // Jobs route - FIXED
-router.get('/jobs', requireStudent, async (req, res) => {
-    try {
-        const { search, jobType, experience } = req.query;
-        let filter = { isActive: true };
-
-        // Apply filters
-        if (search) {
-            filter.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { company: { $regex: search, $options: 'i' } },
-                { skills: { $in: [new RegExp(search, 'i')] } }
-            ];
-        }
-
-        if (jobType) filter.jobType = jobType;
-        if (experience) filter.experienceLevel = experience;
-
-        const jobs = await Job.find(filter).sort({ createdAt: -1 });
-
-        res.render('pages/student/jobs', {
-            title: 'Job Listings - Placement Portal',
-            user: req.session.user,
-            jobs: jobs || [],
-            filters: { search: search || '', jobType: jobType || '', experience: experience || '' },
-            isDemo: !mongoose.Types.ObjectId.isValid(req.session.user.id)
-        });
-    } catch (error) {
-        console.error('Jobs error:', error);
-        res.render('pages/student/jobs', {
-            title: 'Job Listings - Placement Portal',
-            user: req.session.user,
-            jobs: [],
-            filters: { search: '', jobType: '', experience: '' },
-            isDemo: true
-        });
-    }
-});
+router.get('/jobs', requireStudent, studentController.getJobs);
 
 // Job details
-router.get('/jobs/:id', requireStudent, async (req, res) => {
-    try {
-        const job = await Job.findById(req.params.id);
-        if (!job) {
-            return res.status(404).render('404', {
-                title: 'Job Not Found'
-            });
-        }
-
-        const studentId = req.session.user.id;
-        const isDemoUser = !mongoose.Types.ObjectId.isValid(studentId);
-
-        res.render('pages/student/job-details', {
-            title: `${job.title} - Placement Portal`,
-            user: req.session.user,
-            job,
-            hasApplied: false,
-            applicationStatus: null,
-            isSaved: false,
-            isDemo: isDemoUser
-        });
-    } catch (error) {
-        console.error('Job details error:', error);
-        res.status(500).render('error', {
-            title: 'Server Error',
-            message: 'Failed to load job details'
-        });
-    }
-});
+router.get('/jobs/:id', requireStudent, studentController.getJobDetails);
 
 // Applications
-router.get('/applications', requireStudent, async (req, res) => {
-    try {
-        const studentId = req.session.user.id;
-        const isDemoUser = !mongoose.Types.ObjectId.isValid(studentId);
-        
-        if (isDemoUser) {
-            // Return demo applications
-            const demoJobs = await Job.find({ isActive: true }).limit(5);
-            const demoApplications = demoJobs.map(job => ({
-                job: job,
-                status: ['applied', 'under_review', 'shortlisted', 'interview', 'rejected'][Math.floor(Math.random() * 5)],
-                appliedDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000)
-            }));
-            
-            return res.render('pages/student/applications', {
-                title: 'My Applications - Placement Portal',
-                user: req.session.user,
-                applications: demoApplications,
-                isDemo: true
-            });
-        }
-
-        const applications = await Application.find({ student: studentId })
-            .populate('job')
-            .sort({ appliedDate: -1 });
-
-        res.render('pages/student/applications', {
-            title: 'My Applications - Placement Portal',
-            user: req.session.user,
-            applications,
-            isDemo: false
-        });
-    } catch (error) {
-        console.error('Applications error:', error);
-        res.status(500).render('error', {
-            title: 'Server Error',
-            message: 'Failed to load applications'
-        });
-    }
-});
+router.get('/applications', requireStudent, studentController.getApplications);
 
 // Profile
-router.get('/profile', requireStudent, async (req, res) => {
-    try {
-        const studentId = req.session.user.id;
-        const isDemoUser = !mongoose.Types.ObjectId.isValid(studentId);
-        
-        let profile = null;
-        
-        if (!isDemoUser) {
-            profile = await StudentProfile.findOne({ user: studentId });
-        }
-
-        res.render('pages/student/profile', {
-            title: 'Student Profile - Placement Portal',
-            user: req.session.user,
-            profile: profile || {},
-            isDemo: isDemoUser
-        });
-    } catch (error) {
-        console.error('Profile error:', error);
-        res.status(500).render('error', {
-            title: 'Server Error',
-            message: 'Failed to load profile'
-        });
-    }
-});
+router.get('/profile', requireStudent, studentController.getProfile);
 
 // Resume
-router.get('/resume', requireStudent, async (req, res) => {
-    try {
-        const studentId = req.session.user.id;
-        const isDemoUser = !mongoose.Types.ObjectId.isValid(studentId);
-        
-        let profile = null;
-        
-        if (!isDemoUser) {
-            profile = await StudentProfile.findOne({ user: studentId });
-        }
-
-        res.render('pages/student/resume', {
-            title: 'My Resume - Placement Portal',
-            user: req.session.user,
-            profile: profile || {},
-            isDemo: isDemoUser
-        });
-    } catch (error) {
-        console.error('Resume page error:', error);
-        res.status(500).render('error', {
-            title: 'Server Error',
-            message: 'Failed to load resume page'
-        });
-    }
-});
+router.get('/resume', requireStudent, studentController.getResume);
 
 // API Routes for dynamic actions
 router.post('/apply-job', requireStudent, async (req, res) => {
