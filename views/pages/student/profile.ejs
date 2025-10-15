@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/profile.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/student/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/student/profile" class="nav-item active">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="/student/jobs" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Job Listings</span>
+                </a>
+                <a href="/student/applications" class="nav-item">
+                    <i class="fas fa-file-alt"></i>
+                    <span>My Applications</span>
+                </a>
+                <a href="/student/resume" class="nav-item">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>My Resume</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>My Profile</h1>
+                    <p>Manage your personal information</p>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <span class="user-name"><%= user.name %></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="profile-content">
+                <div class="profile-container">
+                    <!-- Profile Header -->
+                    <div class="profile-header">
+                        <div class="profile-avatar">
+                            <div class="avatar-placeholder">
+                                <i class="fas fa-user-graduate"></i>
+                            </div>
+                            <button class="change-avatar-btn">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+                        <div class="profile-info">
+                            <h2><%= user.name %></h2>
+                            <p>Computer Science Student</p>
+                            <div class="profile-stats">
+                                <div class="stat">
+                                    <strong>12</strong>
+                                    <span>Applications</span>
+                                </div>
+                                <div class="stat">
+                                    <strong>85%</strong>
+                                    <span>Profile Complete</span>
+                                </div>
+                                <div class="stat">
+                                    <strong>3</strong>
+                                    <span>Interviews</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Form -->
+                    <form class="profile-form">
+                        <div class="form-section">
+                            <h3>Personal Information</h3>
+                            <div class="form-grid">
+                                <div class="input-group">
+                                    <label>Full Name</label>
+                                    <input type="text" value="<%= user.name %>" placeholder="Enter your full name">
+                                </div>
+                                <div class="input-group">
+                                    <label>Email Address</label>
+                                    <input type="email" value="<%= user.email %>" placeholder="Enter your email" readonly>
+                                </div>
+                                <div class="input-group">
+                                    <label>Phone Number</label>
+                                    <input type="tel" placeholder="Enter your phone number">
+                                </div>
+                                <div class="input-group">
+                                    <label>Date of Birth</label>
+                                    <input type="date" placeholder="Select your date of birth">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Education</h3>
+                            <div class="form-grid">
+                                <div class="input-group">
+                                    <label>College/University</label>
+                                    <input type="text" placeholder="Enter your college name">
+                                </div>
+                                <div class="input-group">
+                                    <label>Course/Degree</label>
+                                    <input type="text" placeholder="e.g., B.Tech Computer Science">
+                                </div>
+                                <div class="input-group">
+                                    <label>Specialization</label>
+                                    <input type="text" placeholder="e.g., Artificial Intelligence">
+                                </div>
+                                <div class="input-group">
+                                    <label>CGPA</label>
+                                    <input type="number" step="0.01" placeholder="Enter your CGPA">
+                                </div>
+                                <div class="input-group full-width">
+                                    <label>Graduation Year</label>
+                                    <select>
+                                        <option value="">Select graduation year</option>
+                                        <option value="2024">2024</option>
+                                        <option value="2025">2025</option>
+                                        <option value="2026">2026</option>
+                                        <option value="2027">2027</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Skills & Expertise</h3>
+                            <div class="input-group full-width">
+                                <label>Skills (comma separated)</label>
+                                <textarea placeholder="e.g., JavaScript, React, Node.js, Python, Machine Learning"></textarea>
+                                <small>Separate skills with commas</small>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3>Social Links</h3>
+                            <div class="form-grid">
+                                <div class="input-group">
+                                    <label><i class="fab fa-linkedin"></i> LinkedIn</label>
+                                    <input type="url" placeholder="LinkedIn profile URL">
+                                </div>
+                                <div class="input-group">
+                                    <label><i class="fab fa-github"></i> GitHub</label>
+                                    <input type="url" placeholder="GitHub profile URL">
+                                </div>
+                                <div class="input-group">
+                                    <label><i class="fas fa-globe"></i> Portfolio</label>
+                                    <input type="url" placeholder="Portfolio website URL">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary">Cancel</button>
+                            <button type="submit" class="btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/profile.js"></script>
+</body>
+</html>

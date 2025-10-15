@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="auth-header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>PlacementPortal</span>
+            </div>
+            <nav class="auth-nav">
+                <a href="/admin/dashboard" class="nav-link">Dashboard</a>
+                <a href="/admin/students" class="nav-link">Students</a>
+                <a href="/auth/logout" class="nav-link">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main style="padding: 2rem 0; min-height: 60vh;">
+        <div class="container">
+            <div class="dashboard-welcome">
+                <h1>Welcome, <%= user.name %>! 🔧</h1>
+                <p>Admin Dashboard - Manage the placement portal</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="auth-footer">
+        <div class="container">
+            <p>&copy; 2023 Placement Portal. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

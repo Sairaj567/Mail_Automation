@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/resume.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/student/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/student/profile" class="nav-item">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="/student/jobs" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Job Listings</span>
+                </a>
+                <a href="/student/applications" class="nav-item">
+                    <i class="fas fa-file-alt"></i>
+                    <span>My Applications</span>
+                </a>
+                <a href="/student/resume" class="nav-item active">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>My Resume</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>My Resume</h1>
+                    <p>Upload and manage your resume for job applications</p>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <span class="user-name"><%= user.name %></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="resume-content">
+                <!-- Resume Status Card -->
+                <div class="resume-status-card">
+                    <div class="status-header">
+                        <div class="status-icon">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <div class="status-info">
+                            <h3>Resume Status</h3>
+                            <p>Keep your resume updated for better job opportunities</p>
+                        </div>
+                    </div>
+                    
+                    <div class="status-details">
+                        <% if (profile && profile.resume) { %>
+                            <div class="status-item success">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Resume Uploaded</span>
+                            </div>
+                            <div class="status-item">
+                                <strong>File:</strong> <%= profile.resume %>
+                            </div>
+                            <div class="status-item">
+                                <strong>Last Updated:</strong> Just now
+                            </div>
+                            <div class="status-item">
+                                <strong>Used in:</strong> <%= profile.applicationCount || 0 %> applications
+                            </div>
+                        <% } else { %>
+                            <div class="status-item warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>No Resume Uploaded</span>
+                            </div>
+                            <div class="status-item">
+                                Upload your resume to start applying for jobs
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Upload Resume Section -->
+                <div class="upload-section">
+                    <div class="section-header">
+                        <h2><%= profile && profile.resume ? 'Update Your Resume' : 'Upload Your Resume' %></h2>
+                        <p>Supported format: PDF (Max 5MB)</p>
+                    </div>
+
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-placeholder">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <h4>Drag & Drop your resume here</h4>
+                            <p>or</p>
+                            <button class="btn-primary" id="browseBtn">Browse Files</button>
+                            <input type="file" id="resumeFile" accept=".pdf" style="display: none;">
+                        </div>
+                        <div class="upload-progress" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                            <p>Uploading... <span class="progress-text">0%</span></p>
+                        </div>
+                    </div>
+
+                    <div class="upload-requirements">
+                        <h4>Resume Requirements:</h4>
+                        <ul>
+                            <li><i class="fas fa-check"></i> File must be in PDF format</li>
+                            <li><i class="fas fa-check"></i> Maximum file size: 5MB</li>
+                            <li><i class="fas fa-check"></i> Include your contact information</li>
+                            <li><i class="fas fa-check"></i> Highlight relevant skills and experience</li>
+                            <li><i class="fas fa-check"></i> Keep it to 1-2 pages for best results</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Resume Preview Section -->
+                <% if (profile && profile.resume) { %>
+                <div class="preview-section">
+                    <div class="section-header">
+                        <h2>Resume Preview</h2>
+                        <div class="preview-actions">
+                            <button class="btn-secondary" id="downloadBtn">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                            <button class="btn-secondary" id="replaceBtn">
+                                <i class="fas fa-sync"></i> Replace
+                            </button>
+                            <button class="btn-danger" id="deleteBtn">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="resume-preview">
+                        <div class="preview-placeholder">
+                            <i class="fas fa-file-pdf"></i>
+                            <h4><%= profile.resume %></h4>
+                            <p>PDF Document</p>
+                            <button class="btn-primary" id="viewPreviewBtn">
+                                <i class="fas fa-eye"></i> View Preview
+                            </button>
+                        </div>
+                        
+                        <!-- PDF Preview Container -->
+                        <div class="pdf-preview" id="pdfPreview" style="display: none;">
+                            <div class="pdf-controls">
+                                <button class="btn-secondary" id="prevPage">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <span class="page-info">Page <span id="currentPage">1</span> of <span id="totalPages">1</span></span>
+                                <button class="btn-secondary" id="nextPage">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <button class="btn-secondary" id="closePreview">
+                                    <i class="fas fa-times"></i> Close
+                                </button>
+                            </div>
+                            <canvas id="pdfCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <% } %>
+
+                <!-- Resume Builder Section -->
+                <div class="builder-section">
+                    <div class="section-header">
+                        <h2>Build Your Resume</h2>
+                        <p>Create a professional resume using our builder</p>
+                    </div>
+
+                    <div class="builder-options">
+                        <div class="builder-card">
+                            <div class="builder-icon">
+                                <i class="fas fa-magic"></i>
+                            </div>
+                            <h4>AI Resume Builder</h4>
+                            <p>Generate a professional resume automatically from your profile</p>
+                            <button class="btn-primary" id="aiBuilderBtn">
+                                <i class="fas fa-robot"></i> Generate with AI
+                            </button>
+                        </div>
+
+                        <div class="builder-card">
+                            <div class="builder-icon">
+                                <i class="fas fa-edit"></i>
+                            </div>
+                            <h4>Template Builder</h4>
+                            <p>Choose from professional templates and customize</p>
+                            <button class="btn-primary" id="templateBuilderBtn">
+                                <i class="fas fa-palette"></i> Choose Template
+                            </button>
+                        </div>
+
+                        <div class="builder-card">
+                            <div class="builder-icon">
+                                <i class="fas fa-upload"></i>
+                            </div>
+                            <h4>Upload Existing</h4>
+                            <p>Already have a resume? Upload it directly</p>
+                            <button class="btn-primary" id="uploadExistingBtn">
+                                <i class="fas fa-file-upload"></i> Upload Resume
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resume Analytics -->
+                <div class="analytics-section">
+                    <div class="section-header">
+                        <h2>Resume Analytics</h2>
+                        <p>Track how your resume performs</p>
+                    </div>
+
+                    <div class="analytics-grid">
+                        <div class="analytic-card">
+                            <div class="analytic-icon">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                            <div class="analytic-info">
+                                <h3>245</h3>
+                                <p>Times Viewed</p>
+                            </div>
+                        </div>
+
+                        <div class="analytic-card">
+                            <div class="analytic-icon">
+                                <i class="fas fa-briefcase"></i>
+                            </div>
+                            <div class="analytic-info">
+                                <h3><%= profile && profile.applicationCount || 0 %></h3>
+                                <p>Applications Sent</p>
+                            </div>
+                        </div>
+
+                        <div class="analytic-card">
+                            <div class="analytic-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="analytic-info">
+                                <h3>12</h3>
+                                <p>Shortlisted</p>
+                            </div>
+                        </div>
+
+                        <div class="analytic-card">
+                            <div class="analytic-icon">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="analytic-info">
+                                <h3>85%</h3>
+                                <p>Profile Match Score</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- PDF.js Library for PDF preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="/js/resume.js"></script>
+</body>
+</html>

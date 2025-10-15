@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .profile-view-container {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid #E2E8F0;
+        }
+        
+        .company-logo-large {
+            width: 120px;
+            height: 120px;
+            border-radius: 20px;
+            background: #F8FAFC;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #E2E8F0;
+            overflow: hidden;
+        }
+        
+        .company-logo-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .company-logo-large i {
+            font-size: 3rem;
+            color: #CBD5E0;
+        }
+        
+        .company-info h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-size: 2rem;
+        }
+        
+        .company-info .industry {
+            color: var(--primary-purple);
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .company-info .website {
+            color: #64748B;
+            text-decoration: none;
+        }
+        
+        .company-info .website:hover {
+            color: var(--primary-purple);
+        }
+        
+        .profile-sections {
+            display: grid;
+            gap: 2rem;
+        }
+        
+        .profile-section {
+            background: #F8FAFC;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary-purple);
+        }
+        
+        .profile-section h3 {
+            margin: 0 0 1rem 0;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+        }
+        
+        .info-value {
+            color: #64748B;
+        }
+        
+        .description-content {
+            line-height: 1.6;
+            color: #4A5568;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #E2E8F0;
+        }
+        
+        .btn-edit {
+            background: linear-gradient(135deg, var(--primary-purple), #9C77D4);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-edit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(139, 95, 191, 0.3);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748B;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #CBD5E0;
+        }
+    </style>
+</head>
+<body>
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-building"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/company/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/company/profile-view" class="nav-item active">
+                    <i class="fas fa-eye"></i>
+                    <span>View Profile</span>
+                </a>
+                <a href="/company/profile" class="nav-item">
+                    <i class="fas fa-edit"></i>
+                    <span>Edit Profile</span>
+                </a>
+                <a href="/company/post-job" class="nav-item">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Post Jobs</span>
+                </a>
+                <a href="/company/jobs" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Manage Jobs</span>
+                </a>
+                <a href="/company/applicants" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>Applicants</span>
+                </a>
+                <a href="/company/analytics" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Company Profile</h1>
+                    <p>View your public company profile</p>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <% if (companyProfile.logo) { %>
+                                <img src="/uploads/company-logos/<%= companyProfile.logo %>" alt="Company Logo" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                            <% } else { %>
+                                <i class="fas fa-building"></i>
+                            <% } %>
+                        </div>
+                        <span class="user-name"><%= companyProfile.companyName || user.name %></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="profile-view-container">
+                    <% if (companyProfile.companyName) { %>
+                        <!-- Profile Header -->
+                        <div class="profile-header">
+                            <div class="company-logo-large">
+                                <% if (companyProfile.logo) { %>
+                                    <img src="/uploads/company-logos/<%= companyProfile.logo %>" alt="<%= companyProfile.companyName %>">
+                                <% } else { %>
+                                    <i class="fas fa-building"></i>
+                                <% } %>
+                            </div>
+                            <div class="company-info">
+                                <h1><%= companyProfile.companyName %></h1>
+                                <% if (companyProfile.industry) { %>
+                                    <div class="industry"><%= companyProfile.industry %></div>
+                                <% } %>
+                                <% if (companyProfile.website) { %>
+                                    <a href="<%= companyProfile.website %>" class="website" target="_blank">
+                                        <i class="fas fa-external-link-alt"></i> <%= companyProfile.website %>
+                                    </a>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <!-- Profile Sections -->
+                        <div class="profile-sections">
+                            <!-- About Section -->
+                            <% if (companyProfile.description) { %>
+                                <div class="profile-section">
+                                    <h3><i class="fas fa-info-circle"></i> About Us</h3>
+                                    <div class="description-content">
+                                        <%= companyProfile.description %>
+                                    </div>
+                                </div>
+                            <% } %>
+
+                            <!-- Company Details -->
+                            <div class="profile-section">
+                                <h3><i class="fas fa-building"></i> Company Details</h3>
+                                <div class="info-grid">
+                                    <% if (companyProfile.size) { %>
+                                        <div class="info-item">
+                                            <span class="info-label">Company Size</span>
+                                            <span class="info-value"><%= companyProfile.size %> employees</span>
+                                        </div>
+                                    <% } %>
+                                    
+                                    <% if (companyProfile.founded) { %>
+                                        <div class="info-item">
+                                            <span class="info-label">Founded</span>
+                                            <span class="info-value"><%= companyProfile.founded %></span>
+                                        </div>
+                                    <% } %>
+                                    
+                                    <% if (companyProfile.contactPerson) { %>
+                                        <div class="info-item">
+                                            <span class="info-label">Contact Person</span>
+                                            <span class="info-value"><%= companyProfile.contactPerson %></span>
+                                        </div>
+                                    <% } %>
+                                    
+                                    <% if (companyProfile.phone) { %>
+                                        <div class="info-item">
+                                            <span class="info-label">Phone</span>
+                                            <span class="info-value"><%= companyProfile.phone %></span>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            </div>
+
+                            <!-- Address -->
+                            <% if (companyProfile.address && (companyProfile.address.street || companyProfile.address.city)) { %>
+                                <div class="profile-section">
+                                    <h3><i class="fas fa-map-marker-alt"></i> Location</h3>
+                                    <div class="info-grid">
+                                        <% if (companyProfile.address.street) { %>
+                                            <div class="info-item">
+                                                <span class="info-label">Address</span>
+                                                <span class="info-value"><%= companyProfile.address.street %></span>
+                                            </div>
+                                        <% } %>
+                                        
+                                        <% if (companyProfile.address.city) { %>
+                                            <div class="info-item">
+                                                <span class="info-label">City</span>
+                                                <span class="info-value"><%= companyProfile.address.city %></span>
+                                            </div>
+                                        <% } %>
+                                        
+                                        <% if (companyProfile.address.state) { %>
+                                            <div class="info-item">
+                                                <span class="info-label">State</span>
+                                                <span class="info-value"><%= companyProfile.address.state %></span>
+                                            </div>
+                                        <% } %>
+                                        
+                                        <% if (companyProfile.address.country) { %>
+                                            <div class="info-item">
+                                                <span class="info-label">Country</span>
+                                                <span class="info-value"><%= companyProfile.address.country %></span>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            <% } %>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-buttons">
+                            <a href="/company/profile" class="btn-edit">
+                                <i class="fas fa-edit"></i> Edit Profile
+                            </a>
+                        </div>
+
+                    <% } else { %>
+                        <!-- Empty State -->
+                        <div class="empty-state">
+                            <i class="fas fa-building"></i>
+                            <h3>No Profile Created Yet</h3>
+                            <p>Create your company profile to attract the best talent</p>
+                            <a href="/company/profile" class="btn-edit" style="margin-top: 1rem;">
+                                <i class="fas fa-plus"></i> Create Profile
+                            </a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

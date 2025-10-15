@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .applicants-container {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #E2E8F0;
+        }
+        
+        .page-header h1 {
+            margin: 0;
+            color: var(--text-dark);
+            font-size: 1.8rem;
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: #F8FAFC;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid;
+            text-align: center;
+        }
+        
+        .stat-card.applied { border-left-color: #7E57C2; }
+        .stat-card.review { border-left-color: #5C6BC0; }
+        .stat-card.interview { border-left-color: #FF9800; }
+        .stat-card.hired { border-left-color: #48BB78; }
+        .stat-card.rejected { border-left-color: #EF4444; }
+        
+        .stat-card h3 {
+            margin: 0;
+            font-size: 2rem;
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+        
+        .stat-card p {
+            margin: 0.5rem 0 0 0;
+            color: #64748B;
+            font-size: 0.9rem;
+            text-transform: capitalize;
+        }
+        
+        .filters-section {
+            background: #F8FAFC;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1.5rem;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .filter-group label {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+        }
+        
+        .filter-select {
+            padding: 0.75rem 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 8px;
+            background: white;
+            font-family: 'Poppins', sans-serif;
+            min-width: 180px;
+        }
+        
+        .search-input {
+            padding: 0.75rem 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 8px;
+            background: white;
+            font-family: 'Poppins', sans-serif;
+            min-width: 250px;
+        }
+        
+        .applicants-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .applicant-card {
+            background: white;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .applicant-card:hover {
+            border-color: var(--primary-purple);
+            box-shadow: 0 4px 15px rgba(139, 95, 191, 0.1);
+        }
+        
+        .applicant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .applicant-info {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        
+        .applicant-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-purple), #9C77D4);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        
+        .applicant-details h3 {
+            margin: 0 0 0.25rem 0;
+            color: var(--text-dark);
+            font-size: 1.1rem;
+        }
+        
+        .applicant-meta {
+            color: #64748B;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .applicant-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .skill-tag {
+            background: #E2E8F0;
+            color: #4A5568;
+            padding: 0.3rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .applicant-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        
+        .status-select {
+            padding: 0.5rem 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 6px;
+            background: white;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            min-width: 140px;
+        }
+        
+        .status-applied { color: #7E57C2; border-color: #7E57C2; }
+        .status-under_review { color: #5C6BC0; border-color: #5C6BC0; }
+        .status-shortlisted { color: #9575CD; border-color: #9575CD; }
+        .status-interview { color: #FF9800; border-color: #FF9800; }
+        .status-hired { color: #48BB78; border-color: #48BB78; }
+        .status-rejected { color: #EF4444; border-color: #EF4444; }
+        
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-icon {
+            padding: 0.5rem;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            background: white;
+            color: #64748B;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-icon:hover {
+            background: var(--primary-purple);
+            color: white;
+            border-color: var(--primary-purple);
+        }
+        
+        .job-info {
+            background: #F8FAFC;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        
+        .job-info strong {
+            color: var(--text-dark);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748B;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #CBD5E0;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #E2E8F0;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-dark);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #64748B;
+            padding: 0.25rem;
+        }
+        
+        .cover-letter-content {
+            line-height: 1.6;
+            color: #4A5568;
+            white-space: pre-wrap;
+        }
+        
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .filters-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .applicant-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .applicant-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+        .demo-banner {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-building"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/company/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/company/profile-view" class="nav-item">
+                    <i class="fas fa-eye"></i>
+                    <span>View Profile</span>
+                </a>
+                <a href="/company/profile" class="nav-item">
+                    <i class="fas fa-edit"></i>
+                    <span>Edit Profile</span>
+                </a>
+                <a href="/company/post-job" class="nav-item">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Post Jobs</span>
+                </a>
+                <a href="/company/jobs" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Manage Jobs</span>
+                </a>
+                <a href="/company/applicants" class="nav-item active">
+                    <i class="fas fa-users"></i>
+                    <span>Applicants</span>
+                </a>
+                <a href="/company/analytics" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Applicants</h1>
+                    <p>Manage and review job applications</p>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <% if (companyProfile && companyProfile.logo) { %>
+                                <img src="/uploads/company-logos/<%= companyProfile.logo %>" alt="Company Logo" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                            <% } else { %>
+                                <i class="fas fa-building"></i>
+                            <% } %>
+                        </div>
+                        <span class="user-name"><%= (companyProfile && companyProfile.companyName) || user.name %></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="applicants-container">
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <h1>Job Applications</h1>
+                        <div style="color: #64748B; font-size: 0.9rem;">
+                            Total: <strong><%= applications.length %></strong> applications
+                        </div>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="stats-cards">
+                        <div class="stat-card applied">
+                            <h3><%= applications.filter(app => app.status === 'applied').length %></h3>
+                            <p>New Applications</p>
+                        </div>
+                        <div class="stat-card review">
+                            <h3><%= applications.filter(app => app.status === 'under_review').length %></h3>
+                            <p>Under Review</p>
+                        </div>
+                        <div class="stat-card interview">
+                            <h3><%= applications.filter(app => app.status === 'interview').length %></h3>
+                            <p>Interview</p>
+                        </div>
+                        <div class="stat-card hired">
+                            <h3><%= applications.filter(app => app.status === 'hired').length %></h3>
+                            <p>Hired</p>
+                        </div>
+                        <div class="stat-card rejected">
+                            <h3><%= applications.filter(app => app.status === 'rejected').length %></h3>
+                            <p>Rejected</p>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="filters-section">
+                        <div class="filter-group">
+                            <label for="jobFilter">Filter by Job</label>
+                            <select id="jobFilter" class="filter-select">
+                                <option value="">All Jobs</option>
+                                <% companyJobs.forEach(job => { %>
+                                    <option value="<%= job._id %>" <%= filters.job === job._id.toString() ? 'selected' : '' %>>
+                                        <%= job.title %>
+                                    </option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="statusFilter">Filter by Status</label>
+                            <select id="statusFilter" class="filter-select">
+                                <option value="">All Status</option>
+                                <option value="applied" <%= filters.status === 'applied' ? 'selected' : '' %>>Applied</option>
+                                <option value="under_review" <%= filters.status === 'under_review' ? 'selected' : '' %>>Under Review</option>
+                                <option value="shortlisted" <%= filters.status === 'shortlisted' ? 'selected' : '' %>>Shortlisted</option>
+                                <option value="interview" <%= filters.status === 'interview' ? 'selected' : '' %>>Interview</option>
+                                <option value="hired" <%= filters.status === 'hired' ? 'selected' : '' %>>Hired</option>
+                                <option value="rejected" <%= filters.status === 'rejected' ? 'selected' : '' %>>Rejected</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="searchInput">Search Applicants</label>
+                            <input type="text" id="searchInput" class="search-input" placeholder="Search by name, college..." value="<%= filters.search || '' %>">
+                        </div>
+                        
+                        <button class="btn-primary" onclick="applyFilters()" style="height: fit-content;">
+                            <i class="fas fa-filter"></i> Apply Filters
+                        </button>
+                    </div>
+
+                    <% if (applications.length > 0) { %>
+                        <!-- Applicants List -->
+                        <div class="applicants-list" id="applicantsList">
+                            <% applications.forEach(application => { %>
+                                <div class="applicant-card" 
+                                     data-job="<%= application.job._id %>" 
+                                     data-status="<%= application.status %>" 
+                                     data-name="<%= application.student.name.toLowerCase() %>">
+                                    <div class="applicant-header">
+                                        <div class="applicant-info">
+                                            <div class="applicant-avatar">
+                                                <%= application.student.name.charAt(0).toUpperCase() %>
+                                            </div>
+                                            <div class="applicant-details">
+                                                <h3><%= application.student.name %></h3>
+                                                <div class="applicant-meta">
+                                                    <i class="fas fa-envelope"></i> <%= application.student.email %>
+                                                    <% if (application.student.college) { %>
+                                                        • <i class="fas fa-graduation-cap"></i> <%= application.student.college %>
+                                                    <% } %>
+                                                </div>
+                                                <% if (application.student.skills && application.student.skills.length > 0) { %>
+                                                    <div class="applicant-skills">
+                                                        <% application.student.skills.slice(0, 4).forEach(skill => { %>
+                                                            <span class="skill-tag"><%= skill %></span>
+                                                        <% }); %>
+                                                        <% if (application.student.skills.length > 4) { %>
+                                                            <span class="skill-tag">+<%= application.student.skills.length - 4 %> more</span>
+                                                        <% } %>
+                                                    </div>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="applicant-actions">
+                                            <select class="status-select status-<%= application.status %>" 
+                                                    data-application-id="<%= application._id %>"
+                                                    onchange="updateApplicationStatus('<%= application._id %>', this.value)">
+                                                <option value="applied" <%= application.status === 'applied' ? 'selected' : '' %>>Applied</option>
+                                                <option value="under_review" <%= application.status === 'under_review' ? 'selected' : '' %>>Under Review</option>
+                                                <option value="shortlisted" <%= application.status === 'shortlisted' ? 'selected' : '' %>>Shortlisted</option>
+                                                <option value="interview" <%= application.status === 'interview' ? 'selected' : '' %>>Interview</option>
+                                                <option value="hired" <%= application.status === 'hired' ? 'selected' : '' %>>Hired</option>
+                                                <option value="rejected" <%= application.status === 'rejected' ? 'selected' : '' %>>Rejected</option>
+                                            </select>
+                                            
+                                            <div class="action-buttons">
+                                                <button class="btn-icon view-cover-letter" title="View Cover Letter" 
+                                                        data-content="<%= application.coverLetter || 'No cover letter provided' %>"
+                                                        data-student="<%= application.student.name %>">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn-icon download-resume" title="Download Resume" 
+                                                        data-resume="<%= application.resume %>">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                                <button class="btn-icon contact-student" title="Contact Student" 
+                                                        data-email="<%= application.student.email %>"
+                                                        data-student="<%= application.student.name %>">
+                                                    <i class="fas fa-envelope"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="job-info">
+                                        <strong>Applied for:</strong> <%= application.job.title %> • 
+                                        <strong>Applied on:</strong> <%= new Date(application.appliedDate).toLocaleDateString() %>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        </div>
+                    <% } else { %>
+                        <!-- Empty State -->
+                        <div class="empty-state">
+                            <i class="fas fa-users"></i>
+                            <h3>No Applications Yet</h3>
+                            <p>Applications from students will appear here when they start applying to your jobs.</p>
+                            <a href="/company/post-job" class="btn-primary" style="margin-top: 1rem;">
+                                <i class="fas fa-plus"></i> Post a Job
+                            </a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Cover Letter Modal -->
+    <div id="coverLetterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Cover Letter</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="coverLetterContent" class="cover-letter-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Apply filters
+        function applyFilters() {
+            const jobFilter = document.getElementById('jobFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const searchInput = document.getElementById('searchInput').value.trim().toLowerCase();
+            
+            let url = '/company/applicants?';
+            if (jobFilter) url += `job=${jobFilter}&`;
+            if (statusFilter) url += `status=${statusFilter}&`;
+            if (searchInput) url += `search=${encodeURIComponent(searchInput)}&`;
+            
+            window.location.href = url.slice(0, -1); // Remove trailing & or ?
+        }
+
+        // Update application status
+        async function updateApplicationStatus(applicationId, newStatus) {
+            try {
+                const response = await fetch('/company/update-application-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        applicationId: applicationId,
+                        status: newStatus
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('Application status updated successfully!', 'success');
+                    // Update the status select styling
+                    const select = document.querySelector(`[data-application-id="${applicationId}"]`);
+                    select.className = `status-select status-${newStatus}`;
+                    
+                    // Update stats cards after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error updating application status:', error);
+                showNotification('Failed to update application status', 'error');
+            }
+        }
+
+        // View cover letter
+        function viewCoverLetter(content, studentName) {
+            document.getElementById('modalTitle').textContent = `Cover Letter - ${studentName}`;
+            document.getElementById('coverLetterContent').textContent = content || 'No cover letter provided';
+            document.getElementById('coverLetterModal').style.display = 'flex';
+        }
+
+        // Download resume
+        function downloadResume(filename) {
+            if (filename) {
+                window.open(`/uploads/resumes/${filename}`, '_blank');
+            } else {
+                showNotification('No resume available for download', 'warning');
+            }
+        }
+
+        // Contact student
+        function contactStudent(email, name) {
+            window.location.href = `mailto:${email}?subject=Regarding your job application&body=Dear ${name},%0D%0A%0D%0A`;
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('coverLetterModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('coverLetterModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <i class="fas fa-${getNotificationIcon(type)}"></i>
+                    <span>${message}</span>
+                </div>
+                <button class="notification-close" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                success: 'check-circle',
+                error: 'exclamation-circle',
+                warning: 'exclamation-triangle',
+                info: 'info-circle'
+            };
+            return icons[type] || 'info-circle';
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        });
+    </script>
+</body>
+</html>

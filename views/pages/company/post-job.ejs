@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .post-job-container {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+        
+        .form-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #E2E8F0;
+        }
+        
+        .form-header h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+            font-size: 1.8rem;
+        }
+        
+        .form-header p {
+            color: #64748B;
+            margin: 0;
+        }
+        
+        .job-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+        
+        .form-group.required label::after {
+            content: " *";
+            color: #EF4444;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 10px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: #F8FAFC;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-purple);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(139, 95, 191, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+            line-height: 1.6;
+        }
+        
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .form-section {
+            margin-bottom: 2.5rem;
+            padding: 1.5rem;
+            background: #F8FAFC;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary-purple);
+        }
+        
+        .form-section h3 {
+            margin: 0 0 1rem 0;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #E2E8F0;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-purple), #9C77D4);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 15px rgba(139, 95, 191, 0.3);
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 95, 191, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            background: #CBD5E0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: var(--primary-purple);
+            padding: 1rem 2rem;
+            border: 2px solid var(--primary-purple);
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--primary-purple);
+            color: white;
+        }
+        
+        .skills-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .skill-tag {
+            background: var(--primary-purple);
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .skill-tag .remove-skill {
+            cursor: pointer;
+            padding: 0.1rem;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        
+        .skill-tag .remove-skill:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .demo-banner {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            max-width: 500px;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 1.25rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-left: 4px solid;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            max-width: 400px;
+            animation: slideInRight 0.3s ease;
+        }
+        
+        .notification-success {
+            border-left-color: #10B981;
+        }
+        
+        .notification-error {
+            border-left-color: #EF4444;
+        }
+        
+        .notification-warning {
+            border-left-color: #F59E0B;
+        }
+        
+        .notification-info {
+            border-left-color: #5F7BF4;
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .job-form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-building"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/company/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/company/profile-view" class="nav-item">
+                    <i class="fas fa-eye"></i>
+                    <span>View Profile</span>
+                </a>
+                <a href="/company/profile" class="nav-item">
+                    <i class="fas fa-edit"></i>
+                    <span>Edit Profile</span>
+                </a>
+                <a href="/company/post-job" class="nav-item active">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Post Jobs</span>
+                </a>
+                <a href="/company/jobs" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Manage Jobs</span>
+                </a>
+                <a href="/company/applicants" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>Applicants</span>
+                </a>
+                <a href="/company/analytics" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Post New Job</h1>
+                    <p>Create a job posting to attract talented students</p>
+                    <% if (isDemo) { %>
+                        <div class="demo-banner">
+                            <i class="fas fa-info-circle"></i>
+                            <span>You are in demo mode. Create an account to post real jobs.</span>
+                        </div>
+                    <% } %>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <% if (companyProfile && companyProfile.logo) { %>
+                                <img src="/uploads/company-logos/<%= companyProfile.logo %>" alt="Company Logo" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                            <% } else { %>
+                                <i class="fas fa-building"></i>
+                            <% } %>
+                        </div>
+                        <span class="user-name"><%= (companyProfile && companyProfile.companyName) || user.name %></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="post-job-container">
+                    <form id="postJobForm">
+                        <!-- Basic Job Information -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-info-circle"></i> Basic Job Information</h3>
+                            <div class="job-form-grid">
+                                <div class="form-group required">
+                                    <label for="jobTitle">Job Title</label>
+                                    <input type="text" id="jobTitle" name="title" required placeholder="e.g., Frontend Developer">
+                                </div>
+
+                                <div class="form-group required">
+                                    <label for="jobType">Job Type</label>
+                                    <select id="jobType" name="jobType" required>
+                                        <option value="">Select Job Type</option>
+                                        <option value="full-time">Full Time</option>
+                                        <option value="part-time">Part Time</option>
+                                        <option value="internship">Internship</option>
+                                        <option value="remote">Remote</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group required">
+                                    <label for="location">Location</label>
+                                    <input type="text" id="location" name="location" required placeholder="e.g., Remote, New York, Bangalore">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="salary">Salary Range</label>
+                                    <input type="text" id="salary" name="salary" placeholder="e.g., $60,000 - $80,000">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="experienceLevel">Experience Level</label>
+                                    <select id="experienceLevel" name="experienceLevel">
+                                        <option value="">Select Experience</option>
+                                        <option value="0-2">Intern</option>
+                                        <option value="2-5">Fresher (0-1 years)</option>
+                                        <option value="5+">Senior (5+ years)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group required">
+                                    <label for="applicationDeadline">Application Deadline</label>
+                                    <input type="date" id="applicationDeadline" name="applicationDeadline" required min="<%= new Date().toISOString().split('T')[0] %>">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="vacancies">Number of Vacancies</label>
+                                    <input type="number" id="vacancies" name="vacancies" min="1" placeholder="e.g., 3">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Job Description -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-file-alt"></i> Job Description & Requirements</h3>
+                            <div class="job-form-grid">
+                                <div class="form-group full-width required">
+                                    <label for="description">Job Description</label>
+                                    <textarea id="description" name="description" required placeholder="Describe the role, responsibilities, and what you're looking for in a candidate..."></textarea>
+                                </div>
+
+                                <div class="form-group full-width required">
+                                    <label for="requirements">Requirements & Qualifications</label>
+                                    <textarea id="requirements" name="requirements" required placeholder="List the required skills, qualifications, and experience..."></textarea>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="responsibilities">Key Responsibilities</label>
+                                    <textarea id="responsibilities" name="responsibilities" placeholder="List the main responsibilities and tasks for this role..."></textarea>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="benefits">Benefits & Perks</label>
+                                    <textarea id="benefits" name="benefits" placeholder="Health insurance, remote work, professional development, etc."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Skills & Tags -->
+                        <div class="form-section">
+                            <h3><i class="fas fa-tags"></i> Skills & Technologies</h3>
+                            <div class="job-form-grid">
+                                <div class="form-group full-width">
+                                    <label for="skillsInput">Required Skills</label>
+                                    <input type="text" id="skillsInput" placeholder="e.g., JavaScript, React, Node.js (Press Enter to add)">
+                                    <div class="skills-input" id="skillsContainer"></div>
+                                    <input type="hidden" id="skills" name="skills">
+                                    <small style="color: #64748B; margin-top: 0.5rem; display: block;">
+                                        Type a skill and press Enter to add it. Click on a skill to remove it.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="form-actions">
+                            <a href="/company/dashboard" class="btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                            </a>
+                            <button type="submit" class="btn-primary" id="submitBtn">
+                                <i class="fas fa-paper-plane"></i> Post Job
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Skills Management
+        const skills = [];
+        const skillsInput = document.getElementById('skillsInput');
+        const skillsContainer = document.getElementById('skillsContainer');
+        const skillsHidden = document.getElementById('skills');
+
+        skillsInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const skill = this.value.trim();
+                if (skill && !skills.includes(skill)) {
+                    skills.push(skill);
+                    updateSkillsDisplay();
+                    this.value = '';
+                }
+            }
+        });
+
+        function updateSkillsDisplay() {
+            skillsContainer.innerHTML = '';
+            skills.forEach((skill, index) => {
+                const skillTag = document.createElement('div');
+                skillTag.className = 'skill-tag';
+                skillTag.innerHTML = `
+                    ${skill}
+                    <span class="remove-skill" onclick="removeSkill(${index})">
+                        <i class="fas fa-times"></i>
+                    </span>
+                `;
+                skillsContainer.appendChild(skillTag);
+            });
+            skillsHidden.value = skills.join(',');
+        }
+
+        function removeSkill(index) {
+            skills.splice(index, 1);
+            updateSkillsDisplay();
+        }
+
+        // Form Submission
+        document.getElementById('postJobForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await postJob();
+        });
+
+        async function postJob() {
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            // Show loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting Job...';
+            submitBtn.disabled = true;
+
+            try {
+                const formData = new FormData(document.getElementById('postJobForm'));
+                
+                // Check if demo mode
+                const isDemoUser = document.querySelector('.demo-banner') !== null;
+
+                if (isDemoUser) {
+                    // Demo mode - simulate success
+                    setTimeout(() => {
+                        showNotification('Demo mode: Job posting simulated (not saved)', 'info');
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }, 1000);
+                    return;
+                }
+
+                const response = await fetch('/company/post-job', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(Object.fromEntries(formData))
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('Job posted successfully!', 'success');
+                    // Redirect to manage jobs page after success
+                    setTimeout(() => {
+                        window.location.href = '/company/jobs';
+                    }, 1500);
+                } else {
+                    showNotification(data.message || 'Failed to post job', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to post job. Please try again.', 'error');
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <i class="fas fa-${getNotificationIcon(type)}"></i>
+                    <span>${message}</span>
+                </div>
+                <button class="notification-close" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                success: 'check-circle',
+                error: 'exclamation-circle',
+                warning: 'exclamation-triangle',
+                info: 'info-circle'
+            };
+            return icons[type] || 'info-circle';
+        }
+
+        // Set minimum date for deadline to today
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('applicationDeadline').min = today;
+        });
+    </script>
+</body>
+</html>

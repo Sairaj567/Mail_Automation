@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .analytics-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .period-selector {
+            display: flex;
+            gap: 0.5rem;
+            background: #f8f9fa;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .period-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #6c757d;
+        }
+
+        .period-btn:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .period-btn.active {
+            background: #7E57C2;
+            color: white;
+            box-shadow: 0 2px 4px rgba(126, 87, 194, 0.3);
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: 400px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .chart-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #2d3748;
+        }
+
+        .metric-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #7E57C2;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #7E57C2;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .metric-trend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .trend-up {
+            color: #48BB78;
+        }
+
+        .trend-down {
+            color: #F56565;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .data-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .data-card h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+            color: #2d3748;
+        }
+
+        .data-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .data-item:last-child {
+            border-bottom: none;
+        }
+
+        .progress-bar {
+            width: 100px;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #7E57C2;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .export-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-top: 2rem;
+        }
+
+        .export-options {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-outline {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #7E57C2;
+            background: transparent;
+            color: #7E57C2;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-outline:hover {
+            background: #7E57C2;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(126, 87, 194, 0.3);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+
+        .no-data i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .demo-banner {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <!-- USE THE SAME LAYOUT AS YOUR COMPANY DASHBOARD -->
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-building"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/company/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/company/profile" class="nav-item">
+                    <i class="fas fa-building"></i>
+                    <span>Company Profile</span>
+                </a>
+                <a href="/company/post-job" class="nav-item">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Post Jobs</span>
+                </a>
+                <a href="/company/jobs" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Manage Jobs</span>
+                </a>
+                <a href="/company/applicants" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>Applicants</span>
+                </a>
+                <a href="/company/analytics" class="nav-item active">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Analytics Dashboard</h1>
+                    <p>Track your recruitment performance and metrics</p>
+                    <% if (isDemo) { %>
+                        <div class="demo-banner">
+                            <i class="fas fa-info-circle"></i>
+                            <span>You are in demo mode. Create an account to save your data.</span>
+                        </div>
+                    <% } %>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <span class="user-name"><%= user.name %></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="analytics-header">
+                    <div class="period-selector">
+                        <button class="period-btn active" data-period="7d">7D</button>
+                        <button class="period-btn" data-period="30d">30D</button>
+                        <button class="period-btn" data-period="90d">90D</button>
+                    </div>
+                </div>
+
+                <!-- Overview Metrics -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3><%= analytics.overview.totalJobs %></h3>
+                            <p>Total Jobs Posted</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-paper-plane"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3><%= analytics.overview.totalApplications %></h3>
+                            <p>Total Applications</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3><%= analytics.overview.hiredCount %></h3>
+                            <p>Successful Hires</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3><%= analytics.overview.conversionRate %>%</h3>
+                            <p>Conversion Rate</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Grid -->
+                <div class="charts-grid">
+                    <!-- Applications Over Time -->
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Applications Over Time</h3>
+                        </div>
+                        <canvas id="applicationsChart"></canvas>
+                    </div>
+
+                    <!-- Application Status Distribution -->
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Application Status</h3>
+                        </div>
+                        <canvas id="statusChart"></canvas>
+                    </div>
+
+                    <!-- Job Performance -->
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Top Performing Jobs</h3>
+                        </div>
+                        <canvas id="jobsChart"></canvas>
+                    </div>
+
+                    <!-- College Demographics -->
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>Top Colleges</h3>
+                        </div>
+                        <canvas id="collegesChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Data Lists -->
+                <div class="data-grid">
+                    <!-- Popular Jobs List -->
+                    <div class="data-card">
+                        <h3>Most Popular Jobs</h3>
+                        <div class="data-list">
+                            <% if (analytics.popularJobs && analytics.popularJobs.length > 0) { %>
+                                <% analytics.popularJobs.forEach(job => { %>
+                                <div class="data-item">
+                                    <span><%= job.title %></span>
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <span><%= job.applications %> apps</span>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: '<%= (job.applications / analytics.overview.totalApplications) * 100 %>%'"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <% }); %>
+                            <% } else { %>
+                                <div class="no-data">
+                                    <i class="fas fa-briefcase"></i>
+                                    <p>No job data available</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Skills Analysis -->
+                    <div class="data-card">
+                        <h3>Top Skills</h3>
+                        <div class="data-list">
+                            <% if (analytics.skillsAnalysis && analytics.skillsAnalysis.length > 0) { %>
+                                <% analytics.skillsAnalysis.forEach(skill => { %>
+                                <div class="data-item">
+                                    <span><%= skill._id %></span>
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <span><%= skill.count %> applicants</span>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: '<%= (skill.count / analytics.overview.totalApplications) * 100 %>%' "></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <% }); %>
+                            <% } else { %>
+                                <div class="no-data">
+                                    <i class="fas fa-code"></i>
+                                    <p>No skills data available</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Section -->
+                <div class="export-section">
+                    <h3>Export Reports</h3>
+                    <div class="export-options">
+                        <button class="btn-outline" onclick="exportToExcel()">
+                            <i class="fas fa-file-excel"></i>
+                            Export to Excel
+                        </button>
+                        <button class="btn-outline" onclick="exportToPDF()">
+                            <i class="fas fa-file-pdf"></i>
+                            Export to PDF
+                        </button>
+                        <button class="btn-outline" onclick="generateFullReport()">
+                            <i class="fas fa-chart-bar"></i>
+                            Generate Full Report
+                        </button>
+                    </div>
+                    
+                    <!-- Loading indicator -->
+                    <div id="exportLoading" style="display: none; text-align: center; padding: 1rem;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Generating report...</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize charts with data from EJS - WITH PROPER PARSING
+        const analyticsData = '<%- JSON.stringify(analytics) %>'; // REMOVED QUOTES!
+        let currentPeriod = '30d';
+
+        console.log('Analytics data loaded:', analyticsData);
+
+        // Safe data access functions
+        function getApplicationsOverTime() {
+            return analyticsData.applicationsOverTime || [];
+        }
+
+        function getApplicationsByStatus() {
+            return analyticsData.applicationsByStatus || {};
+        }
+
+        function getPopularJobs() {
+            return analyticsData.popularJobs || [];
+        }
+
+        function getCollegeDemographics() {
+            return analyticsData.collegeDemographics || [];
+        }
+
+        // Applications Over Time Chart
+        const applicationsCtx = document.getElementById('applicationsChart');
+        let applicationsChart;
+        if (applicationsCtx) {
+            applicationsChart = new Chart(applicationsCtx, {
+                type: 'line',
+                data: {
+                    labels: getApplicationsOverTime().map(item => item._id),
+                    datasets: [{
+                        label: 'Applications',
+                        data: getApplicationsOverTime().map(item => item.count),
+                        borderColor: '#7E57C2',
+                        backgroundColor: 'rgba(126, 87, 194, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Status Distribution Chart
+        const statusCtx = document.getElementById('statusChart');
+        let statusChart;
+        if (statusCtx) {
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(getApplicationsByStatus()).map(key => {
+                        const statusMap = {
+                            'applied': 'Applied',
+                            'under_review': 'Under Review', 
+                            'shortlisted': 'Shortlisted',
+                            'interview': 'Interview',
+                            'rejected': 'Rejected',
+                            'accepted': 'Hired'
+                        };
+                        return statusMap[key] || key;
+                    }),
+                    datasets: [{
+                        data: Object.values(getApplicationsByStatus()),
+                        backgroundColor: [
+                            '#7E57C2', '#5C6BC0', '#9575CD', '#FF9800', '#F56565', '#48BB78'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Jobs Performance Chart
+        const jobsCtx = document.getElementById('jobsChart');
+        let jobsChart;
+        if (jobsCtx) {
+            jobsChart = new Chart(jobsCtx, {
+                type: 'bar',
+                data: {
+                    labels: getPopularJobs().map(job => 
+                        job.title.length > 20 ? job.title.substring(0, 20) + '...' : job.title
+                    ),
+                    datasets: [{
+                        label: 'Applications',
+                        data: getPopularJobs().map(job => job.applications),
+                        backgroundColor: '#7E57C2',
+                        borderColor: '#7E57C2',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Colleges Chart
+        const collegesCtx = document.getElementById('collegesChart');
+        let collegesChart;
+        if (collegesCtx) {
+            collegesChart = new Chart(collegesCtx, {
+                type: 'polarArea',
+                data: {
+                    labels: getCollegeDemographics().map(item => 
+                        item.college.length > 15 ? item.college.substring(0, 15) + '...' : item.college
+                    ),
+                    datasets: [{
+                        data: getCollegeDemographics().map(item => item.count),
+                        backgroundColor: [
+                            '#7E57C2', '#5C6BC0', '#9575CD', '#FF9800', '#48BB78',
+                            '#F56565', '#4299E1', '#ED8936', '#38B2AC', '#9F7AEA'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Period selector functionality
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Update active button
+                document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update period
+                currentPeriod = this.dataset.period;
+                
+                console.log('Period changed to:', currentPeriod);
+                
+                // Show loading state
+                showLoadingState();
+                
+                // Load new data
+                loadAnalyticsData(currentPeriod);
+            });
+        });
+
+        // Show loading state
+        function showLoadingState() {
+            const chartContainers = document.querySelectorAll('.chart-container');
+            chartContainers.forEach(container => {
+                const canvas = container.querySelector('canvas');
+                if (canvas) {
+                    canvas.style.opacity = '0.5';
+                }
+            });
+        }
+
+        // Hide loading state
+        function hideLoadingState() {
+            const chartContainers = document.querySelectorAll('.chart-container');
+            chartContainers.forEach(container => {
+                const canvas = container.querySelector('canvas');
+                if (canvas) {
+                    canvas.style.opacity = '1';
+                }
+            });
+        }
+
+        // Load analytics data for different periods
+        async function loadAnalyticsData(period) {
+            try {
+                console.log('Loading analytics data for period:', period);
+                
+                const response = await fetch(`/company/analytics/data?period=${period}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('Data loaded successfully:', data.data);
+                    updateCharts(data.data);
+                } else {
+                    console.error('Failed to load data:', data.message);
+                    alert('Failed to load analytics data: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error loading analytics data:', error);
+                alert('Error loading analytics data. Please try again.');
+            } finally {
+                hideLoadingState();
+            }
+        }
+
+        // Update charts with new data
+        function updateCharts(data) {
+            console.log('Updating charts with data:', data);
+            
+            // Update applications chart
+            if (applicationsChart && data.applicationsOverTime) {
+                applicationsChart.data.labels = data.applicationsOverTime.map(item => item._id);
+                applicationsChart.data.datasets[0].data = data.applicationsOverTime.map(item => item.count);
+                applicationsChart.update();
+            }
+
+            // Update status chart
+            if (statusChart && data.statusDistribution) {
+                statusChart.data.labels = data.statusDistribution.map(item => {
+                    const statusMap = {
+                        'applied': 'Applied',
+                        'under_review': 'Under Review', 
+                        'shortlisted': 'Shortlisted',
+                        'interview': 'Interview',
+                        'rejected': 'Rejected',
+                        'accepted': 'Hired'
+                    };
+                    return statusMap[item._id] || item._id;
+                });
+                statusChart.data.datasets[0].data = data.statusDistribution.map(item => item.count);
+                statusChart.update();
+            }
+
+            // Update jobs chart
+            if (jobsChart && data.jobPerformance) {
+                jobsChart.data.labels = data.jobPerformance.map(job => 
+                    job.jobTitle.length > 20 ? job.jobTitle.substring(0, 20) + '...' : job.jobTitle
+                );
+                jobsChart.data.datasets[0].data = data.jobPerformance.map(job => job.applications);
+                jobsChart.update();
+            }
+        }
+
+        // Export functionality
+        async function exportToExcel() {
+            try {
+                showExportLoading();
+                console.log('Exporting to Excel...');
+                
+                const response = await fetch('/company/analytics/export/excel');
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'analytics-report.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showExportSuccess('Excel file downloaded successfully!');
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to export Excel file');
+                }
+            } catch (error) {
+                console.error('Excel export error:', error);
+                showExportError(error.message);
+            } finally {
+                hideExportLoading();
+            }
+        }
+
+        async function exportToPDF() {
+            try {
+                showExportLoading();
+                console.log('Exporting to PDF...');
+                
+                const response = await fetch('/company/analytics/export/pdf');
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'analytics-report.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showExportSuccess('PDF file downloaded successfully!');
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to export PDF file');
+                }
+            } catch (error) {
+                console.error('PDF export error:', error);
+                showExportError(error.message);
+            } finally {
+                hideExportLoading();
+            }
+        }
+
+        async function generateFullReport() {
+            try {
+                showExportLoading();
+                console.log('Generating full report...');
+                
+                // Open in new tab for HTML report
+                window.open('/company/analytics/export/full-report', '_blank');
+                
+                showExportSuccess('Full report generated!');
+            } catch (error) {
+                console.error('Full report error:', error);
+                showExportError(error.message);
+            } finally {
+                hideExportLoading();
+            }
+        }
+
+        // Loading and notification functions
+        function showExportLoading() {
+            const loadingElement = document.getElementById('exportLoading');
+            if (loadingElement) {
+                loadingElement.style.display = 'block';
+            }
+            
+            // Disable buttons during export
+            document.querySelectorAll('.btn-outline').forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+            });
+        }
+
+        function hideExportLoading() {
+            const loadingElement = document.getElementById('exportLoading');
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+            
+            // Re-enable buttons
+            document.querySelectorAll('.btn-outline').forEach(btn => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            });
+        }
+
+        function showExportSuccess(message) {
+            // You can use a toast notification library or simple alert
+            alert('✅ ' + message);
+        }
+
+        function showExportError(message) {
+            alert('❌ ' + message);
+        }
+
+        function generateReport() {
+            alert('Generating comprehensive report...');
+            // In a real implementation, this would generate a detailed PDF report
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Analytics dashboard initialized');
+            
+            // Set initial active period button
+            const initialActiveBtn = document.querySelector('.period-btn[data-period="30d"]');
+            if (initialActiveBtn) {
+                initialActiveBtn.classList.add('active');
+            }
+        });
+    </script>
+</body>
+</html>

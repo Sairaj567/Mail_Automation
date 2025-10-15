@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/jobs.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .job-details-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .job-header {
+            background: linear-gradient(135deg, #7E57C2, #9575CD);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .job-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 200%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: rotate(45deg);
+        }
+
+        .job-title-section {
+            position: relative;
+            z-index: 2;
+        }
+
+        .job-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+
+        .company-name {
+            font-size: 1.5rem;
+            font-weight: 500;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .job-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .meta-item i {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        .job-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        @media (max-width: 968px) {
+            .job-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .job-info-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .job-info-card h3 {
+            color: #7E57C2;
+            margin-bottom: 1.5rem;
+            font-size: 1.4rem;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 0.5rem;
+        }
+
+        .description-content {
+            line-height: 1.8;
+            color: #555;
+        }
+
+        .requirements-list, .responsibilities-list, .benefits-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .requirements-list li, .responsibilities-list li, .benefits-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .requirements-list li:last-child, .responsibilities-list li:last-child, .benefits-list li:last-child {
+            border-bottom: none;
+        }
+
+        .requirements-list li i, .responsibilities-list li i, .benefits-list li i {
+            color: #7E57C2;
+            margin-top: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .skill-tag {
+            background: #7E57C2;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .sidebar-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .salary-amount {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #7E57C2;
+            margin-bottom: 0.5rem;
+        }
+
+        .job-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-apply {
+            background: #7E57C2;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-apply:hover {
+            background: #6a4bac;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(126, 87, 194, 0.4);
+        }
+
+        .btn-save {
+            background: transparent;
+            color: #7E57C2;
+            border: 2px solid #7E57C2;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-save:hover {
+            background: #7E57C2;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .application-status-banner {
+            background: linear-gradient(135deg, #48BB78, #68D391);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .application-status-banner i {
+            font-size: 2rem;
+        }
+
+        .application-status-banner h4 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .application-status-banner p {
+            margin: 0.25rem 0 0 0;
+            opacity: 0.9;
+        }
+
+        .apply-form {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 12px;
+            border: 2px dashed #dee2e6;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #7E57C2;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #7E57C2;
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #6a4bac;
+        }
+
+        .deadline-warning {
+            background: #FFF3E0;
+            border: 1px solid #FFB74D;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #E65100;
+        }
+
+        .deadline-warning i {
+            font-size: 1.2rem;
+        }
+
+        .demo-banner {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+    /* Enhanced Application Form Styles */
+    .apply-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        margin-top: 2rem;
+        overflow: hidden;
+    }
+
+    .form-section {
+        margin-bottom: 2.5rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid #f8f9fa;
+    }
+
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .form-section h3 {
+        color: #7E57C2;
+        margin-bottom: 1.5rem;
+        font-size: 1.3rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .form-section h3::before {
+        content: '';
+        width: 4px;
+        height: 20px;
+        background: #7E57C2;
+        border-radius: 2px;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-family: 'Poppins', sans-serif;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #7E57C2;
+        box-shadow: 0 0 0 3px rgba(126, 87, 194, 0.1);
+    }
+
+    .form-group input[type="file"] {
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+    }
+
+    .form-group input[type="file"]:focus {
+        border-color: #7E57C2;
+        background: #f3f0ff;
+    }
+
+    .checkbox-group {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        margin-top: 0.25rem;
+        transform: scale(1.2);
+        accent-color: #7E57C2;
+    }
+
+    .checkbox-group label {
+        font-weight: normal;
+        margin-bottom: 0;
+        line-height: 1.5;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        align-items: center;
+        padding-top: 2rem;
+        border-top: 2px solid #f8f9fa;
+    }
+
+    @media (max-width: 768px) {
+        .form-actions {
+            flex-direction: column;
+        }
+    }
+
+    .btn-primary {
+        background: #7E57C2;
+        color: white;
+        border: none;
+        padding: 1rem 2.5rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-decoration: none;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: #6a4bac;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(126, 87, 194, 0.4);
+    }
+
+    .btn-primary:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: #7E57C2;
+        border: 2px solid #7E57C2;
+        padding: 1rem 2.5rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .btn-outline:hover {
+        background: #7E57C2;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+        transform: translateY(-1px);
+    }
+
+    small {
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+
+    .file-info {
+        background: #f8f9fa;
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #495057;
+    }
+
+    .application-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    /* Loading animation */
+    .btn-loading {
+        position: relative;
+        color: transparent;
+    }
+
+    .btn-loading::after {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        top: 50%;
+        left: 50%;
+        margin-left: -10px;
+        margin-top: -10px;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Form validation styles */
+    .form-group.error input,
+    .form-group.error select,
+    .form-group.error textarea {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+    }
+
+    .error-message {
+        color: #dc3545;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+        display: none;
+    }
+
+    .form-group.error .error-message {
+        display: block;
+    }
+
+    /* Success message */
+    .application-success {
+        background: linear-gradient(135deg, #48BB78, #68D391);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .application-success i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .application-success h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.5rem;
+    }
+
+    /* Notification styles */
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+    }
+
+    .notification-success {
+        background: #48BB78;
+        color: white;
+    }
+
+    .notification-error {
+        background: #F56565;
+        color: white;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+</style>
+</head>
+<body>
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-user-graduate"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/student/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/student/jobs" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Find Jobs</span>
+                </a>
+                <a href="/student/applications" class="nav-item">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>My Applications</span>
+                </a>
+                <a href="/student/profile" class="nav-item">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="/student/resume" class="nav-item">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Resume</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Job Details</h1>
+                    <p>Find your dream job opportunity</p>
+                    <% if (isDemo) { %>
+                        <div class="demo-banner">
+                            <i class="fas fa-info-circle"></i>
+                            <span>You are in demo mode. Create an account to apply for jobs.</span>
+                        </div>
+                    <% } %>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <span class="user-name"><%= user.name %></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="job-details-container">
+                <!-- Back Link -->
+                <a href="/student/jobs" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Jobs
+                </a>
+
+                <!-- Job Header -->
+                <div class="job-header">
+                    <div class="job-title-section">
+                        <h1 class="job-title"><%= job.title %></h1>
+                        <div class="company-name"><%= job.company %></div>
+                        <div class="job-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span><%= job.location %></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-clock"></i>
+                                <span><%= job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time' %></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-briefcase"></i>
+                                <span><%= job.experienceLevel ? job.experienceLevel.charAt(0).toUpperCase() + job.experienceLevel.slice(1) : 'Any experience' %></span>
+                            </div>
+                            <% if (job.applicationDeadline) { %>
+                            <div class="meta-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Apply by <%= new Date(job.applicationDeadline).toLocaleDateString() %></span>
+                            </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="job-content">
+                    <!-- Main Content -->
+                    <div class="main-content-section">
+                        <!-- Job Description -->
+                        <div class="job-info-card">
+                            <h3>Job Description</h3>
+                            <div class="description-content">
+                                <%= job.description || 'No description provided.' %>
+                            </div>
+                        </div>
+
+                        <!-- Requirements -->
+                        <% if (job.requirements && job.requirements.length > 0) { %>
+                        <div class="job-info-card">
+                            <h3>Requirements</h3>
+                            <ul class="requirements-list">
+                                <% job.requirements.forEach(req => { %>
+                                <li>
+                                    <i class="fas fa-check-circle"></i>
+                                    <span><%= req %></span>
+                                </li>
+                                <% }) %>
+                            </ul>
+                        </div>
+                        <% } %>
+
+                        <!-- Responsibilities -->
+                        <% if (job.responsibilities && job.responsibilities.length > 0) { %>
+                        <div class="job-info-card">
+                            <h3>Responsibilities</h3>
+                            <ul class="responsibilities-list">
+                                <% job.responsibilities.forEach(resp => { %>
+                                <li>
+                                    <i class="fas fa-check-circle"></i>
+                                    <span><%= resp %></span>
+                                </li>
+                                <% }) %>
+                            </ul>
+                        </div>
+                        <% } %>
+
+                        <!-- Skills -->
+                        <% if (job.skills && job.skills.length > 0) { %>
+                        <div class="job-info-card">
+                            <h3>Required Skills</h3>
+                            <div class="skills-container">
+                                <% job.skills.forEach(skill => { %>
+                                <span class="skill-tag"><%= skill %></span>
+                                <% }) %>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <!-- Benefits -->
+                        <% if (job.benefits && job.benefits.length > 0) { %>
+                        <div class="job-info-card">
+                            <h3>Benefits & Perks</h3>
+                            <ul class="benefits-list">
+                                <% job.benefits.forEach(benefit => { %>
+                                <li>
+                                    <i class="fas fa-gift"></i>
+                                    <span><%= benefit %></span>
+                                </li>
+                                <% }) %>
+                            </ul>
+                        </div>
+                        <% } %>
+                    </div>
+
+                    <!-- Sidebar -->
+                    <div class="sidebar-section">
+                        <!-- Salary & Apply Card -->
+                        <div class="sidebar-card">
+                            <% if (job.salary) { %>
+                            <div class="salary-section">
+                                <h3>Salary</h3>
+                                <div class="salary-amount"><%= job.salary %></div>
+                            </div>
+                            <% } %>
+
+                            <div class="job-actions">
+                                <% if (hasApplied) { %>
+                                <div class="application-status-section">
+                                    <input type="hidden" id="applicationId" value="<%= application._id %>">
+                                    <div class="application-success">
+                                        <i class="fas fa-check-circle"></i>
+                                        <h3>Application Submitted!</h3>
+                                        <p>Your application is currently: <strong><%= applicationStatus.toUpperCase().replace('_', ' ') %></strong></p>
+                                        <% if (applicationStatus === 'applied') { %>
+                                        <div class="application-actions">
+                                            <button class="btn-danger" onclick="deleteApplication()">
+                                                <i class="fas fa-trash"></i>
+                                                Delete Application
+                                            </button>
+                                        </div>
+                                        <% } %>
+                                    </div>
+                                </div>
+                                <% } else { %>
+                                    <!-- Apply Button in Sidebar -->
+                                    <div class="sidebar-card">
+                                        <% if (job.salary) { %>
+                                        <div class="salary-section">
+                                            <h3>Salary</h3>
+                                            <div class="salary-amount"><%= job.salary %></div>
+                                        </div>
+                                        <% } %>
+
+                                        <div class="job-actions">
+                                            <button class="btn-apply" onclick="applyForJob()" <%= isDemo ? 'disabled' : '' %>>
+                                                <i class="fas fa-paper-plane"></i>
+                                                Apply Now
+                                            </button>
+
+                                            <button class="btn-save" onclick="toggleSaveJob()" <%= isDemo ? 'disabled' : '' %>>
+                                                <i class="fas fa-bookmark" id="saveIcon"></i>
+                                                <span id="saveText"><%= isSaved ? 'Saved' : 'Save Job' %></span>
+                                            </button>
+                                        </div>
+                                        <% if (job.applicationDeadline && new Date(job.applicationDeadline) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)) { %>
+                                <div class="deadline-warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div>
+                                        <strong>Deadline Approaching</strong>
+                                        <p>Apply before <%= new Date(job.applicationDeadline).toLocaleDateString() %></p>
+                                    </div>
+                                </div>
+                                <% } %>
+                            </div>
+                            <% } %>
+                        </div>
+
+                        <!-- Job Overview -->
+                        <div class="sidebar-card">
+                            <h3>Job Overview</h3>
+                            <div class="overview-list">
+                                <div class="overview-item">
+                                    <strong>Location:</strong>
+                                    <span><%= job.location %></span>
+                                </div>
+                                <div class="overview-item">
+                                    <strong>Job Type:</strong>
+                                    <span><%= job.jobType ? job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) : 'Full-time' %></span>
+                                </div>
+                                <div class="overview-item">
+                                    <strong>Experience:</strong>
+                                    <span><%= job.experienceLevel ? job.experienceLevel.charAt(0).toUpperCase() + job.experienceLevel.slice(1) : 'Any' %></span>
+                                </div>
+                                <% if (job.vacancies) { %>
+                                <div class="overview-item">
+                                    <strong>Vacancies:</strong>
+                                    <span><%= job.vacancies %></span>
+                                </div>
+                                <% } %>
+                                <% if (job.applicationDeadline) { %>
+                                <div class="overview-item">
+                                    <strong>Deadline:</strong>
+                                    <span><%= new Date(job.applicationDeadline).toLocaleDateString() %></span>
+                                </div>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Apply Section (Modal Alternative) -->
+                <!-- Enhanced Apply Section -->
+                <div class="apply-section" id="applySection" style="display: none;">
+                    <div class="job-info-card">
+                        <div class="section-header">
+                            <h2>Apply for <%= job.title %></h2>
+                            <p>Complete your application for this position</p>
+                        </div>
+                        
+                        <form class="apply-form" id="applyForm" enctype="multipart/form-data">
+                            <input type="hidden" name="jobId" value="<%= job._id %>">
+                            
+                            <!-- Personal Information -->
+                            <div class="form-section">
+                                <h3>Personal Information</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="fullName">Full Name *</label>
+                                        <input type="text" id="fullName" name="fullName" value="<%= user.name %>" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="email">Email Address *</label>
+                                        <input type="email" id="email" name="email" value="<%= user.email %>" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="phone">Phone Number *</label>
+                                        <input type="tel" id="phone" name="phone" placeholder="+91 9876543210" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="linkedin">LinkedIn Profile (Optional)</label>
+                                        <input type="url" id="linkedin" name="linkedin" placeholder="https://linkedin.com/in/yourprofile">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Educational Information -->
+                            <div class="form-section">
+                                <h3>Educational Background</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="college">College/University *</label>
+                                        <input type="text" id="college" name="college" placeholder="Enter your college name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="degree">Degree/Course *</label>
+                                        <input type="text" id="degree" name="degree" placeholder="e.g., B.Tech Computer Science" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="educationStatus">Education Status *</label>
+                                        <select id="educationStatus" name="educationStatus" required>
+                                            <option value="">Select Status</option>
+                                            <option value="pursuing">Currently Pursuing</option>
+                                            <option value="completed">Completed</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="graduationYear">Graduation Year *</label>
+                                        <select id="graduationYear" name="graduationYear" required>
+                                            <option value="">Select Year</option>
+                                            <% for(let year = new Date().getFullYear(); year <= new Date().getFullYear() + 4; year++) { %>
+                                                <option value="<%= year %>"><%= year %></option>
+                                            <% } %>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="cgpa">CGPA/Percentage *</label>
+                                        <input type="number" id="cgpa" name="cgpa" step="0.01" min="0" max="10" placeholder="e.g., 8.5" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="marksType">Marks Type</label>
+                                        <select id="marksType" name="marksType">
+                                            <option value="cgpa">CGPA (out of 10)</option>
+                                            <option value="percentage">Percentage (%)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Skills & Expertise -->
+                            <div class="form-section">
+                                <h3>Skills & Expertise</h3>
+                                <div class="form-group">
+                                    <label for="skills">Technical Skills *</label>
+                                    <textarea id="skills" name="skills" placeholder="List your technical skills separated by commas (e.g., JavaScript, React, Node.js, Python)" rows="3" required></textarea>
+                                    <small>Separate skills with commas</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="projects">Projects & Experience</label>
+                                    <textarea id="projects" name="projects" placeholder="Briefly describe your key projects, internships, or work experience..." rows="4"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Extracurricular Activities -->
+                            <div class="form-section">
+                                <h3>Extracurricular Activities & Achievements</h3>
+                                <div class="form-group">
+                                    <label for="extracurricular">Activities & Achievements</label>
+                                    <textarea id="extracurricular" name="extracurricular" placeholder="Mention your extracurricular activities, positions of responsibility, awards, certifications, etc." rows="4"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Documents -->
+                            <div class="form-section">
+                                <h3>Documents</h3>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="resume">Upload Resume *</label>
+                                        <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx" required>
+                                        <small>Accepted formats: PDF, DOC, DOCX (Max 5MB)</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="coverLetterFile">Cover Letter (Optional)</label>
+                                        <input type="file" id="coverLetterFile" name="coverLetterFile" accept=".pdf,.doc,.docx">
+                                        <small>Upload your cover letter document</small>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="coverLetterText">Cover Letter Text (Optional)</label>
+                                    <textarea id="coverLetterText" name="coverLetterText" placeholder="Write your cover letter here or upload a document above..." rows="6"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Declaration -->
+                            <div class="form-section">
+                                <div class="form-group checkbox-group">
+                                    <input type="checkbox" id="declaration" name="declaration" required>
+                                    <label for="declaration">
+                                        I declare that all information provided in this application is true and accurate to the best of my knowledge.
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary btn-large" id="submitBtn">
+                                    <i class="fas fa-paper-plane"></i> Submit Application
+                                </button>
+                                <button type="button" class="btn-outline" onclick="closeApplySection()">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+    // Apply for job function
+            function applyForJob() {
+                document.getElementById('applySection').style.display = 'block';
+                document.getElementById('applySection').scrollIntoView({ behavior: 'smooth' });
+            }
+
+            function closeApplySection() {
+                document.getElementById('applySection').style.display = 'none';
+            }
+
+            // Toggle save job
+            async function toggleSaveJob() {
+                try {
+                    const response = await fetch('/student/save-job', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            jobId: '<%= job._id %>'
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const saveIcon = document.getElementById('saveIcon');
+                        const saveText = document.getElementById('saveText');
+                        
+                        if (data.isSaved) {
+                            saveIcon.className = 'fas fa-bookmark';
+                            saveText.textContent = 'Saved';
+                        } else {
+                            saveIcon.className = 'far fa-bookmark';
+                            saveText.textContent = 'Save Job';
+                        }
+                        
+                        showNotification(data.message, 'success');
+                    } else {
+                        showNotification(data.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error saving job:', error);
+                    showNotification('Failed to save job', 'error');
+                }
+            }
+
+            // Enhanced form validation
+            function validateForm() {
+                let isValid = true;
+                const requiredFields = document.querySelectorAll('#applyForm [required]');
+                
+                requiredFields.forEach(field => {
+                    const formGroup = field.closest('.form-group');
+                    if (!field.value.trim()) {
+                        formGroup.classList.add('error');
+                        isValid = false;
+                    } else {
+                        formGroup.classList.remove('error');
+                    }
+                });
+
+                // Validate email
+                const emailField = document.getElementById('email');
+                if (emailField && emailField.value && !isValidEmail(emailField.value)) {
+                    emailField.closest('.form-group').classList.add('error');
+                    isValid = false;
+                }
+
+                // Validate phone
+                const phoneField = document.getElementById('phone');
+                if (phoneField && phoneField.value && !isValidPhone(phoneField.value)) {
+                    phoneField.closest('.form-group').classList.add('error');
+                    isValid = false;
+                }
+
+                // Validate file types
+                const resumeFile = document.getElementById('resume');
+                if (resumeFile && resumeFile.files[0]) {
+                    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+                    if (!allowedTypes.includes(resumeFile.files[0].type)) {
+                        resumeFile.closest('.form-group').classList.add('error');
+                        isValid = false;
+                    }
+                }
+
+                // Check declaration
+                const declaration = document.getElementById('declaration');
+                if (!declaration.checked) {
+                    declaration.closest('.form-group').classList.add('error');
+                    isValid = false;
+                }
+
+                return isValid;
+            }
+
+            function isValidEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            }
+
+            function isValidPhone(phone) {
+                const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+                return phoneRegex.test(phone.replace(/\s/g, ''));
+            }
+
+            // Enhanced form submission with FormData
+            document.getElementById('applyForm')?.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (!validateForm()) {
+                    showNotification('Please fill all required fields correctly', 'error');
+                    return;
+                }
+
+                const submitBtn = document.getElementById('submitBtn');
+                const originalText = submitBtn.innerHTML;
+                
+                // Show loading state
+                submitBtn.innerHTML = 'Submitting...';
+                submitBtn.classList.add('btn-loading');
+                submitBtn.disabled = true;
+
+                try {
+                    const formData = new FormData(this);
+                    
+                    const response = await fetch('/student/apply-job', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showNotification(data.message, 'error');
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.classList.remove('btn-loading');
+                        submitBtn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('Error applying for job:', error);
+                    showNotification('Failed to submit application', 'error');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.classList.remove('btn-loading');
+                    submitBtn.disabled = false;
+                }
+            });
+
+            // Real-time form validation
+            document.querySelectorAll('#applyForm input, #applyForm select, #applyForm textarea').forEach(field => {
+                field.addEventListener('blur', function() {
+                    const formGroup = this.closest('.form-group');
+                    if (this.hasAttribute('required') && !this.value.trim()) {
+                        formGroup.classList.add('error');
+                    } else {
+                        formGroup.classList.remove('error');
+                    }
+
+                    // Specific validations
+                    if (this.type === 'email' && this.value) {
+                        if (!isValidEmail(this.value)) {
+                            formGroup.classList.add('error');
+                        } else {
+                            formGroup.classList.remove('error');
+                        }
+                    }
+
+                    if (this.id === 'phone' && this.value) {
+                        if (!isValidPhone(this.value)) {
+                            formGroup.classList.add('error');
+                        } else {
+                            formGroup.classList.remove('error');
+                        }
+                    }
+                });
+
+                // For file inputs, validate on change
+                if (field.type === 'file') {
+                    field.addEventListener('change', function() {
+                        const formGroup = this.closest('.form-group');
+                        if (this.files[0]) {
+                            const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+                            if (!allowedTypes.includes(this.files[0].type)) {
+                                formGroup.classList.add('error');
+                                showNotification('Please upload only PDF or Word documents', 'error');
+                            } else {
+                                formGroup.classList.remove('error');
+                            }
+                        }
+                    });
+                }
+            });
+
+            // File size validation
+            document.getElementById('resume')?.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+                    if (file.size > maxSize) {
+                        showNotification('Resume file size must be less than 5MB', 'error');
+                        this.value = '';
+                        this.closest('.form-group').classList.add('error');
+                    }
+                }
+            });
+
+            document.getElementById('coverLetterFile')?.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+                    if (file.size > maxSize) {
+                        showNotification('Cover letter file size must be less than 5MB', 'error');
+                        this.value = '';
+                        this.closest('.form-group').classList.add('error');
+                    }
+                }
+            });
+
+            // Delete application function
+            async function deleteApplication() {
+                const applicationId = document.getElementById('applicationId')?.value;
+                
+                if (!applicationId) {
+                    showNotification('Application ID not found', 'error');
+                    return;
+                }
+
+                if (!confirm('Are you sure you want to delete this application? This action cannot be undone.')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/student/delete-application', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            applicationId: applicationId
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showNotification('Application deleted successfully', 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showNotification(data.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting application:', error);
+                    showNotification('Failed to delete application', 'error');
+                }
+            }
+
+            // Notification function
+            function showNotification(message, type) {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                notification.innerHTML = `
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                    <span>${message}</span>
+                `;
+
+                // Add styles
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? '#48BB78' : '#F56565'};
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    z-index: 1000;
+                    animation: slideIn 0.3s ease;
+                `;
+
+                document.body.appendChild(notification);
+
+                // Remove after 5 seconds
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            document.body.removeChild(notification);
+                        }
+                    }, 300);
+                }, 5000);
+            }
+
+            // Add CSS animations
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Auto-fill form with profile data if available
+            document.addEventListener('DOMContentLoaded', function() {
+                // This would typically come from the server, but for now we'll use placeholders
+                const profileData = {
+                    fullName: '<%= user.name %>',
+                    email: '<%= user.email %>',
+                    // Add more fields as needed from student profile
+                };
+
+                // Auto-fill known fields
+                document.getElementById('fullName').value = profileData.fullName;
+                document.getElementById('email').value = profileData.email;
+            });
+    </script>
+</body>
+</html>

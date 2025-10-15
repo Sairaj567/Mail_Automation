@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Applicant Details - Placement Portal</title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/company.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .applicant-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .applicant-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .applicant-info h1 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .applicant-meta {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #666;
+        }
+
+        .applicant-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-applied { background: #E3F2FD; color: #1976D2; }
+        .status-under_review { background: #FFF3E0; color: #F57C00; }
+        .status-shortlisted { background: #E8F5E8; color: #388E3C; }
+        .status-interview { background: #F3E5F5; color: #7B1FA2; }
+        .status-rejected { background: #FFEBEE; color: #D32F2F; }
+        .status-accepted { background: #E8F5E8; color: #2E7D32; }
+
+        .applicant-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 968px) {
+            .applicant-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .info-card h3 {
+            color: #7E57C2;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 0.5rem;
+        }
+
+        .info-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .info-value {
+            color: #666;
+            text-align: right;
+        }
+
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .skill-tag {
+            background: #7E57C2;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 1rem;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .message-company {
+            background: #7E57C2;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .message-student {
+            background: #f0f0f0;
+            color: #333;
+            align-self: flex-start;
+        }
+
+        .message-sender {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 0.5rem;
+        }
+
+        .chat-input {
+            padding: 1.5rem;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .chat-input button {
+            background: #7E57C2;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .interview-schedule {
+            background: #FFF3E0;
+            border: 2px dashed #FFB74D;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-building"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/company/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/company/applicants" class="nav-item active">
+                    <i class="fas fa-users"></i>
+                    <span>Applicants</span>
+                </a>
+                <a href="/company/jobs" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Jobs</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Applicant Details</h1>
+                    <p>Review candidate application and profile</p>
+                </div>
+            </header>
+
+            <div class="applicant-container">
+                <!-- Back Link -->
+                <a href="/company/applicants" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Applicants
+                </a>
+
+                <!-- Applicant Header -->
+                <div class="applicant-header">
+                    <div class="applicant-info">
+                        <h1><%= application.personalInfo.fullName %></h1>
+                        <p>Applied for: <strong><%= application.job.title %></strong></p>
+                        <div class="applicant-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-envelope"></i>
+                                <span><%= application.personalInfo.email %></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-phone"></i>
+                                <span><%= application.personalInfo.phone %></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>Applied: <%= application.appliedDate.toLocaleDateString() %></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="applicant-actions">
+                        <span class="status-badge status-<%= application.status %>">
+                            <%= application.status.replace('_', ' ').toUpperCase() %>
+                        </span>
+                        <button class="btn-primary" onclick="updateStatus('shortlisted')">
+                            Shortlist
+                        </button>
+                        <button class="btn-outline" onclick="scheduleInterview()">
+                            Schedule Interview
+                        </button>
+                        <button class="btn-danger" onclick="updateStatus('rejected')">
+                            Reject
+                        </button>
+                    </div>
+                </div>
+
+                <div class="applicant-content">
+                    <!-- Main Content -->
+                    <div class="main-content-section">
+                        <!-- Education -->
+                        <div class="info-card">
+                            <h3>Educational Background</h3>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">College/University</span>
+                                    <span class="info-value"><%= application.education.college %></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Degree/Course</span>
+                                    <span class="info-value"><%= application.education.degree %></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Status</span>
+                                    <span class="info-value"><%= application.education.status.toUpperCase() %></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Graduation Year</span>
+                                    <span class="info-value"><%= application.education.graduationYear %></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Academic Performance</span>
+                                    <span class="info-value">
+                                        <%= application.education.cgpa %> 
+                                        <%= application.education.marksType === 'cgpa' ? 'CGPA' : '%' %>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Skills -->
+                        <div class="info-card">
+                            <h3>Skills & Expertise</h3>
+                            <div class="skills-container">
+                                <% application.skills.forEach(skill => { %>
+                                <span class="skill-tag"><%= skill %></span>
+                                <% }) %>
+                            </div>
+                        </div>
+
+                        <!-- Projects & Experience -->
+                        <% if (application.projects) { %>
+                        <div class="info-card">
+                            <h3>Projects & Experience</h3>
+                            <p style="white-space: pre-wrap; line-height: 1.6;"><%= application.projects %></p>
+                        </div>
+                        <% } %>
+
+                        <!-- Extracurricular -->
+                        <% if (application.extracurricular) { %>
+                        <div class="info-card">
+                            <h3>Extracurricular Activities & Achievements</h3>
+                            <p style="white-space: pre-wrap; line-height: 1.6;"><%= application.extracurricular %></p>
+                        </div>
+                        <% } %>
+
+                        <!-- Cover Letter -->
+                        <% if (application.coverLetterText) { %>
+                        <div class="info-card">
+                            <h3>Cover Letter</h3>
+                            <p style="white-space: pre-wrap; line-height: 1.6;"><%= application.coverLetterText %></p>
+                        </div>
+                        <% } %>
+                    </div>
+
+                    <!-- Sidebar -->
+                    <div class="sidebar-section">
+                        <!-- Documents -->
+                        <div class="info-card">
+                            <h3>Documents</h3>
+                            <div class="document-actions">
+                                <a href="/uploads/resumes/<%= application.resume %>" 
+                                   class="btn-primary" 
+                                   target="_blank" 
+                                   download>
+                                    <i class="fas fa-download"></i> Resume
+                                </a>
+                                <% if (application.coverLetterFile) { %>
+                                <a href="/uploads/cover-letters/<%= application.coverLetterFile %>" 
+                                   class="btn-outline" 
+                                   target="_blank" 
+                                   download>
+                                    <i class="fas fa-download"></i> Cover Letter
+                                </a>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="info-card">
+                            <h3>Contact Information</h3>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Email</span>
+                                    <span class="info-value"><%= application.personalInfo.email %></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Phone</span>
+                                    <span class="info-value"><%= application.personalInfo.phone %></span>
+                                </div>
+                                <% if (application.personalInfo.linkedin) { %>
+                                <div class="info-item">
+                                    <span class="info-label">LinkedIn</span>
+                                    <span class="info-value">
+                                        <a href="<%= application.personalInfo.linkedin %>" target="_blank">View Profile</a>
+                                    </span>
+                                </div>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <!-- Interview Schedule -->
+                        <% if (application.interviewSchedule) { %>
+                        <div class="info-card">
+                            <h3>Interview Schedule</h3>
+                            <div class="interview-schedule">
+                                <p><strong>Date:</strong> <%= application.interviewSchedule.scheduledDate.toLocaleString() %></p>
+                                <p><strong>Type:</strong> <%= application.interviewSchedule.interviewType.replace('_', ' ').toUpperCase() %></p>
+                                <% if (application.interviewSchedule.interviewLink) { %>
+                                <p><strong>Link:</strong> <a href="<%= application.interviewSchedule.interviewLink %>" target="_blank">Join Interview</a></p>
+                                <% } %>
+                                <% if (application.interviewSchedule.location) { %>
+                                <p><strong>Location:</strong> <%= application.interviewSchedule.location %></p>
+                                <% } %>
+                                <% if (application.interviewSchedule.notes) { %>
+                                <p><strong>Notes:</strong> <%= application.interviewSchedule.notes %></p>
+                                <% } %>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <!-- Chat (Only for accepted candidates) -->
+                        <% if (application.status === 'accepted') { %>
+                        <div class="info-card">
+                            <h3>Communication</h3>
+                            <div class="chat-container">
+                                <div class="chat-messages" id="chatMessages">
+                                    <% application.chatMessages.forEach(msg => { %>
+                                    <div class="message message-<%= msg.sender %>">
+                                        <div class="message-sender">
+                                            <%= msg.sender === 'company' ? 'You' : application.personalInfo.fullName %>
+                                        </div>
+                                        <div class="message-content"><%= msg.message %></div>
+                                        <div class="message-time">
+                                            <%= msg.timestamp.toLocaleString() %>
+                                        </div>
+                                    </div>
+                                    <% }) %>
+                                </div>
+                                <div class="chat-input">
+                                    <input type="text" id="chatInput" placeholder="Type your message...">
+                                    <button onclick="sendMessage()">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Update application status
+        async function updateStatus(status) {
+            try {
+                const response = await fetch('/company/update-application-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        applicationId: '<%= application._id %>',
+                        status: status
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Status updated successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+                alert('Failed to update status');
+            }
+        }
+
+        // Schedule interview
+        function scheduleInterview() {
+            const date = prompt('Enter interview date and time (YYYY-MM-DD HH:MM):');
+            const type = prompt('Enter interview type (phone/video/in_person):');
+            const link = prompt('Enter interview link (if video):');
+            const location = prompt('Enter location (if in_person):');
+            const notes = prompt('Enter any additional notes:');
+
+            if (date && type) {
+                fetch('/company/schedule-interview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        applicationId: '<%= application._id %>',
+                        scheduledDate: date,
+                        interviewType: type,
+                        interviewLink: link,
+                        location: location,
+                        notes: notes
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Interview scheduled successfully!');
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error scheduling interview:', error);
+                    alert('Failed to schedule interview');
+                });
+            }
+        }
+
+        // Chat functionality
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            try {
+                const response = await fetch('/company/send-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        applicationId: '<%= application._id %>',
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    input.value = '';
+                    // Add message to chat UI
+                    addMessageToChat('company', message);
+                } else {
+                    alert('Error sending message');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Failed to send message');
+            }
+        }
+
+        function addMessageToChat(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${sender}`;
+            messageDiv.innerHTML = `
+                <div class="message-sender">
+                    ${sender === 'company' ? 'You' : '<%= application.personalInfo.fullName %>'}
+                </div>
+                <div class="message-content">${message}</div>
+                <div class="message-time">
+                    ${new Date().toLocaleString()}
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+</body>
+</html>

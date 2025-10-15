@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/jobs.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/student/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/student/profile" class="nav-item">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="/student/jobs" class="nav-item active">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Job Listings</span>
+                </a>
+                <a href="/student/applications" class="nav-item">
+                    <i class="fas fa-file-alt"></i>
+                    <span>My Applications</span>
+                </a>
+                <a href="/student/resume" class="nav-item">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>My Resume</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Job Listings</h1>
+                    <p>Find your dream job from top companies</p>
+                    <% if (isDemo) { %>
+                        <div class="demo-banner">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Demo mode: You can browse jobs but applications won't be saved.</span>
+                        </div>
+                    <% } %>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <span class="user-name"><%= user.name %></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="jobs-content">
+                <!-- Search and Filters -->
+                <div class="jobs-header">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="jobSearch" placeholder="Search jobs by title, company, or skills..." 
+                               value="<%= filters.search || '' %>">
+                    </div>
+                    <div class="filter-controls">
+                        <select id="jobTypeFilter">
+                            <option value="">All Job Types</option>
+                            <option value="internship" <%= filters.jobType === 'internship' ? 'selected' : '' %>>Internship</option>
+                            <option value="fulltime" <%= filters.jobType === 'fulltime' ? 'selected' : '' %>>Full Time</option>
+                            <option value="parttime" <%= filters.jobType === 'parttime' ? 'selected' : '' %>>Part Time</option>
+                            <option value="remote" <%= filters.jobType === 'remote' ? 'selected' : '' %>>Remote</option>
+                        </select>
+                        <select id="experienceFilter">
+                            <option value="">All Experience Levels</option>
+                            <option value="fresher" <%= filters.experience === 'fresher' ? 'selected' : '' %>>Fresher</option>
+                            <option value="0-2" <%= filters.experience === '0-2' ? 'selected' : '' %>>0-2 Years</option>
+                            <option value="2-5" <%= filters.experience === '2-5' ? 'selected' : '' %>>2-5 Years</option>
+                            <option value="5+" <%= filters.experience === '5+' ? 'selected' : '' %>>5+ Years</option>
+                        </select>
+                        <button class="btn-primary" id="applyFilters">Apply Filters</button>
+                    </div>
+                </div>
+
+                <!-- Jobs Count -->
+                <div class="jobs-count">
+                    <p><strong><%= jobs ? jobs.length : 0 %></strong> jobs found</p>
+                </div>
+
+                <!-- Jobs Grid -->
+                <div class="jobs-grid">
+                    <% if (jobs && jobs.length > 0) { %>
+                        <% jobs.forEach(job => { %>
+                            <div class="job-card" data-job-type="<%= job.jobType %>" data-experience="<%= job.experienceLevel %>">
+                                <div class="job-header">
+                                    <div class="company-logo">
+                                        <i class="fas fa-building"></i>
+                                    </div>
+                                    <div class="job-info">
+                                        <h3><%= job.title %></h3>
+                                        <p class="company-name"><%= job.company %></p>
+                                        <div class="job-meta">
+                                            <span class="location"><i class="fas fa-map-marker-alt"></i> <%= job.location %></span>
+                                            <span class="salary"><i class="fas fa-money-bill-wave"></i> <%= job.salary %></span>
+                                        </div>
+                                    </div>
+                                    <div class="job-type <%= job.jobType %>">
+                                        <%= job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) %>
+                                    </div>
+                                </div>
+                                
+                                <div class="job-description">
+                                    <p><%= job.description.substring(0, 150) %>...</p>
+                                </div>
+                                
+                                <div class="job-skills">
+                                    <% if (job.skills && job.skills.length > 0) { %>
+                                        <% job.skills.slice(0, 4).forEach(skill => { %>
+                                            <span class="skill-tag"><%= skill %></span>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <span class="skill-tag">Various Skills</span>
+                                    <% } %>
+                                </div>
+                                
+                                <div class="job-footer">
+                                    <div class="posted-date">
+                                        <i class="far fa-clock"></i> 
+                                        Posted <%= job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently' %>
+                                    </div>
+                                    <div class="job-actions">
+                                        <button class="btn-secondary save-job" data-job-id="<%= job._id %>">
+                                            <i class="far fa-bookmark"></i> Save
+                                        </button>
+                                        <a href="/student/jobs/<%= job._id %>" class="btn-primary">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div class="no-jobs">
+                            <i class="fas fa-search fa-3x"></i>
+                            <h3>No jobs found</h3>
+                            <p>Try adjusting your search criteria or check back later for new opportunities.</p>
+                            <% if (filters.search || filters.jobType || filters.experience) { %>
+                                <button class="btn-primary" id="clearFilters">Clear All Filters</button>
+                            <% } %>
+                        </div>
+                    <% } %>
+                </div>
+
+                <!-- Load More -->
+                <% if (jobs && jobs.length >= 8) { %>
+                <div class="load-more">
+                    <button class="btn-secondary" id="loadMoreJobs">
+                        <i class="fas fa-plus"></i> Load More Jobs
+                    </button>
+                </div>
+                <% } %>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/jobs.js"></script>
+</body>
+</html>

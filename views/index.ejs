@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .hero-section {
+            min-height: 80vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(139, 95, 191, 0.1) 0%, rgba(95, 123, 244, 0.1) 100%);
+            padding: 4rem 2rem;
+        }
+        
+        .hero-content h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-dark);
+            line-height: 1.2;
+        }
+        
+        .hero-content p {
+            font-size: 1.3rem;
+            color: var(--dark-gray);
+            margin-bottom: 2.5rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+        
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 4rem;
+        }
+        
+        .feature-card {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-purple), var(--primary-blue));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            margin: 0 auto 1.5rem;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+        
+        .feature-card p {
+            color: var(--dark-gray);
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero-content p {
+                font-size: 1.1rem;
+            }
+            
+            .hero-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .hero-buttons .btn-primary,
+            .hero-buttons .btn-secondary {
+                width: 100%;
+                max-width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation">
+        <div class="bg-bubble bubble-1"></div>
+        <div class="bg-bubble bubble-2"></div>
+        <div class="bg-bubble bubble-3"></div>
+        <div class="bg-bubble bubble-4"></div>
+    </div>
+
+    <header class="auth-header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>PlacementPortal</span>
+            </div>
+            <nav class="auth-nav">
+                <% if (user) { %>
+                    <a href="/<%= user.role %>/dashboard" class="nav-link">Dashboard</a>
+                    <a href="/auth/logout" class="nav-link">Logout</a>
+                <% } else { %>
+                    <a href="/auth" class="nav-link">Login/Signup</a>
+                    <a href="#features" class="nav-link">Features</a>
+                    <a href="#about" class="nav-link">About</a>
+                <% } %>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="container">
+                <div class="hero-content">
+                    <h1>Launch Your Career with Placement Portal</h1>
+                    <p>Connect with top companies, discover amazing opportunities, and kickstart your professional journey. Our platform bridges the gap between talented students and innovative employers.</p>
+                    
+                    <div class="hero-buttons">
+                        <% if (user) { %>
+                            <a href="/<%= user.role %>/dashboard" class="btn-primary" style="padding: 1rem 2rem; font-size: 1.1rem;">
+                                Go to Dashboard
+                            </a>
+                        <% } else { %>
+                            <a href="/auth" class="btn-primary" style="padding: 1rem 2rem; font-size: 1.1rem;">
+                                Get Started
+                            </a>
+                            <a href="/auth?role=student" class="btn-secondary" style="padding: 1rem 2rem; font-size: 1.1rem;">
+                                I'm a Student
+                            </a>
+                        <% } %>
+                    </div>
+
+                    <!-- Features Grid -->
+                    <div class="features-grid" id="features">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-user-graduate"></i>
+                            </div>
+                            <h3>For Students</h3>
+                            <p>Find internships and full-time positions, track applications, and build your professional profile with our comprehensive student tools.</p>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <h3>For Companies</h3>
+                            <p>Discover talented candidates, post job openings, and streamline your recruitment process with our efficient hiring platform.</p>
+                        </div>
+                        
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-university"></i>
+                            </div>
+                            <h3>For Colleges</h3>
+                            <p>Manage placements, track student progress, and collaborate with companies to ensure successful career outcomes for your students.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section style="background: var(--white); padding: 4rem 2rem; text-align: center;">
+            <div class="container">
+                <h2 style="font-size: 2.5rem; margin-bottom: 3rem; color: var(--text-dark);">Why Choose Placement Portal?</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; max-width: 1000px; margin: 0 auto;">
+                    <div>
+                        <h3 style="font-size: 3rem; color: var(--primary-purple); margin-bottom: 0.5rem;">500+</h3>
+                        <p style="color: var(--dark-gray); font-weight: 500;">Companies Registered</p>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 3rem; color: var(--primary-purple); margin-bottom: 0.5rem;">10K+</h3>
+                        <p style="color: var(--dark-gray); font-weight: 500;">Students Placed</p>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 3rem; color: var(--primary-purple); margin-bottom: 0.5rem;">2K+</h3>
+                        <p style="color: var(--dark-gray); font-weight: 500;">Job Openings</p>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 3rem; color: var(--primary-purple); margin-bottom: 0.5rem;">50+</h3>
+                        <p style="color: var(--dark-gray); font-weight: 500;">Colleges Partnered</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="auth-footer">
+        <div class="container">
+            <p>&copy; 2023 Placement Portal. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

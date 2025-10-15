@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .jobs-container {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #E2E8F0;
+        }
+        
+        .page-header h1 {
+            margin: 0;
+            color: var(--text-dark);
+            font-size: 1.8rem;
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: #F8FAFC;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary-purple);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            margin: 0;
+            font-size: 2rem;
+            color: var(--primary-purple);
+            font-weight: 700;
+        }
+        
+        .stat-card p {
+            margin: 0.5rem 0 0 0;
+            color: #64748B;
+            font-size: 0.9rem;
+        }
+        
+        .jobs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .jobs-table th {
+            background: #F8FAFC;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-dark);
+            border-bottom: 2px solid #E2E8F0;
+        }
+        
+        .jobs-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #E2E8F0;
+            vertical-align: middle;
+        }
+        
+        .job-title {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .job-meta {
+            color: #64748B;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+        
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        
+        .status-active {
+            background: #E8F5E8;
+            color: #48BB78;
+        }
+        
+        .status-inactive {
+            background: #FFF3E0;
+            color: #ED8936;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-icon {
+            padding: 0.5rem;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            background: white;
+            color: #64748B;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-icon:hover {
+            background: var(--primary-purple);
+            color: white;
+            border-color: var(--primary-purple);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-purple), #9C77D4);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(139, 95, 191, 0.3);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748B;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #CBD5E0;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+        }
+        
+        .filter-select {
+            padding: 0.5rem 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 6px;
+            background: white;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .jobs-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-building"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/company/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/company/profile-view" class="nav-item">
+                    <i class="fas fa-eye"></i>
+                    <span>View Profile</span>
+                </a>
+                <a href="/company/profile" class="nav-item">
+                    <i class="fas fa-edit"></i>
+                    <span>Edit Profile</span>
+                </a>
+                <a href="/company/post-job" class="nav-item">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Post Jobs</span>
+                </a>
+                <a href="/company/jobs" class="nav-item active">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Manage Jobs</span>
+                </a>
+                <a href="/company/applicants" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>Applicants</span>
+                </a>
+                <a href="/company/analytics" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Manage Jobs</h1>
+                    <p>View and manage your job postings</p>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <% if (companyProfile && companyProfile.logo) { %>
+                                <img src="/uploads/company-logos/<%= companyProfile.logo %>" alt="Company Logo" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                            <% } else { %>
+                                <i class="fas fa-building"></i>
+                            <% } %>
+                        </div>
+                        <span class="user-name"><%= (companyProfile && companyProfile.companyName) || user.name %></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="jobs-container">
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <h1>Your Job Postings</h1>
+                        <a href="/company/post-job" class="btn-primary">
+                            <i class="fas fa-plus"></i> Post New Job
+                        </a>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <h3><%= jobs.length %></h3>
+                            <p>Total Jobs</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3><%= jobs.filter(job => job.isActive).length %></h3>
+                            <p>Active Jobs</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3><%= jobs.filter(job => !job.isActive).length %></h3>
+                            <p>Paused Jobs</p>
+                        </div>
+                    </div>
+
+                    <% if (jobs.length > 0) { %>
+                        <!-- Jobs Table -->
+                        <div class="table-responsive">
+                            <table class="jobs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Job Title</th>
+                                        <th>Location</th>
+                                        <th>Type</th>
+                                        <th>Salary</th>
+                                        <th>Status</th>
+                                        <th>Posted Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% jobs.forEach(job => { %>
+                                        <tr>
+                                            <td>
+                                                <div class="job-title"><%= job.title %></div>
+                                                <div class="job-meta">
+                                                    <% if (job.applicationsCount) { %>
+                                                        <%= job.applicationsCount %> applications
+                                                    <% } else { %>
+                                                        No applications yet
+                                                    <% } %>
+                                                </div>
+                                            </td>
+                                            <td><%= job.location %></td>
+                                            <td>
+                                                <span style="text-transform: capitalize;">
+                                                    <%= job.jobType.replace('-', ' ') %>
+                                                </span>
+                                            </td>
+                                            <td><%= job.salary || 'Not specified' %></td>
+                                            <td>
+                                                <span class="status-badge <%= job.isActive ? 'status-active' : 'status-inactive' %>">
+                                                    <%= job.isActive ? 'Active' : 'Paused' %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <%= new Date(job.createdAt).toLocaleDateString() %>
+                                            </td>
+                                            <td>
+                                                <div class="action-buttons">
+                                                    <button class="btn-icon" title="View Applicants">
+                                                        <i class="fas fa-users"></i>
+                                                    </button>
+                                                    <button class="btn-icon" title="Edit Job">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn-icon" title="Toggle Status" onclick="toggleJobStatus('<%= job._id %>', '<%= job.isActive %>')">
+                                                        <i class="fas <%= job.isActive ? 'fa-pause' : 'fa-play' %>"></i>
+                                                    </button>
+                                                    <button class="btn-icon" title="Delete Job" onclick="deleteJob('<%= job._id %>')" style="color: #EF4444;">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    <% } else { %>
+                        <!-- Empty State -->
+                        <div class="empty-state">
+                            <i class="fas fa-briefcase"></i>
+                            <h3>No Jobs Posted Yet</h3>
+                            <p>Start by posting your first job to attract talented students</p>
+                            <a href="/company/post-job" class="btn-primary" style="margin-top: 1rem;">
+                                <i class="fas fa-plus"></i> Post Your First Job
+                            </a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Toggle job status (active/inactive)
+        async function toggleJobStatus(jobId, currentStatus) {
+            try {
+                const response = await fetch(`/company/jobs/${jobId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        isActive: !currentStatus
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                    // Reload page to reflect changes
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error toggling job status:', error);
+                showNotification('Failed to update job status', 'error');
+            }
+        }
+
+        // Delete job
+        async function deleteJob(jobId) {
+            if (confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+                try {
+                    const response = await fetch(`/company/jobs/${jobId}`, {
+                        method: 'DELETE'
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        // Reload page to reflect changes
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showNotification(data.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting job:', error);
+                    showNotification('Failed to delete job', 'error');
+                }
+            }
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <i class="fas fa-${getNotificationIcon(type)}"></i>
+                    <span>${message}</span>
+                </div>
+                <button class="notification-close" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            // Add styles if not already added
+            if (!document.querySelector('#notification-styles')) {
+                const styles = document.createElement('style');
+                styles.id = 'notification-styles';
+                styles.textContent = `
+                    .notification {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: white;
+                        padding: 1rem 1.5rem;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        border-left: 4px solid #8B5FBF;
+                        z-index: 10000;
+                        display: flex;
+                        align-items: center;
+                        gap: 1rem;
+                        max-width: 400px;
+                        animation: slideInRight 0.3s ease;
+                    }
+                    .notification-success { border-left-color: #10B981; }
+                    .notification-error { border-left-color: #EF4444; }
+                    .notification-warning { border-left-color: #F59E0B; }
+                    .notification-info { border-left-color: #5F7BF4; }
+                    .notification-content {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        flex: 1;
+                    }
+                    .notification-close {
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        color: #64748B;
+                        padding: 0.25rem;
+                    }
+                    @keyframes slideInRight {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(styles);
+            }
+
+            document.body.appendChild(notification);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                success: 'check-circle',
+                error: 'exclamation-circle',
+                warning: 'exclamation-triangle',
+                info: 'info-circle'
+            };
+            return icons[type] || 'info-circle';
+        }
+    </script>
+</body>
+</html>
