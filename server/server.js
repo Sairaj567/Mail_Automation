@@ -1,37 +1,71 @@
+// server/server.js
+
 const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
+const MongoStore = require('connect-mongo'); // To store sessions in MongoDB
 const path = require('path');
-require('dotenv').config();
+const helmet = require('helmet'); // For security headers
+const morgan = require('morgan'); // For request logging
+const cookieParser = require('cookie-parser'); // If needed, though session handles cookies
+require('dotenv').config(); // Load environment variables from .env file
 
 const app = express();
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// --- Middleware ---
 
+// Basic Security Headers
+// app.use(helmet()); // Consider re-enabling after testing if Content Security Policy causes issues
+
+// Logging (use 'dev' for development, consider 'combined' for production)
+app.use(morgan('dev'));
+
+// Body Parsers
+app.use(express.json()); // For parsing application/json
+app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
+
+// Cookie Parser (if needed separately from session)
+app.use(cookieParser());
+
+// Static Files Setup
+// Serve files from 'public' directory at the root URL
 app.use(express.static(path.join(__dirname, '../public')));
+// Serve specific client-side assets from 'client' directory under specific paths
+// Ensure these point to the correct directories if you reorganized
 app.use('/css', express.static(path.join(__dirname, '../client/css')));
 app.use('/js', express.static(path.join(__dirname, '../client/js')));
-app.use('/images', express.static(path.join(__dirname, '../client/images')));
-app.use('/uploads', express.static(path.join(__dirname, '../client/uploads')));
+// If you have images in client/images:
+// app.use('/images', express.static(path.join(__dirname, '../client/images')));
+// Serve uploaded files (ensure this path points to where uploads are saved)
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads'))); // Serve uploads from public/uploads
 
-// Session configuration
+// Session Configuration
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/placement_portal'; // Define URI here for session store
+
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'placement-portal-secret-key-2023',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { 
-        secure: false,
-        maxAge: 24 * 60 * 60 * 1000
+    secret: process.env.SESSION_SECRET || 'a-very-strong-secret-key-change-it', // CHANGE THIS to a strong secret from .env
+    resave: false, // Don't save session if unmodified
+    saveUninitialized: false, // Don't create session until something stored
+    store: MongoStore.create({ mongoUrl: MONGODB_URI }), // Store session in MongoDB
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (requires HTTPS)
+        httpOnly: true, // Prevent client-side JS from accessing the cookie
+        maxAge: 24 * 60 * 60 * 1000 // Cookie expiry: 1 day
     }
 }));
 
-// View engine setup
+
+// --- View Engine Setup ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 
-// Helper function for role icons
+// Middleware to pass user session data to all views
+app.use((req, res, next) => {
+  res.locals.user = req.session.user || null; // Make user available in EJS templates
+  next();
+});
+
+// Helper function for role icons (Example - keep if used in EJS)
 app.locals.getRoleIcon = function(role) {
     const icons = {
         student: 'fas fa-user-graduate',
@@ -41,131 +75,123 @@ app.locals.getRoleIcon = function(role) {
     return icons[role] || 'fas fa-user';
 };
 
-// MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/placement_portal';
+
+// --- MongoDB Connection ---
+// MONGODB_URI is already defined above for session store
 mongoose.connect(MONGODB_URI)
 .then(() => console.log('Connected to MongoDB'))
-.catch(err => console.log('MongoDB connection error:', err));
+.catch(err => {
+    console.error('MongoDB connection error:', err);
+    // Exit process if DB connection fails on startup
+    process.exit(1);
+});
 
-// Import routes
+
+// --- Import Routers ---
 const authRoutes = require('./routers/authRoutes');
 const studentRoutes = require('./routers/studentRoutes');
 const companyRoutes = require('./routers/companyRoutes');
 const adminRoutes = require('./routers/adminRoutes');
+const n8nRoutes = require('./routers/n8nRoutes'); // Import the new n8n router
+// const mailRoutes = require('./routers/mailRoutes'); // Import mail router if you created it separately
 
 
-// Use routes
+// --- Use Routers ---
+// IMPORTANT: Define API/specific routes BEFORE generic ones and BEFORE error handlers
 app.use('/auth', authRoutes);
 app.use('/student', studentRoutes);
-app.use('/company', companyRoutes);
+app.use('/company', companyRoutes); // User-facing company routes
 app.use('/admin', adminRoutes);
+app.use('/api/n8n', n8nRoutes);   // <--- REGISTER n8n ROUTES HERE
+// app.use('/', mailRoutes); // Mount mail routes if created separately
 
+
+// --- Core Routes ---
 
 // Home route
 app.get('/', (req, res) => {
-    res.render('index', { 
+    // Pass user data to the index template
+    res.render('index', {
         title: 'Placement Portal - Find Your Dream Job',
-        user: req.session.user || null
+        user: req.session.user || null // Ensure user is passed
     });
 });
 
-// Simple dashboard routes for testing
-app.get('/student/dashboard', (req, res) => {
-    if (!req.session.user || req.session.user.role !== 'student') {
-        return res.redirect('/auth/login?role=student');
-    }
-    res.render('pages/student/dashboard', {
-        title: 'Student Dashboard',
-        user: req.session.user
-    });
-});
+// Remove simple dashboard routes if they are fully handled by specific routers
+// app.get('/student/dashboard', ...); // Should be handled by studentRoutes
+// app.get('/company/dashboard', ...); // Should be handled by companyRoutes
+// app.get('/admin/dashboard', ...);   // Should be handled by adminRoutes
 
-app.get('/company/dashboard', (req, res) => {
-    if (!req.session.user || req.session.user.role !== 'company') {
-        return res.redirect('/auth/login?role=company');
-    }
-    res.render('pages/company/dashboard', {
-        title: 'Company Dashboard',
-        user: req.session.user
-    });
-});
 
-app.get('/admin/dashboard', (req, res) => {
-    if (!req.session.user || req.session.user.role !== 'admin') {
-        return res.redirect('/auth/login?role=admin');
-    }
-    res.render('pages/admin/dashboard', {
-        title: 'Admin Dashboard',
-        user: req.session.user
-    });
-});
+// --- Error Handling Middleware ---
 
-// Error handling middleware
-// app.use((err, req, res, next) => {
-//     console.error('Error:', err.stack);
-//     res.status(500).render('error', { 
-//         title: 'Server Error',
-//         message: 'Something went wrong! Please try again later.'
-//     });
-// });
-
-// IMPROVED ERROR HANDLING MIDDLEWARE
+// Improved Error Handler (Must be defined AFTER all other app.use() and routes)
 app.use((err, req, res, next) => {
-    console.error('Error:', err.stack);
-    
-    // Check if it's an API route (starts with /company, /student, etc.)
-    if (req.path.startsWith('/company/') || req.path.startsWith('/student/') || req.path.startsWith('/auth/')) {
-        // Return JSON for API routes
-        return res.status(500).json({
+    console.error('Error Timestamp:', new Date().toISOString());
+    console.error('Request URL:', req.originalUrl);
+    console.error('Error Stack:', err.stack); // Log the full error stack
+
+    const statusCode = err.status || 500;
+    const message = err.message || 'An unexpected error occurred. Please try again later.';
+
+    // Check if the request likely expects JSON (adjust prefixes as needed)
+    const expectsJson = req.originalUrl.startsWith('/api/') ||
+                        req.originalUrl.startsWith('/company/') || // Assuming company routes might have API parts
+                        req.originalUrl.startsWith('/student/') || // Assuming student routes might have API parts
+                        req.originalUrl.startsWith('/auth/');    // Assuming auth routes might have API parts
+
+    // Avoid sending error page if headers already sent
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    if (expectsJson) {
+        // Send JSON error response for API routes
+        return res.status(statusCode).json({
             success: false,
-            message: 'Server error: ' + err.message
+            message: `Server error: ${message}`
         });
     } else {
-        // Return HTML for page routes
-        res.status(500).render('error', { 
-            title: 'Server Error',
-            message: 'Something went wrong! Please try again later.'
+        // Render HTML error page for non-API routes
+        res.status(statusCode).render('error', { // Ensure you have an 'error.ejs' view
+            title: `Error ${statusCode}`,
+            message: message,
+            user: req.session.user || null // Pass user data to error page if needed
         });
     }
 });
 
-// API-specific error handler for multer file upload errors
-app.use('/company/update-profile', (err, req, res, next) => {
-    if (err) {
-        console.error('File upload error:', err);
-        return res.status(400).json({
-            success: false,
-            message: 'File upload error: ' + err.message
-        });
-    }
-    next();
-});
 
-// 404 handler - FIXED: Use Express syntax
-// app.use((req, res) => {
-//     res.status(404).render('404', { 
-//         title: 'Page Not Found'
-//     });
-// });
-
-// 404 handler - FIXED: Use Express syntax
+// 404 Not Found Handler (Must be the VERY LAST route handler)
 app.use((req, res) => {
-    // Check if it's an API route
-    if (req.path.startsWith('/api/') || req.path.startsWith('/company/') || req.path.startsWith('/student/')) {
-        return res.status(404).json({
+    const statusCode = 404;
+    // Check if the request likely expects JSON
+     const expectsJson = req.originalUrl.startsWith('/api/') ||
+                        req.originalUrl.startsWith('/company/') ||
+                        req.originalUrl.startsWith('/student/') ||
+                        req.originalUrl.startsWith('/auth/');
+
+    console.warn(`404 Not Found: ${req.method} ${req.originalUrl}`); // Log 404 errors
+
+    if (expectsJson) {
+        return res.status(statusCode).json({
             success: false,
             message: 'API endpoint not found'
         });
     }
-    
-    res.status(404).render('404', { 
-        title: 'Page Not Found'
+
+    res.status(statusCode).render('404', { // Ensure you have a '404.ejs' view
+        title: 'Page Not Found',
+        user: req.session.user || null // Pass user data if needed
     });
 });
+// --- End Error Handling ---
 
+
+// --- Start Server ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+// Listen on 0.0.0.0 to be accessible from outside the host (e.g., from n8n Docker container)
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
-    
+    console.log(`   (Accessible externally, e.g., via http://<your_host_ip>:${PORT})`);
 });
-
