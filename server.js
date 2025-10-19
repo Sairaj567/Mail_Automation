@@ -31,11 +31,12 @@ app.use(cookieParser());
 // Serve files from 'public' directory at the root URL
 app.use(express.static(path.join(__dirname, '../public')));
 // Serve specific client-side assets from 'client' directory under specific paths
-app.use('/css', express.static(path.join(__dirname, '../client/css'))); //
-app.use('/js', express.static(path.join(__dirname, '../client/js'))); //
+// Ensure these point to the correct directories if you reorganized
+app.use('/css', express.static(path.join(__dirname, '../client/css')));
+app.use('/js', express.static(path.join(__dirname, '../client/js')));
 // If you have images in client/images:
 // app.use('/images', express.static(path.join(__dirname, '../client/images')));
-// Serve uploaded files (ensure this path is correct and secure)
+// Serve uploaded files (ensure this path points to where uploads are saved)
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads'))); // Serve uploads from public/uploads
 
 // Session Configuration
@@ -55,8 +56,8 @@ app.use(session({
 
 
 // --- View Engine Setup ---
-app.set('view engine', 'ejs'); //
-app.set('views', path.join(__dirname, '../views')); //
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, '../views'));
 
 // Middleware to pass user session data to all views
 app.use((req, res, next) => {
@@ -65,13 +66,13 @@ app.use((req, res, next) => {
 });
 
 // Helper function for role icons (Example - keep if used in EJS)
-app.locals.getRoleIcon = function(role) { //
+app.locals.getRoleIcon = function(role) {
     const icons = {
-        student: 'fas fa-user-graduate', //
-        company: 'fas fa-building', //
-        admin: 'fas fa-user-shield' //
+        student: 'fas fa-user-graduate',
+        company: 'fas fa-building',
+        admin: 'fas fa-user-shield'
     };
-    return icons[role] || 'fas fa-user'; //
+    return icons[role] || 'fas fa-user';
 };
 
 
@@ -87,21 +88,22 @@ mongoose.connect(MONGODB_URI)
 
 
 // --- Import Routers ---
-const authRoutes = require('./routers/authRoutes'); //
-const studentRoutes = require('./routers/studentRoutes'); //
-const companyRoutes = require('./routers/companyRoutes'); //
-const adminRoutes = require('./routers/adminRoutes'); //
+const authRoutes = require('./routers/authRoutes');
+const studentRoutes = require('./routers/studentRoutes');
+const companyRoutes = require('./routers/companyRoutes');
+const adminRoutes = require('./routers/adminRoutes');
 const n8nRoutes = require('./routers/n8nRoutes'); // Import the new n8n router
 // const mailRoutes = require('./routers/mailRoutes'); // Import mail router if you created it separately
 
 
 // --- Use Routers ---
 // IMPORTANT: Define API/specific routes BEFORE generic ones and BEFORE error handlers
-app.use('/auth', authRoutes); //
-app.use('/student', studentRoutes); //
+app.use('/auth', authRoutes);
+app.use('/student', studentRoutes);
 app.use('/company', companyRoutes); // User-facing company routes
-app.use('/admin', adminRoutes); //
-app.use('/api/n8n', n8nRoutes);   // Mount n8n webhook routes under /api/n8n
+app.use('/admin', adminRoutes);
+app.use('/api/n8n', n8nRoutes);   // <--- REGISTER n8n ROUTES HERE
+// app.use('/', mailRoutes); // Mount mail routes if created separately
 
 
 // --- Core Routes ---
@@ -109,7 +111,7 @@ app.use('/api/n8n', n8nRoutes);   // Mount n8n webhook routes under /api/n8n
 // Home route
 app.get('/', (req, res) => {
     // Pass user data to the index template
-    res.render('index', { //
+    res.render('index', {
         title: 'Placement Portal - Find Your Dream Job',
         user: req.session.user || null // Ensure user is passed
     });
@@ -153,7 +155,7 @@ app.use((err, req, res, next) => {
         // Render HTML error page for non-API routes
         res.status(statusCode).render('error', { // Ensure you have an 'error.ejs' view
             title: `Error ${statusCode}`,
-            message: message, //
+            message: message,
             user: req.session.user || null // Pass user data to error page if needed
         });
     }
@@ -187,7 +189,7 @@ app.use((req, res) => {
 
 
 // --- Start Server ---
-const PORT = process.env.PORT || 3000; //
+const PORT = process.env.PORT || 3000;
 // Listen on 0.0.0.0 to be accessible from outside the host (e.g., from n8n Docker container)
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
