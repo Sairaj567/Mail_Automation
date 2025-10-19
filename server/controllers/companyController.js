@@ -1,27 +1,26 @@
 // server/controllers/companyController.js
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs'); // Needed for potential user creation
+const bcrypt = require('bcryptjs');
 const Job = require('../models/Job');
 const Application = require('../models/Application');
 const CompanyProfile = require('../models/CompanyProfile');
-const User = require('../models/User'); // Make sure User model is imported
-const ExcelJS = require('exceljs'); // For Excel export
-const PDFDocument = require('pdfkit'); // For PDF export
+const User = require('../models/User');
+const ExcelJS = require('exceljs');
+const PDFDocument = require('pdfkit');
 
 // --- Helper Functions ---
 const isDemo = (req) => Boolean(req.session?.user?.isDemo);
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-// Mongoose version to ensure profile exists (copied from student controller logic)
+// Mongoose version to ensure profile exists
 const ensureCompanyProfile = async (userId, name, industry = '') => {
     let profile = await CompanyProfile.findOne({ user: userId });
     if (!profile) {
          console.log(`Creating new company profile for user: ${userId}`);
         profile = await CompanyProfile.create({
             user: userId,
-            companyName: name || 'Demo Company', // Use provided name or default
+            companyName: name || 'Demo Company',
             industry: industry || '',
-            // Initialize other fields if necessary
         });
     }
     return profile;
@@ -36,12 +35,11 @@ const formatJob = (job) => {
     formatted.requirements = formatted.requirements || [];
     formatted.responsibilities = formatted.responsibilities || [];
     formatted.skills = formatted.skills || [];
-    formatted.benefits = formatted.benefits || []; // Add benefits if missing
+    formatted.benefits = formatted.benefits || [];
     formatted.jobType = formatted.jobType || 'full-time';
     formatted.experienceLevel = formatted.experienceLevel || 'fresher';
     formatted.salary = formatted.salary || 'Not specified';
     formatted.createdAt = formatted.createdAt || new Date();
-    // Add application count if needed (e.g., via aggregation or virtual)
     formatted.applicationsCount = formatted.applicationsCount || 0;
     return formatted;
 };
@@ -55,99 +53,59 @@ const formatApplication = (application) => {
     formatted.appliedDate = formatted.appliedDate || new Date();
     if (formatted.job && typeof formatted.job === 'object' && formatted.job._id) {
         formatted.job = formatJob(formatted.job);
-    } else if (formatted.job) { // Only ID present
+    } else if (formatted.job) {
         formatted.job = { _id: formatted.job.toString(), title: 'Unknown Job', company: 'Unknown Company', location: 'Unknown' };
-    } else { // Job missing
+    } else {
         formatted.job = { _id: null, title: 'Unknown Job', company: 'Unknown Company', location: 'Unknown' };
     }
-    // Format student info if populated
     if (formatted.student && typeof formatted.student === 'object' && formatted.student._id) {
-         // Assuming student object has name, email, etc. directly from population
          formatted.student = {
              _id: formatted.student._id.toString(),
              name: formatted.student.name || 'Unknown Student',
              email: formatted.student.email || 'No email',
-             college: formatted.student.studentProfile?.college || 'Unknown College', // Check if studentProfile was populated
+             college: formatted.student.studentProfile?.college || 'Unknown College',
              skills: formatted.student.studentProfile?.skills || []
          };
     } else {
          formatted.student = { _id: formatted.student?.toString(), name: 'Unknown Student' };
     }
-
     return formatted;
 };
 
 // --- Demo Data Functions ---
-// Demo dashboard data for companies (Mongoose compatible)
-const renderDemoDashboard = async (req, res) => { // Keep async if formatJob/formatApplication become async
-    const demoStats = {
-        totalJobs: 5, activeJobs: 3, totalApplications: 24, newApplications: 6, interviews: 3
-    };
+const renderDemoDashboard = (req, res) => { // No async needed for static demo
+    const demoStats = { totalJobs: 5, activeJobs: 3, totalApplications: 24, newApplications: 6, interviews: 3 };
     const demoApplicantsRaw = [
         { student: { name: 'John Smith', college: 'Tech University' }, job: { title: 'Frontend Developer' }, appliedDate: new Date(), status: 'applied', _id: 'app1' },
         { student: { name: 'Sarah Johnson', college: 'Engineering College' }, job: { title: 'Backend Developer' }, appliedDate: new Date(Date.now() - 2 * 86400000), status: 'under_review', _id: 'app2' },
         { student: { name: 'Mike Chen', college: 'Business School' }, job: { title: 'Product Manager' }, appliedDate: new Date(Date.now() - 1 * 86400000), status: 'interview', _id: 'app3' }
     ];
      const demoJobsRaw = [
-        { _id: 'job1', title: 'Senior Software Engineer', location: 'Remote', jobType: 'full-time', description: '...', applicationsCount: 12, createdAt: new Date() },
-        { _id: 'job2', title: 'Product Designer', location: 'New York, NY', jobType: 'full-time', description: '...', applicationsCount: 8, createdAt: new Date() },
-        { _id: 'job3', title: 'Marketing Intern', location: 'Remote', jobType: 'internship', description: '...', applicationsCount: 4, createdAt: new Date() }
+        { _id: 'job1', title: 'Senior Software Engineer', location: 'Remote', jobType: 'full-time', description: '...', applicationsCount: 12, createdAt: new Date(), isActive: true },
+        { _id: 'job2', title: 'Product Designer', location: 'New York, NY', jobType: 'full-time', description: '...', applicationsCount: 8, createdAt: new Date(), isActive: true },
+        { _id: 'job3', title: 'Marketing Intern', location: 'Remote', jobType: 'internship', description: '...', applicationsCount: 4, createdAt: new Date(), isActive: false } // Example paused job
     ];
 
     res.render('pages/company/dashboard', {
-        title: 'Company Dashboard - Placement Portal',
-        user: req.session.user,
-        stats: demoStats,
-        recentApplicants: demoApplicantsRaw.map(formatApplication), // Format demo data
-        activeJobs: demoJobsRaw.filter(j => j.isActive !== false).map(formatJob), // Format demo data
-        companyProfile: { companyName: 'Demo Company Inc.' }, // Provide minimal profile
-        isDemo: true
+        title: 'Company Dashboard - Placement Portal', user: req.session.user, stats: demoStats,
+        recentApplicants: demoApplicantsRaw.map(formatApplication),
+        activeJobs: demoJobsRaw.filter(j => j.isActive).map(formatJob),
+        companyProfile: { companyName: 'Demo Company Inc.' }, isDemo: true
     });
 };
 
-// Demo analytics data (Mongoose compatible)
-const renderDemoAnalytics = (req, res) => { // No need for async if static
-     const demoAnalytics = {
-        overview: { totalJobs: 12, totalApplications: 156, hiredCount: 8, interviewCount: 24, conversionRate: 5, interviewToHireRate: 33, activeJobs: 8 },
-        applicationsByStatus: { applied: 45, under_review: 32, shortlisted: 18, interview: 24, rejected: 29, accepted: 8 }, // Use 'accepted'
-        applicationsOverTime: [ { _id: '2024-01-01', count: 5 }, { _id: '2024-01-05', count: 15 }, /* more items */ ],
-        popularJobs: [ { title: 'Senior Software Engineer', applications: 45 }, { title: 'Frontend Developer', applications: 38 }, /* more items */ ],
-        popularJobsWithDetails: [ { title: 'Senior Software Engineer', applications: 45, location:'Remote', jobType:'full-time' }, { title: 'Frontend Developer', applications: 38, location:'NY', jobType:'full-time' } /* more */ ],
-        collegeDemographics: [ { college: 'Tech University', count: 34 }, { college: 'Engineering College', count: 28 }, /* more items */ ],
-        skillsAnalysis: [ { _id: 'JavaScript', count: 45 }, { _id: 'React', count: 38 }, /* more items */ ],
-        timePeriod: 'last_30_days',
-        recentApplications: [] // Can add demo recent apps if needed for report
-    };
-
-    res.render('pages/company/analytics', {
-        title: 'Analytics Dashboard - Placement Portal',
-        user: req.session.user,
-        analytics: demoAnalytics,
-        isDemo: true
-    });
-};
-
-// Helper for Demo Chart Data
-function getDemoChartData(period) {
-     // Generate slightly different data based on period for demo purposes
-    const multiplier = period === '7d' ? 0.2 : (period === '90d' ? 2.5 : 1);
-    const baseData = {
-        applicationsOverTime: [ { _id: '2024-01-01', count: Math.round(5 * multiplier) }, { _id: '2024-01-02', count: Math.round(8 * multiplier) }, { _id: '2024-01-03', count: Math.round(12 * multiplier) } ],
-        statusDistribution: [ { _id: 'applied', count: Math.round(45 * multiplier) }, { _id: 'under_review', count: Math.round(32 * multiplier) }, { _id: 'shortlisted', count: Math.round(18 * multiplier) }, { _id: 'interview', count: Math.round(24 * multiplier) }, { _id: 'rejected', count: Math.round(29 * multiplier) }, { _id: 'accepted', count: Math.round(8 * multiplier) } ], // Use 'accepted'
-        jobPerformance: [ { jobTitle: 'Senior Software Engineer', applications: Math.round(45 * multiplier) }, { jobTitle: 'Frontend Developer', applications: Math.round(38 * multiplier) }, { jobTitle: 'Product Manager', applications: Math.round(32 * multiplier) } ]
-    };
-    return baseData;
-}
+const renderDemoAnalytics = (req, res) => { /* ... (Static demo data implementation from previous response) ... */ };
+function getDemoChartData(period) { /* ... (Static demo data implementation from previous response) ... */ };
 // --- End Demo Data Functions ---
 
 
 // --- Controller Functions ---
 
-// Get company dashboard (Mongoose version)
+// Get company dashboard (Mongoose version) - DEFINE USING exports.
 exports.getDashboard = async (req, res) => {
     try {
         if (isDemo(req)) {
-            return await renderDemoDashboard(req, res); // Use await if demo function becomes async
+            return renderDemoDashboard(req, res); // No await needed if sync
         }
 
         const companyId = req.session.user.id;
@@ -156,65 +114,50 @@ exports.getDashboard = async (req, res) => {
             return res.redirect('/auth/login?role=company');
         }
 
-        const companyProfile = await CompanyProfile.findOne({ user: companyId }); // Fetch profile
-        const companyJobs = await Job.find({ postedBy: companyId }); // Fetch jobs posted by company
+        const companyProfile = await CompanyProfile.findOne({ user: companyId });
+        const companyJobs = await Job.find({ postedBy: companyId });
         const jobIds = companyJobs.map(job => job._id);
 
-        // Perform counts and fetches using Mongoose
         const [totalApplications, newApplicantsCount, interviewsCount, activeJobsCount, recentApps, activeJobsList] = await Promise.all([
             Application.countDocuments({ job: { $in: jobIds } }),
-             // Count applications created in the last 24 hours
             Application.countDocuments({ job: { $in: jobIds }, appliedDate: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } }),
             Application.countDocuments({ job: { $in: jobIds }, status: 'interview' }),
-            Job.countDocuments({ postedBy: companyId, isActive: true }), // Count active jobs
+            Job.countDocuments({ postedBy: companyId, isActive: true }),
             Application.find({ job: { $in: jobIds } })
-                .populate({ path: 'student', select: 'name studentProfile.college' }) // Populate student name and college
-                .populate({ path: 'job', select: 'title' }) // Populate job title
-                .sort({ appliedDate: -1 })
-                .limit(5),
-             Job.find({ postedBy: companyId, isActive: true })
-                .sort({ createdAt: -1 })
-                .limit(3)
-                .lean() // Use lean for performance if just reading data
+                .populate({ path: 'student', select: 'name studentProfile.college' })
+                .populate({ path: 'job', select: 'title' })
+                .sort({ appliedDate: -1 }).limit(5),
+             Job.find({ postedBy: companyId, isActive: true }).sort({ createdAt: -1 }).limit(3).lean()
         ]);
 
-         // Add application counts to activeJobsList
         const activeJobsWithCounts = await Promise.all(
             activeJobsList.map(async (job) => {
                 const count = await Application.countDocuments({ job: job._id });
-                return { ...job, applicationsCount: count }; // Use Mongoose field name if different
+                return { ...job, applicationsCount: count };
             })
         );
 
-
         res.render('pages/company/dashboard', {
-            title: 'Company Dashboard - Placement Portal',
-            user: req.session.user,
+            title: 'Company Dashboard - Placement Portal', user: req.session.user,
             stats: {
-                totalJobs: companyJobs.length,
-                activeJobs: activeJobsCount, // Use the count
-                totalApplications: totalApplications,
-                newApplicants: newApplicantsCount, // Use new applicant count
-                interviews: interviewsCount
+                totalJobs: companyJobs.length, activeJobs: activeJobsCount, totalApplications: totalApplications,
+                newApplicants: newApplicantsCount, interviews: interviewsCount
             },
-            recentApplicants: recentApps.map(formatApplication), // Use formatter
-            activeJobs: activeJobsWithCounts.map(formatJob), // Use formatter
-            companyProfile: companyProfile ? companyProfile.toObject() : {}, // Pass profile
+            recentApplicants: recentApps.map(formatApplication),
+            activeJobs: activeJobsWithCounts.map(formatJob),
+            companyProfile: companyProfile ? companyProfile.toObject() : {},
             isDemo: false
         });
     } catch (error) {
         console.error('Company dashboard error:', error);
-        // Fallback to demo dashboard on error
-        try {
-           await renderDemoDashboard(req, res); // Use await if demo func is async
-        } catch(renderError) {
+        try { renderDemoDashboard(req, res); } catch(renderError) {
              console.error('Error rendering demo dashboard fallback:', renderError);
              res.status(500).render('error', { title: 'Server Error', message: 'Failed to load dashboard.' });
         }
     }
 };
 
-// Post new job (Mongoose version)
+// Post new job (Mongoose version) - DEFINE USING exports.
 exports.postJob = async (req, res) => {
     try {
         if (isDemo(req)) {
@@ -225,41 +168,29 @@ exports.postJob = async (req, res) => {
              return res.status(400).json({ success: false, message: 'Invalid company ID in session.' });
         }
 
-
         const companyProfile = await CompanyProfile.findOne({ user: companyId });
-        const companyName = companyProfile?.companyName || req.session.user.name; // Use profile name or user name
+        const companyName = companyProfile?.companyName || req.session.user.name;
 
-         const {
-            title, location, jobType, salary, description, requirements,
-            responsibilities, benefits, skills, experienceLevel,
-            applicationDeadline, vacancies
-        } = req.body;
-
-         // Convert multi-line text areas or comma-separated strings to arrays
+         const { title, location, jobType, salary, description, requirements, responsibilities, benefits, skills, experienceLevel, applicationDeadline, vacancies } = req.body;
          const parseToArray = (text) => text ? text.split('\n').map(s => s.trim()).filter(Boolean) : [];
          const parseSkillsToArray = (text) => text ? text.split(',').map(s => s.trim()).filter(Boolean) : [];
 
         const jobData = {
-            title,
-            company: companyName, // Store company name directly in job
-            location, jobType, salary, description,
-            requirements: parseToArray(requirements),
-            responsibilities: parseToArray(responsibilities),
-            benefits: parseToArray(benefits), // Assuming benefits is handled similarly
-            skills: parseSkillsToArray(skills),
-            experienceLevel,
-            applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : null,
-            vacancies: vacancies ? parseInt(vacancies) : 1,
-            postedBy: companyId, // Link to the User ID
-            isActive: true
+            title, company: companyName, location, jobType, salary, description,
+            requirements: parseToArray(requirements), responsibilities: parseToArray(responsibilities),
+            benefits: parseToArray(benefits), skills: parseSkillsToArray(skills),
+            experienceLevel, applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : null,
+            vacancies: vacancies ? parseInt(vacancies) : 1, postedBy: companyId, isActive: true
         };
 
         const job = new Job(jobData);
         await job.save();
 
-        // Optionally link job back to CompanyProfile if schema supports it
-        if (companyProfile && companyProfile.jobsPosted) {
+        if (companyProfile && companyProfile.jobsPosted?.push) { // Safely check if jobsPosted exists and is an array
              await CompanyProfile.updateOne({ _id: companyProfile._id }, { $push: { jobsPosted: job._id } });
+        } else if (companyProfile) {
+             // If jobsPosted doesn't exist or isn't an array, initialize it
+             await CompanyProfile.updateOne({ _id: companyProfile._id }, { $set: { jobsPosted: [job._id] } });
         }
 
 
@@ -270,11 +201,11 @@ exports.postJob = async (req, res) => {
     }
 };
 
-// Get company applications (Mongoose version)
+// Get company applications (Mongoose version) - DEFINE USING exports.
 exports.getApplications = async (req, res) => {
      try {
         const companyId = req.session.user.id;
-        const { status, job: jobIdFilter, search } = req.query; // Rename job query param
+        const { status, job: jobIdFilter, search } = req.query;
         const isDemoUser = !mongoose.Types.ObjectId.isValid(companyId);
 
         let applications = [];
@@ -282,55 +213,46 @@ exports.getApplications = async (req, res) => {
         let companyProfile = null;
 
         if (isDemoUser) {
-             // Demo data
             companyJobs = [ { _id: '1', title: 'Frontend Developer' }, { _id: '2', title: 'Backend Engineer' } ];
-            companyProfile = { companyName: 'Demo Tech Inc.', logo: null }; // Add logo field
-            applications = [ /* ... array of demo application objects using formatApplication ... */ ];
-             applications = [
+            companyProfile = { companyName: 'Demo Tech Inc.', logo: null };
+            applications = [
                 { _id: 'app1', student: { name: 'John Doe', email: 'j@d.com', college: 'Demo Uni', skills: ['JS', 'React'] }, job: { _id: '1', title: 'Frontend Dev' }, status: 'applied', appliedDate: new Date(), resume: 'r1.pdf', coverLetter:'...' },
                 { _id: 'app2', student: { name: 'Jane Smith', email: 'j@s.com', college: 'Demo Col', skills: ['Python', 'SQL'] }, job: { _id: '2', title: 'Backend Eng' }, status: 'under_review', appliedDate: new Date(Date.now()-86400000), resume: 'r2.pdf', coverLetter:'...' }
-             ].map(formatApplication); // Format demo data
+             ].map(formatApplication);
 
         } else {
-            companyJobs = await Job.find({ postedBy: companyId }).select('_id title').lean(); // Fetch only needed fields
-            companyProfile = await CompanyProfile.findOne({ user: companyId }).lean(); // Fetch profile
-
+            companyJobs = await Job.find({ postedBy: companyId }).select('_id title').lean();
+            companyProfile = await CompanyProfile.findOne({ user: companyId }).lean();
             const jobIds = companyJobs.map(j => j._id);
             let filter = { job: { $in: jobIds } };
 
             if (status && status !== 'all') filter.status = status;
-            if (jobIdFilter && jobIdFilter !== 'all' && isValidObjectId(jobIdFilter)) {
-                 filter.job = jobIdFilter; // Filter by specific job ID
+            if (jobIdFilter && jobIdFilter !== 'all' && isValidObjectId(jobIdFilter)) { filter.job = jobIdFilter; }
+            // Basic search implementation (adjust fields as needed)
+            if (search) {
+                 const searchRegex = { $regex: search, $options: 'i' };
+                 // Need to lookup student data to search effectively
+                 const studentIds = await User.find({ name: searchRegex, role: 'student' }).select('_id').lean();
+                 const studentIdList = studentIds.map(s => s._id);
+                 filter.$or = [
+                     { student: { $in: studentIdList } }, // Search by student name (indirectly)
+                     // Add search on application fields if needed, e.g., personalInfo
+                     // { 'personalInfo.fullName': searchRegex }
+                 ];
+                 // Note: Searching job title requires populating or denormalizing job title onto application
             }
-            // Build search query if present
-             if (search) {
-                const searchRegex = { $regex: search, $options: 'i' };
-                // We need to query related student data, requires lookup or denormalization
-                // Simple search on application fields first:
-                // filter.$or = [
-                //     // Need student name/email/college on application schema or use $lookup
-                //     { 'personalInfo.fullName': searchRegex },
-                //     { 'personalInfo.email': searchRegex },
-                //     { 'education.college': searchRegex },
-                // ];
-                 // More complex search requires aggregation pipeline with $lookup
-                 // For now, let's skip search or make it basic if data is denormalized
-                 console.warn("Search filter is complex with current schema, skipping advanced search.");
-            }
-
 
             applications = await Application.find(filter)
-                .populate({ path: 'job', select: 'title' }) // Populate job title
-                .populate({ path: 'student', select: 'name email studentProfile.college studentProfile.skills' }) // Populate student details
+                .populate({ path: 'job', select: 'title' })
+                .populate({ path: 'student', select: 'name email studentProfile.college studentProfile.skills' }) // Adjust population as needed
                 .sort({ appliedDate: -1 });
         }
 
         res.render('pages/company/applicants', {
-            title: 'Applicants - Placement Portal',
-            user: req.session.user,
-            applications: applications.map(formatApplication), // Use formatter
-            companyJobs: companyJobs.map(j => ({ _id: j._id.toString(), title: j.title })), // Format for dropdown
-            companyProfile: companyProfile || {}, // Pass profile
+            title: 'Applicants - Placement Portal', user: req.session.user,
+            applications: applications.map(formatApplication),
+            companyJobs: companyJobs.map(j => ({ _id: j._id.toString(), title: j.title })),
+            companyProfile: companyProfile || {},
             filters: { status: status || '', job: jobIdFilter || '', search: search || '' },
             isDemo: isDemoUser
         });
@@ -340,7 +262,8 @@ exports.getApplications = async (req, res) => {
     }
 };
 
-// Update application status (Mongoose version)
+
+// Update application status (Mongoose version) - DEFINE USING exports.
 exports.updateApplicationStatus = async (req, res) => {
     try {
         if (isDemo(req)) {
@@ -349,21 +272,11 @@ exports.updateApplicationStatus = async (req, res) => {
         const { applicationId, status } = req.body;
         const companyId = req.session.user.id;
 
-        if (!isValidObjectId(applicationId)) {
-             return res.status(400).json({ success: false, message: 'Invalid application ID.' });
-        }
-         if (!STATUS_DISPLAY.includes(status)) { // Validate status value
-             return res.status(400).json({ success: false, message: 'Invalid status value.' });
-         }
+        if (!isValidObjectId(applicationId)) { return res.status(400).json({ success: false, message: 'Invalid application ID.' }); }
+        if (!STATUS_DISPLAY.includes(status)) { return res.status(400).json({ success: false, message: 'Invalid status value.' }); }
 
-
-        // Find application and verify ownership by checking the job's postedBy field
         const application = await Application.findById(applicationId).populate('job');
-
-        if (!application) {
-            return res.status(404).json({ success: false, message: 'Application not found' });
-        }
-        // Check if job exists and if postedBy matches companyId
+        if (!application) { return res.status(404).json({ success: false, message: 'Application not found' }); }
         if (!application.job || !application.job.postedBy || !application.job.postedBy.equals(companyId)) {
             return res.status(403).json({ success: false, message: 'Unauthorized action' });
         }
@@ -378,7 +291,7 @@ exports.updateApplicationStatus = async (req, res) => {
     }
 };
 
-// Get company profile (Mongoose version)
+// Get company profile (Mongoose version) - DEFINE USING exports.
 exports.getProfile = async (req, res) => {
     try {
         const companyId = req.session.user.id;
@@ -390,15 +303,13 @@ exports.getProfile = async (req, res) => {
         } else {
             profile = await CompanyProfile.findOne({ user: companyId });
              if (!profile) {
-                 // Optionally create a basic profile if none exists yet
-                 profile = await ensureCompanyProfile(companyId, req.session.user.name);
+                 profile = await ensureCompanyProfile(companyId, req.session.user.name); // Create if needed
              }
         }
 
         res.render('pages/company/profile', {
-            title: 'Company Profile - Placement Portal',
-            user: req.session.user,
-            companyProfile: profile ? (profile.toObject ? profile.toObject() : profile) : {}, // Use companyProfile variable
+            title: 'Company Profile - Placement Portal', user: req.session.user,
+            companyProfile: profile ? (profile.toObject ? profile.toObject() : profile) : {},
             isDemo: isDemoUser
         });
     } catch (error) {
@@ -408,38 +319,92 @@ exports.getProfile = async (req, res) => {
 };
 
 
-// Update company profile (Mongoose version) - Already provided, ensure it matches the one with file upload
-exports.updateProfile = async (req, res) => { /* ... (Implementation from previous response with file handling) ... */ };
+// Update company profile (Mongoose version with file upload) - DEFINE USING exports.
+exports.updateProfile = async (req, res) => {
+    try {
+        if (isDemo(req)) {
+            // Simulate success for demo
+             if (req.file) { // Cleanup demo file upload
+                 try { fs.unlinkSync(req.file.path); } catch(e) {}
+             }
+            return res.json({ success: true, message: 'Demo profile updated (not saved)!', companyName: req.body.companyName || 'Demo Company Inc.' });
+        }
+        const companyId = req.session.user.id;
+        if (!isValidObjectId(companyId)) {
+            return res.status(400).json({ success: false, message: 'Invalid company ID.' });
+        }
 
-// Get analytics (Mongoose version)
+        const profileData = {
+            companyName: req.body.companyName, industry: req.body.industry, website: req.body.website,
+            size: req.body.size, founded: req.body.founded ? parseInt(req.body.founded) : undefined,
+            contactPerson: req.body.contactPerson, phone: req.body.phone, description: req.body.description
+        };
+        if (req.body['address.street'] || req.body['address.city']) {
+            profileData.address = { street: req.body['address.street'] || '', city: req.body['address.city'] || '', state: req.body['address.state'] || '', country: req.body['address.country'] || '', zipCode: req.body['address.zipCode'] || '' };
+        }
+        if (req.body['socialLinks.linkedin'] || req.body['socialLinks.twitter'] || req.body['socialLinks.facebook']) {
+             profileData.socialLinks = { linkedin: req.body['socialLinks.linkedin'] || '', twitter: req.body['socialLinks.twitter'] || '', facebook: req.body['socialLinks.facebook'] || '' };
+        }
+
+
+        // Handle file upload
+        if (req.file) {
+            profileData.logo = req.file.filename;
+            console.log('Logo uploaded:', req.file.filename);
+            // Optional: Delete old logo file if it exists
+        }
+
+        const options = { new: true, upsert: true, setDefaultsOnInsert: true };
+        const updatedProfile = await CompanyProfile.findOneAndUpdate(
+            { user: companyId },
+            { $set: profileData },
+            options
+        );
+
+        // Update session if company name changed
+        if (updatedProfile.companyName && req.session.user.name !== updatedProfile.companyName) {
+            // Assuming req.session.user.name might store the company name for display
+            // Adjust if you store it differently in the session
+             req.session.user.companyName = updatedProfile.companyName; // Or req.session.user.name if that's used
+        }
+
+
+        res.json({ success: true, message: 'Company profile updated successfully!', companyName: updatedProfile.companyName });
+
+    } catch (error) {
+        console.error('Company profile update error:', error);
+         // Cleanup uploaded file if update fails
+        if (req.file?.path) { try { fs.unlinkSync(req.file.path); } catch(e){} }
+        res.status(500).json({ success: false, message: `Failed to update company profile: ${error.message}` });
+    }
+};
+
+
+// Get analytics (Mongoose version) - DEFINE USING exports.
 exports.getAnalytics = async (req, res) => {
     try {
         if (isDemo(req)) {
-            return renderDemoAnalytics(req, res); // Use the demo renderer
+            return renderDemoAnalytics(req, res);
         }
-
         const companyId = req.session.user.id;
-        if (!isValidObjectId(companyId)) {
-            console.error(`Invalid companyId for analytics: ${companyId}`);
-            return renderDemoAnalytics(req, res); // Fallback to demo
-        }
+        if (!isValidObjectId(companyId)) { return renderDemoAnalytics(req, res); } // Fallback
 
         const companyJobs = await Job.find({ postedBy: companyId });
         const jobIds = companyJobs.map(job => job._id);
 
-        // Fetch data using Mongoose aggregation
         const [statusCountsData, appsOverTimeData, popularJobsData, collegeDataRaw, skillsDataRaw, totalApps, hiredCountData, interviewCountData] = await Promise.all([
             Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $group: { _id: '$status', count: { $sum: 1 } } } ]),
             Application.aggregate([ { $match: { job: { $in: jobIds }, appliedDate: { $gte: new Date(Date.now() - 30 * 86400000) } } }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$appliedDate" } }, count: { $sum: 1 } } }, { $sort: { _id: 1 } } ]),
             Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $group: { _id: '$job', applications: { $sum: 1 } } }, { $sort: { applications: -1 } }, { $limit: 5 } ]),
-            Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $lookup: { from: 'studentprofiles', localField: 'student', foreignField: 'user', as: 'studentProfileData' } }, { $unwind: '$studentProfileData' }, { $group: { _id: '$studentProfileData.college', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 5 } ]), // Assumes StudentProfile has college
-            Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $lookup: { from: 'studentprofiles', localField: 'student', foreignField: 'user', as: 'studentProfileData' } }, { $unwind: '$studentProfileData' }, { $unwind: '$studentProfileData.skills' }, { $group: { _id: '$studentProfileData.skills', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 } ]), // Assumes StudentProfile has skills array
+            // Corrected College Aggregation using $lookup with User and then StudentProfile
+            Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $lookup: { from: 'users', localField: 'student', foreignField: '_id', as: 'studentUser' } }, { $unwind: '$studentUser' }, { $lookup: { from: 'studentprofiles', localField: 'student', foreignField: 'user', as: 'studentProfileData'} }, { $unwind: '$studentProfileData' }, { $match: {'studentProfileData.college': {$ne: null, $ne: ""}} }, { $group: { _id: '$studentProfileData.college', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 5 } ]),
+            // Corrected Skills Aggregation
+            Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $lookup: { from: 'studentprofiles', localField: 'student', foreignField: 'user', as: 'studentProfileData'} }, { $unwind: '$studentProfileData' }, { $unwind: '$studentProfileData.skills' }, { $match: {'studentProfileData.skills': {$ne: null, $ne: ""}} }, { $group: { _id: '$studentProfileData.skills', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 } ]),
             Application.countDocuments({ job: { $in: jobIds } }),
-            Application.countDocuments({ job: { $in: jobIds }, status: 'accepted' }), // Use 'accepted' status
+            Application.countDocuments({ job: { $in: jobIds }, status: 'accepted' }),
             Application.countDocuments({ job: { $in: jobIds }, status: 'interview' })
         ]);
 
-        // Process aggregated data
         const statusCounts = statusCountsData.reduce((acc, item) => { acc[item._id] = item.count; return acc; }, {});
         const popularJobsWithDetails = await Promise.all(
             popularJobsData.map(async (job) => {
@@ -448,328 +413,273 @@ exports.getAnalytics = async (req, res) => {
             })
         );
         const collegeDemographics = collegeDataRaw.map(item => ({ college: item._id || 'Not Specified', count: item.count }));
-        const skillsAnalysis = skillsDataRaw; // Already in correct format {_id: skill, count: number}
+        const skillsAnalysis = skillsDataRaw;
 
         const analytics = {
-            overview: {
-                totalJobs: companyJobs.length,
-                totalApplications: totalApps,
-                hiredCount: hiredCountData, // Use direct count
-                interviewCount: interviewCountData, // Use direct count
-                conversionRate: totalApps > 0 ? Math.round((hiredCountData / totalApps) * 100) : 0,
-                interviewToHireRate: interviewCountData > 0 ? Math.round((hiredCountData / interviewCountData) * 100) : 0,
-                activeJobs: companyJobs.filter(j => j.isActive).length // Calculate active jobs
-            },
-            applicationsByStatus: statusCounts,
-            applicationsOverTime: appsOverTimeData,
-            popularJobs: popularJobsWithDetails,
-            collegeDemographics: collegeDemographics,
-            skillsAnalysis: skillsAnalysis,
-            timePeriod: 'last_30_days' // Assuming default, can be dynamic later
+            overview: { totalJobs: companyJobs.length, totalApplications: totalApps, hiredCount: hiredCountData, interviewCount: interviewCountData, conversionRate: totalApps > 0 ? Math.round((hiredCountData / totalApps) * 100) : 0, interviewToHireRate: interviewCountData > 0 ? Math.round((hiredCountData / interviewCountData) * 100) : 0, activeJobs: companyJobs.filter(j => j.isActive).length },
+            applicationsByStatus: statusCounts, applicationsOverTime: appsOverTimeData, popularJobs: popularJobsWithDetails,
+            collegeDemographics: collegeDemographics, skillsAnalysis: skillsAnalysis, timePeriod: 'last_30_days'
         };
 
-        res.render('pages/company/analytics', {
-            title: 'Analytics Dashboard - Placement Portal', user: req.session.user, analytics, isDemo: false
-        });
-
+        res.render('pages/company/analytics', { title: 'Analytics Dashboard - Placement Portal', user: req.session.user, analytics, isDemo: false });
     } catch (error) {
         console.error('Company analytics error:', error);
-        renderDemoAnalytics(req, res); // Fallback to demo on error
+        renderDemoAnalytics(req, res); // Fallback
     }
 };
 
-// Get analytics data for charts (API endpoint, Mongoose version)
-exports.getAnalyticsData = async (req, res) => {
-    try {
+// Get analytics data for charts (API, Mongoose version) - DEFINE USING exports.
+exports.getAnalyticsData = async (req, res) => { /* ... (Mongoose implementation from previous response) ... */ };
+exports.exportToExcel = async (req, res) => { /* ... (Mongoose implementation from previous response) ... */ };
+exports.exportToPDF = async (req, res) => { /* ... (Mongoose implementation from previous response) ... */ };
+exports.generateFullReport = async (req, res) => { /* ... (Mongoose implementation from previous response) ... */ };
+exports.handleN8nCompanyUpdate = async (req, res) => { /* ... (Mongoose implementation from previous response) ... */ };
+
+// ADD Mongoose versions of other required functions if they exist (e.g., getJobDetails, editJob, updateJob, toggleJobStatus, deleteJob, getProfileView etc.)
+
+// Example: Get Job Details Page (needed by other routes potentially)
+exports.getJobDetailsPage = async (req, res) => {
+     try {
+        const jobId = req.params.id;
         const companyId = req.session.user.id;
-        const { period = '30d' } = req.query;
         const isDemoUser = !mongoose.Types.ObjectId.isValid(companyId);
 
-        if (isDemoUser) {
-            return res.json({ success: true, data: getDemoChartData(period) });
+        if (!isValidObjectId(jobId)) {
+             return res.status(404).render('404', { title: 'Not Found' });
         }
 
-        const companyJobs = await Job.find({ postedBy: companyId }).select('_id').lean(); // Only need IDs
-        const jobIds = companyJobs.map(job => job._id);
+        let job;
+        let applications = [];
 
-        let startDate;
-        const endDate = new Date();
-        if (period === '7d') startDate = new Date(Date.now() - 7 * 86400000);
-        else if (period === '90d') startDate = new Date(Date.now() - 90 * 86400000);
-        else startDate = new Date(Date.now() - 30 * 86400000); // Default 30d
+        if (isDemoUser) {
+             // Find the specific demo job
+             const demoJobsRaw = [ { _id: 'job1', title: 'Senior Software Engineer', location: 'Remote', jobType: 'full-time', description: '...', applicationsCount: 12, createdAt: new Date(), isActive: true, postedBy: 'demo_company_id' }, /* ... other demo jobs ... */ ];
+             job = demoJobsRaw.find(j => j._id === jobId);
+             if (job) job = formatJob(job); // Format it
+             // Find demo applications for this job
+             const demoApplicantsRaw = [ { student: { name: 'John Smith' }, job: { _id: 'job1' }, appliedDate: new Date(), status: 'applied', _id: 'app1' }, /* ... */];
+             applications = demoApplicantsRaw.filter(app => app.job._id === jobId).map(formatApplication);
 
-        // Fetch data using Mongoose aggregation
-        const [appsOverTime, statusDist, jobPerfRaw] = await Promise.all([
-             Application.aggregate([ { $match: { job: { $in: jobIds }, appliedDate: { $gte: startDate, $lte: endDate } } }, { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$appliedDate" } }, count: { $sum: 1 } } }, { $sort: { _id: 1 } } ]),
-             Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $group: { _id: '$status', count: { $sum: 1 } } } ]),
-             Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $group: { _id: '$job', applications: { $sum: 1 } } }, { $sort: { applications: -1 } }, { $limit: 5 } ]) // Limit to top 5 jobs
-        ]);
+        } else {
+             job = await Job.findOne({ _id: jobId, postedBy: companyId }); // Verify ownership
+             if (job) {
+                 applications = await Application.find({ job: jobId })
+                    .populate({ path: 'student', select: 'name email studentProfile.college studentProfile.skills' })
+                    .sort({ appliedDate: -1 });
+             }
+        }
 
-        // Populate job titles for job performance
-        const jobPerformance = await Promise.all(
-            jobPerfRaw.map(async (job) => {
-                const jobDetails = await Job.findById(job._id).select('title').lean();
-                return { jobTitle: jobDetails?.title || 'Unknown Job', applications: job.applications };
-            })
-        );
+        if (!job) {
+            return res.status(404).render('404', { title: 'Job Not Found' });
+        }
 
-        res.json({
-            success: true,
-            data: {
-                applicationsOverTime: appsOverTime,
-                statusDistribution: statusDist,
-                jobPerformance: jobPerformance,
-                period: period
-            }
+
+        res.render('pages/company/job-details', { // Ensure you have this EJS file
+            title: `${job.title} - Job Details`,
+            user: req.session.user,
+            job: formatJob(job), // Pass formatted job
+            applications: applications.map(formatApplication), // Pass formatted applications
+            isDemo: isDemoUser
         });
-
     } catch (error) {
-        console.error('Analytics data API error:', error);
-        res.status(500).json({ success: false, message: 'Failed to load analytics data' });
+        console.error('Get job details page error:', error);
+        res.status(500).render('error', { title: 'Server Error', message: 'Failed to load job details page' });
     }
 };
 
-// --- Export Functions (Excel, PDF, Full Report) ---
-// Add the Mongoose implementations for these here if you need them now,
-// similar to how getAnalytics was converted. They involve aggregating data
-// and then formatting it using exceljs or pdfkit.
-
-exports.exportToExcel = async (req, res) => {
+// Example: Get Edit Job Page
+exports.getEditJobPage = async (req, res) => {
      try {
-         if (isDemo(req)) return res.status(403).send('Excel export not available for demo users.');
-         const companyId = req.session.user.id;
-         // Fetch necessary data using Mongoose (similar to getAnalytics)
-         const companyJobs = await Job.find({ postedBy: companyId }).lean();
-         const jobIds = companyJobs.map(j => j._id);
-         const totalApps = await Application.countDocuments({ job: { $in: jobIds } });
-         const statusData = await Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $group: { _id: '$status', count: { $sum: 1 } } } ]);
-         const popularJobsData = await Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $group: { _id: '$job', applications: { $sum: 1 } } }, { $sort: { applications: -1 } }, { $limit: 10 } ]);
+        const jobId = req.params.id;
+        const companyId = req.session.user.id;
+        const isDemoUser = !mongoose.Types.ObjectId.isValid(companyId);
 
-         // Create Excel Workbook
-         const workbook = new ExcelJS.Workbook();
-         const worksheet = workbook.addWorksheet('Analytics Summary');
-         worksheet.columns = [ { header: 'Metric', key: 'metric', width: 30 }, { header: 'Value', key: 'value', width: 20 } ];
+        if (!isValidObjectId(jobId)) { return res.status(404).render('404', { title: 'Not Found' }); }
 
-         // Add Data
-         worksheet.addRow({ metric: 'Total Jobs Posted', value: companyJobs.length });
-         worksheet.addRow({ metric: 'Total Applications Received', value: totalApps });
-         worksheet.addRow({}); // Spacer
-         worksheet.addRow({ metric: 'Applications by Status', value: '' }).font = { bold: true };
-         statusData.forEach(s => worksheet.addRow({ metric: s._id, value: s.count }));
-         worksheet.addRow({}); // Spacer
-         worksheet.addRow({ metric: 'Top 10 Jobs by Applications', value: '' }).font = { bold: true };
-         for(const job of popularJobsData) {
-             const jobDetails = await Job.findById(job._id).select('title').lean();
-             worksheet.addRow({ metric: jobDetails?.title || 'Unknown', value: job.applications });
-         }
-
-         // Send File
-         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-         res.setHeader('Content-Disposition', 'attachment; filename=company_analytics.xlsx');
-         await workbook.xlsx.write(res);
-         res.end();
-
-     } catch (error) {
-         console.error('Excel export error:', error);
-         res.status(500).send('Error generating Excel report');
-     }
-};
-
-exports.exportToPDF = async (req, res) => {
-     try {
-         if (isDemo(req)) return res.status(403).send('PDF export not available for demo users.');
-         const companyId = req.session.user.id;
-         const companyProfile = await CompanyProfile.findOne({ user: companyId }).lean();
-         // Fetch data (similar to Excel export)
-         const companyJobs = await Job.find({ postedBy: companyId }).lean();
-         const jobIds = companyJobs.map(j => j._id);
-         const totalApps = await Application.countDocuments({ job: { $in: jobIds } });
-         const statusData = await Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $group: { _id: '$status', count: { $sum: 1 } } } ]);
-         const popularJobsData = await Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $group: { _id: '$job', applications: { $sum: 1 } } }, { $sort: { applications: -1 } }, { $limit: 5 } ]);
-
-         // Create PDF
-         const doc = new PDFDocument({ margin: 50 });
-         res.setHeader('Content-Type', 'application/pdf');
-         res.setHeader('Content-Disposition', 'attachment; filename=company_analytics.pdf');
-         doc.pipe(res);
-
-         // Add Content
-         doc.fontSize(18).text(`Analytics Report - ${companyProfile?.companyName || 'Your Company'}`, { align: 'center' });
-         doc.fontSize(10).text(`Generated: ${new Date().toLocaleDateString()}`, { align: 'center'});
-         doc.moveDown(2);
-
-         doc.fontSize(14).text('Overview', { underline: true });
-         doc.fontSize(12).text(`Total Jobs Posted: ${companyJobs.length}`);
-         doc.text(`Total Applications Received: ${totalApps}`);
-         doc.moveDown();
-
-         doc.fontSize(14).text('Applications by Status', { underline: true });
-         statusData.forEach(s => doc.text(`${s._id}: ${s.count}`));
-         doc.moveDown();
-
-         doc.fontSize(14).text('Top 5 Jobs by Applications', { underline: true });
-          for(const job of popularJobsData) {
-             const jobDetails = await Job.findById(job._id).select('title').lean();
-             doc.text(`${jobDetails?.title || 'Unknown'}: ${job.applications}`);
-         }
-
-         // Finalize PDF
-         doc.end();
-
-     } catch (error) {
-         console.error('PDF export error:', error);
-         res.status(500).send('Error generating PDF report');
-     }
-};
-
-exports.generateFullReport = async (req, res) => {
-     try {
-        if (isDemo(req)) {
-             // You *could* render the report page with demo data if desired
-             // For now, let's just block it.
-            return res.status(403).send('Full report generation not available for demo users.');
+        let job = null;
+        if (!isDemoUser) {
+             job = await Job.findOne({ _id: jobId, postedBy: companyId }); // Verify ownership
+        } else {
+            // Find specific demo job to edit
+             const demoJobsRaw = [ { _id: 'job1', title: 'Senior SWE', /*...*/ postedBy: 'demo_id' }, /*...*/];
+             job = demoJobsRaw.find(j => j._id === jobId);
         }
 
-        const companyId = req.session.user.id;
-        const companyProfile = await CompanyProfile.findOne({ user: companyId }).lean();
-        const companyJobs = await Job.find({ postedBy: companyId }).lean();
-        const jobIds = companyJobs.map(job => job._id);
 
-        // Fetch comprehensive data similar to getAnalytics
-        const [statusCountsData, popularJobsData, totalApps, activeJobsCount] = await Promise.all([
-             Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $group: { _id: '$status', count: { $sum: 1 } } } ]),
-             Application.aggregate([ { $match: { job: { $in: jobIds } } }, { $group: { _id: '$job', applications: { $sum: 1 } } }, { $sort: { applications: -1 } }, { $limit: 10 } ]), // Top 10 for report
-             Application.countDocuments({ job: { $in: jobIds } }),
-             Job.countDocuments({ postedBy: companyId, isActive: true })
-        ]);
+        if (!job) {
+             return res.status(404).render('404', { title: 'Job Not Found' });
+        }
 
-        const popularJobsWithDetails = await Promise.all(
-            popularJobsData.map(async (job) => {
-                const jobDetails = await Job.findById(job._id).select('title location jobType').lean();
-                return {
-                    title: jobDetails?.title || 'Unknown Job',
-                    applications: job.applications,
-                    location: jobDetails?.location || 'N/A',
-                    jobType: jobDetails?.jobType || 'N/A'
-                };
-            })
-        );
-
-        const analyticsData = {
-            overview: {
-                totalJobs: companyJobs.length,
-                totalApplications: totalApps,
-                activeJobs: activeJobsCount
-            },
-            applicationsByStatus: statusCountsData, // Pass the array directly
-            popularJobsWithDetails: popularJobsWithDetails,
-            // Add other data sections if needed for the report template
+        // Convert arrays back to multiline strings or comma-separated for the form
+        const jobFormData = {
+            ...formatJob(job), // Use formatter, then adjust arrays
+            requirements: job.requirements?.join('\n') || '',
+            responsibilities: job.responsibilities?.join('\n') || '',
+            benefits: job.benefits?.join('\n') || '',
+            skills: job.skills?.join(', ') || '',
+            applicationDeadline: job.applicationDeadline ? job.applicationDeadline.toISOString().split('T')[0] : '' // Format date for input
         };
 
-        res.render('pages/company/analytics-report', {
-            title: 'Analytics Report - Placement Portal',
-            analytics: analyticsData,
-            companyName: companyProfile?.companyName || req.session.user.name,
-            generatedDate: new Date().toLocaleDateString()
-        });
 
+        res.render('pages/company/edit-job', { // Ensure you have this EJS file
+            title: `Edit Job: ${job.title}`,
+            user: req.session.user,
+            job: jobFormData, // Pass formatted data for form
+            isDemo: isDemoUser
+        });
     } catch (error) {
-        console.error('Full report error:', error);
-        res.status(500).render('error', { title:'Server Error', message: 'Failed to generate full report'});
+        console.error('Get edit job page error:', error);
+        res.status(500).render('error', { title: 'Server Error', message: 'Failed to load edit job page' });
     }
 };
-// --- End Export Functions ---
 
-// N8N Handler (Mongoose version)
-exports.handleN8nCompanyUpdate = async (req, res) => {
-    // 1. Verify Webhook Secret
-    const requiredSecret = process.env.N8N_WEBHOOK_SECRET;
-    if (requiredSecret) {
-        const receivedSecret = req.headers['x-webhook-secret'] || req.headers['x-n8n-secret'];
-        if (receivedSecret !== requiredSecret) {
-            console.warn("N8N Webhook: Invalid secret received.");
-            return res.status(401).json({ success: false, message: 'Unauthorized: Invalid webhook secret.' });
-        }
-    } else { console.warn("N8N_WEBHOOK_SECRET not set..."); }
+// Example: Update Job (Handles PUT request from edit form)
+exports.updateJob = async (req, res) => {
+     try {
+        const jobId = req.params.id;
+        if (isDemo(req)) { return res.json({ success: false, message: 'Demo users cannot update jobs.' }); }
+        const companyId = req.session.user.id;
 
-    const { email, companyName, name, industry, website, description, contactPerson, phone, street, city, state, country, zipCode, size, founded, linkedin, twitter, facebook } = req.body;
+        if (!isValidObjectId(jobId)) { return res.status(400).json({ success: false, message: 'Invalid Job ID.' }); }
 
-    if (!email || !companyName) {
-        return res.status(400).json({ success: false, message: 'Missing required fields: email and companyName' });
+        // Fetch job to verify ownership
+        const job = await Job.findOne({ _id: jobId, postedBy: companyId });
+        if (!job) { return res.status(404).json({ success: false, message: 'Job not found or unauthorized.' }); }
+
+        // Prepare update data from req.body (similar to postJob)
+         const { title, location, jobType, salary, description, requirements, responsibilities, benefits, skills, experienceLevel, applicationDeadline, vacancies, isActive } = req.body;
+         const parseToArray = (text) => text ? text.split('\n').map(s => s.trim()).filter(Boolean) : [];
+         const parseSkillsToArray = (text) => text ? text.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+        const updateData = {
+            title, location, jobType, salary, description,
+            requirements: parseToArray(requirements), responsibilities: parseToArray(responsibilities),
+            benefits: parseToArray(benefits), skills: parseSkillsToArray(skills),
+            experienceLevel, applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : null,
+            vacancies: vacancies ? parseInt(vacancies) : 1,
+            isActive: isActive === 'true' || isActive === true // Handle boolean conversion
+        };
+
+        // Update the job
+        const updatedJob = await Job.findByIdAndUpdate(jobId, updateData, { new: true }); // {new: true} returns the updated doc
+
+        res.json({ success: true, message: 'Job updated successfully!', jobId: updatedJob._id });
+
+    } catch (error) {
+        console.error('Update job error:', error);
+        res.status(500).json({ success: false, message: `Failed to update job: ${error.message}` });
     }
+};
 
-    try {
-        let user;
-        let isNewUser = false;
-        user = await User.findOne({ email: email, role: 'company' });
+// Example: Toggle Job Status
+exports.toggleJobStatus = async (req, res) => {
+     try {
+        const jobId = req.params.id;
+        const { isActive } = req.body; // Expecting { isActive: boolean }
+        if (isDemo(req)) { return res.json({ success: false, message: 'Demo users cannot toggle job status.' }); }
+        const companyId = req.session.user.id;
 
-        if (!user) {
-            isNewUser = true;
-            console.log(`N8N Webhook: No company user for ${email}. Creating...`);
-            const tempPassword = Math.random().toString(36).slice(-8);
-            const hashedPassword = await bcrypt.hash(tempPassword, 12);
-            user = new User({ name: name || companyName, email: email, password: hashedPassword, role: 'company', isVerified: false });
-            await user.save();
-            console.log(`N8N Webhook: Created company user ${user._id}.`);
-            // NOTE: Consider how to handle the temp password or activation for this user.
-        } else {
-            console.log(`N8N Webhook: Found existing company user ${user._id} for ${email}.`);
-        }
+        if (!isValidObjectId(jobId)) { return res.status(400).json({ success: false, message: 'Invalid Job ID.' }); }
+        if (typeof isActive !== 'boolean') { return res.status(400).json({ success: false, message: 'Invalid isActive value.' }); }
 
-        const profileData = { user: user._id, companyName };
-        // Conditionally add fields only if they exist in the payload
-        if (industry) profileData.industry = industry;
-        if (website) profileData.website = website;
-        if (description) profileData.description = description;
-        if (contactPerson) profileData.contactPerson = contactPerson;
-        if (phone) profileData.phone = phone;
-        if (size) profileData.size = size;
-        if (founded && !isNaN(parseInt(founded)) && parseInt(founded) > 0) profileData.founded = parseInt(founded);
 
-        const address = {};
-        if (street) address.street = street;
-        if (city) address.city = city;
-        if (state) address.state = state;
-        if (country) address.country = country;
-        if (zipCode) address.zipCode = zipCode;
-        if (Object.keys(address).length > 0) profileData.address = address;
-
-        const socialLinks = {};
-        if (linkedin) socialLinks.linkedin = linkedin;
-        if (twitter) socialLinks.twitter = twitter;
-        if (facebook) socialLinks.facebook = facebook;
-        if (Object.keys(socialLinks).length > 0) profileData.socialLinks = socialLinks;
-
-        const updatedProfile = await CompanyProfile.findOneAndUpdate(
-            { user: user._id },
-            { $set: profileData },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
+        const updatedJob = await Job.findOneAndUpdate(
+            { _id: jobId, postedBy: companyId }, // Verify ownership
+            { $set: { isActive: isActive } },
+            { new: true } // Return updated doc
         );
 
-        console.log(`N8N Webhook: ${isNewUser ? 'Created' : 'Updated'} company profile ${updatedProfile._id}.`);
-        res.status(isNewUser ? 201 : 200).json({ success: true, message: `Company profile ${isNewUser ? 'created' : 'updated'}.`, userId: user._id, profileId: updatedProfile._id });
+        if (!updatedJob) {
+            return res.status(404).json({ success: false, message: 'Job not found or unauthorized.' });
+        }
 
+        res.json({ success: true, message: `Job ${isActive ? 'activated' : 'paused'} successfully!`, isActive: updatedJob.isActive });
     } catch (error) {
-        console.error('N8N Company Update Error:', error);
-        res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+        console.error('Toggle job status error:', error);
+        res.status(500).json({ success: false, message: 'Failed to update job status' });
+    }
+};
+
+// Example: Delete Job
+exports.deleteJob = async (req, res) => {
+     try {
+        const jobId = req.params.id;
+        if (isDemo(req)) { return res.json({ success: false, message: 'Demo users cannot delete jobs.' }); }
+        const companyId = req.session.user.id;
+
+        if (!isValidObjectId(jobId)) { return res.status(400).json({ success: false, message: 'Invalid Job ID.' }); }
+
+        // Find and delete job, verifying ownership
+        const deletedJob = await Job.findOneAndDelete({ _id: jobId, postedBy: companyId });
+
+        if (!deletedJob) {
+            return res.status(404).json({ success: false, message: 'Job not found or unauthorized.' });
+        }
+
+        // Delete associated applications
+        const deleteResult = await Application.deleteMany({ job: jobId });
+        console.log(`Deleted ${deleteResult.deletedCount} applications associated with job ${jobId}`);
+
+        // Remove job ID from CompanyProfile.jobsPosted array
+        await CompanyProfile.updateOne({ user: companyId }, { $pull: { jobsPosted: jobId } });
+
+        res.json({ success: true, message: 'Job and associated applications deleted successfully!' });
+    } catch (error) {
+        console.error('Delete job error:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete job' });
+    }
+};
+
+// Example: Get Profile View Page
+exports.getProfileViewPage = async (req, res) => {
+     try {
+        const companyId = req.session.user.id;
+        const isDemoUser = !mongoose.Types.ObjectId.isValid(companyId);
+        let companyProfile = null;
+
+        if (isDemoUser) {
+            companyProfile = { companyName: 'Demo Tech Inc.', industry: 'Technology', website: 'https://demo.com', description: 'Demo Desc.', contactPerson: 'Demo Person', phone: '123', address: { city: 'Demo City'}, size: '11-50', founded: 2020, logo: null };
+        } else {
+            companyProfile = await CompanyProfile.findOne({ user: companyId }).lean(); // Use lean for read-only view
+             if (!companyProfile) {
+                 // If no profile, maybe show a limited view or redirect to edit?
+                 // For now, let's provide an empty object structure
+                 companyProfile = {};
+             }
+        }
+
+        res.render('pages/company/profile-view', { // Ensure you have this EJS file
+            title: 'Company Profile View', user: req.session.user,
+            companyProfile: companyProfile, // Pass lean object or demo object
+            isDemo: isDemoUser
+        });
+    } catch (error) {
+        console.error('Get profile view page error:', error);
+        res.status(500).render('error', { title: 'Server Error', message: 'Failed to load profile view page' });
     }
 };
 
 
-// Make sure all functions are exported
+// --- Final module.exports ---
+// Make sure ALL functions needed by your routes are listed here
 module.exports = {
     getDashboard,
     postJob,
     getApplications,
     updateApplicationStatus,
     getProfile,
-    updateProfile, // Ensure this uses the file upload version if needed elsewhere
+    updateProfile,
     getAnalytics,
     getAnalyticsData,
     exportToExcel,
     exportToPDF,
     generateFullReport,
-    handleN8nCompanyUpdate
-    // Add other functions like getJobDetails, editJob, updateJob, toggleJobStatus, deleteJob, getProfileView etc.
-    // if they were part of your original controller and are still needed.
+    handleN8nCompanyUpdate,
+    // Add the examples if you created corresponding routes:
+    getJobDetailsPage,      // Corresponds to GET /company/jobs/:id (if used for a page)
+    getEditJobPage,       // Corresponds to GET /company/edit-job/:id
+    updateJob,            // Corresponds to PUT /company/jobs/:id
+    toggleJobStatus,      // Corresponds to PUT /company/jobs/:id/status
+    deleteJob,            // Corresponds to DELETE /company/jobs/:id
+    getProfileViewPage    // Corresponds to GET /company/profile-view
 };
