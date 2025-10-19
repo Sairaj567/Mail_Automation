@@ -54,11 +54,13 @@ const authRouter = require('./routers/auth');
 const studentRouter = require('./routers/student');
 const adminRouter = require('./routers/admin');
 const companyRouter = require('./routers/company');
+const n8nRouter = require('./routers/n8nRoutes');
 
 app.use('/', authRouter);
 app.use('/student', studentRouter);
 app.use('/admin', adminRouter);
 app.use('/company', companyRouter);
+app.use('/api/n8n', n8nRouter);
 
 // generic 404
 app.use((req, res) => res.status(404).render('pages/404', { title: 'Not Found' }));
