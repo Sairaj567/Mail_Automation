@@ -756,19 +756,3 @@ exports.handleN8nCompanyUpdate = async (req, res) => {
 };
 
 
-// Make sure all functions are exported
-module.exports = {
-    postJob,
-    getApplications,
-    updateApplicationStatus,
-    getProfile,
-    updateProfile, // Ensure this uses the file upload version if needed elsewhere
-    getAnalytics,
-    getAnalyticsData,
-    exportToExcel,
-    exportToPDF,
-    generateFullReport,
-    handleN8nCompanyUpdate
-    // Add other functions like getJobDetails, editJob, updateJob, toggleJobStatus, deleteJob, getProfileView etc.
-    // if they were part of your original controller and are still needed.
-};
