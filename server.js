@@ -15,7 +15,7 @@ const app = express();
 // --- Middleware ---
 
 // Basic Security Headers
-app.use(helmet());
+// app.use(helmet()); // Consider re-enabling after testing if Content Security Policy causes issues
 
 // Logging (use 'dev' for development, consider 'combined' for production)
 app.use(morgan('dev'));
@@ -31,8 +31,8 @@ app.use(cookieParser());
 // Serve files from 'public' directory at the root URL
 app.use(express.static(path.join(__dirname, '../public')));
 // Serve specific client-side assets from 'client' directory under specific paths
-app.use('/css', express.static(path.join(__dirname, '../client/css')));
-app.use('/js', express.static(path.join(__dirname, '../client/js')));
+app.use('/css', express.static(path.join(__dirname, '../client/css'))); //
+app.use('/js', express.static(path.join(__dirname, '../client/js'))); //
 // If you have images in client/images:
 // app.use('/images', express.static(path.join(__dirname, '../client/images')));
 // Serve uploaded files (ensure this path is correct and secure)
@@ -53,9 +53,10 @@ app.use(session({
     }
 }));
 
+
 // --- View Engine Setup ---
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, '../views'));
+app.set('view engine', 'ejs'); //
+app.set('views', path.join(__dirname, '../views')); //
 
 // Middleware to pass user session data to all views
 app.use((req, res, next) => {
@@ -64,13 +65,13 @@ app.use((req, res, next) => {
 });
 
 // Helper function for role icons (Example - keep if used in EJS)
-app.locals.getRoleIcon = function(role) {
+app.locals.getRoleIcon = function(role) { //
     const icons = {
-        student: 'fas fa-user-graduate',
-        company: 'fas fa-building',
-        admin: 'fas fa-user-shield'
+        student: 'fas fa-user-graduate', //
+        company: 'fas fa-building', //
+        admin: 'fas fa-user-shield' //
     };
-    return icons[role] || 'fas fa-user';
+    return icons[role] || 'fas fa-user'; //
 };
 
 
@@ -86,21 +87,21 @@ mongoose.connect(MONGODB_URI)
 
 
 // --- Import Routers ---
-const authRoutes = require('./routers/authRoutes');
-const studentRoutes = require('./routers/studentRoutes');
-const companyRoutes = require('./routers/companyRoutes');
-const adminRoutes = require('./routers/adminRoutes');
+const authRoutes = require('./routers/authRoutes'); //
+const studentRoutes = require('./routers/studentRoutes'); //
+const companyRoutes = require('./routers/companyRoutes'); //
+const adminRoutes = require('./routers/adminRoutes'); //
 const n8nRoutes = require('./routers/n8nRoutes'); // Import the new n8n router
 // const mailRoutes = require('./routers/mailRoutes'); // Import mail router if you created it separately
 
 
 // --- Use Routers ---
-app.use('/auth', authRoutes);
-app.use('/student', studentRoutes);
+// IMPORTANT: Define API/specific routes BEFORE generic ones and BEFORE error handlers
+app.use('/auth', authRoutes); //
+app.use('/student', studentRoutes); //
 app.use('/company', companyRoutes); // User-facing company routes
-app.use('/admin', adminRoutes);
+app.use('/admin', adminRoutes); //
 app.use('/api/n8n', n8nRoutes);   // Mount n8n webhook routes under /api/n8n
-// app.use('/', mailRoutes); // Mount mail routes if created separately
 
 
 // --- Core Routes ---
@@ -108,14 +109,16 @@ app.use('/api/n8n', n8nRoutes);   // Mount n8n webhook routes under /api/n8n
 // Home route
 app.get('/', (req, res) => {
     // Pass user data to the index template
-    res.render('index', {
+    res.render('index', { //
         title: 'Placement Portal - Find Your Dream Job',
         user: req.session.user || null // Ensure user is passed
     });
 });
 
 // Remove simple dashboard routes if they are fully handled by specific routers
-// (e.g., '/student/dashboard' should be handled within studentRoutes)
+// app.get('/student/dashboard', ...); // Should be handled by studentRoutes
+// app.get('/company/dashboard', ...); // Should be handled by companyRoutes
+// app.get('/admin/dashboard', ...);   // Should be handled by adminRoutes
 
 
 // --- Error Handling Middleware ---
@@ -129,11 +132,16 @@ app.use((err, req, res, next) => {
     const statusCode = err.status || 500;
     const message = err.message || 'An unexpected error occurred. Please try again later.';
 
-    // Check if the request likely expects JSON (e.g., API routes)
+    // Check if the request likely expects JSON (adjust prefixes as needed)
     const expectsJson = req.originalUrl.startsWith('/api/') ||
                         req.originalUrl.startsWith('/company/') || // Assuming company routes might have API parts
                         req.originalUrl.startsWith('/student/') || // Assuming student routes might have API parts
                         req.originalUrl.startsWith('/auth/');    // Assuming auth routes might have API parts
+
+    // Avoid sending error page if headers already sent
+    if (res.headersSent) {
+        return next(err);
+    }
 
     if (expectsJson) {
         // Send JSON error response for API routes
@@ -145,14 +153,14 @@ app.use((err, req, res, next) => {
         // Render HTML error page for non-API routes
         res.status(statusCode).render('error', { // Ensure you have an 'error.ejs' view
             title: `Error ${statusCode}`,
-            message: message,
+            message: message, //
             user: req.session.user || null // Pass user data to error page if needed
         });
     }
 });
 
 
-// 404 Not Found Handler (Must be the LAST route handler)
+// 404 Not Found Handler (Must be the VERY LAST route handler)
 app.use((req, res) => {
     const statusCode = 404;
     // Check if the request likely expects JSON
@@ -160,6 +168,8 @@ app.use((req, res) => {
                         req.originalUrl.startsWith('/company/') ||
                         req.originalUrl.startsWith('/student/') ||
                         req.originalUrl.startsWith('/auth/');
+
+    console.warn(`404 Not Found: ${req.method} ${req.originalUrl}`); // Log 404 errors
 
     if (expectsJson) {
         return res.status(statusCode).json({
@@ -177,7 +187,7 @@ app.use((req, res) => {
 
 
 // --- Start Server ---
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; //
 // Listen on 0.0.0.0 to be accessible from outside the host (e.g., from n8n Docker container)
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
