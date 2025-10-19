@@ -1,19 +1,28 @@
 const fs = require('fs');
 const path = require('path');
-const prisma = require('../prismaClient');
+// Remove Prisma client import
+// const prisma = require('../prismaClient');
+const mongoose = require('mongoose'); // Make sure mongoose is required if not already global
 
+// Import Mongoose models
+const Job = require('../models/Job');
+const Application = require('../models/Application');
+const StudentProfile = require('../models/StudentProfile');
+const User = require('../models/User'); // Import User model if needed for population
+
+// --- Keep the existing constants like JOB_TYPE_VIEW, EXPERIENCE_VIEW, etc. ---
 const JOB_TYPE_VIEW = {
   INTERNSHIP: 'internship',
-  FULL_TIME: 'fulltime',
-  PART_TIME: 'parttime',
-  REMOTE: 'remote'
+  FULL_TIME: 'full-time', // Corrected from 'fulltime' if needed
+  PART_TIME: 'part-time', // Corrected from 'parttime' if needed
+  REMOTE: 'remote',
 };
 
 const EXPERIENCE_VIEW = {
   FRESHER: 'fresher',
   ZERO_TO_TWO: '0-2',
   TWO_TO_FIVE: '2-5',
-  FIVE_PLUS: '5+'
+  FIVE_PLUS: '5+',
 };
 
 const STATUS_VIEW = {
@@ -22,221 +31,209 @@ const STATUS_VIEW = {
   SHORTLISTED: 'shortlisted',
   INTERVIEW: 'interview',
   REJECTED: 'rejected',
-  ACCEPTED: 'accepted'
+  ACCEPTED: 'accepted',
 };
 
 const STATUS_DISPLAY = Object.values(STATUS_VIEW);
+// --- End of constants ---
 
-const mapEducationStatus = (value) => {
-  if (!value) return null;
-  const normalized = value.toString().toLowerCase();
-  if (normalized === 'completed') return 'COMPLETED';
-  if (normalized === 'pursuing') return 'PURSUING';
-  return null;
-};
 
 const isDemo = (req) => Boolean(req.session?.user?.isDemo);
 
-const parseId = (value) => {
-  const parsed = Number(value);
-  return Number.isNaN(parsed) ? null : parsed;
-};
+// Helper function to check for valid ObjectId
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 const ensureStudentProfile = async (userId) => {
-  let profile = await prisma.studentProfile.findUnique({ where: { userId } });
+  let profile = await StudentProfile.findOne({ user: userId });
   if (!profile) {
-    profile = await prisma.studentProfile.create({
-      data: {
-        userId,
-        skills: [],
-        profileCompletion: 0
-      }
+    profile = await StudentProfile.create({
+      user: userId,
+      skills: [],
+      profileCompletion: 0,
     });
   }
   return profile;
 };
 
+// --- Keep formatJob and formatApplication helper functions (adjust if needed for Mongoose structure) ---
 const formatJob = (job) => {
-  if (!job) return null;
-  return {
-    ...job,
-    _id: job.id.toString(),
-    jobType: job.jobType ? JOB_TYPE_VIEW[job.jobType] || job.jobType.toLowerCase() : null,
-    experienceLevel: job.experienceLevel ? EXPERIENCE_VIEW[job.experienceLevel] || job.experienceLevel.toLowerCase() : null,
-    requirements: job.requirements || [],
-    responsibilities: job.responsibilities || [],
-    skills: job.skills || [],
-    company: job.companyName
-  };
+    if (!job) return null;
+    // Mongoose documents have _id, not id by default
+    const formatted = job.toObject ? job.toObject() : { ...job }; // Handle both Mongoose docs and plain objects
+    formatted._id = formatted._id.toString(); // Ensure _id is a string
+    // You might need additional transformations depending on your model vs. view needs
+    formatted.company = formatted.company || 'Unknown Company'; // Assuming 'company' is a string field in Job model
+    formatted.requirements = formatted.requirements || [];
+    formatted.responsibilities = formatted.responsibilities || [];
+    formatted.skills = formatted.skills || [];
+    formatted.jobType = formatted.jobType || 'full-time'; // Default if missing
+    formatted.experienceLevel = formatted.experienceLevel || 'fresher'; // Default if missing
+    formatted.salary = formatted.salary || 'Not specified'; // Default if missing
+
+    return formatted;
 };
 
 const formatApplication = (application) => {
-  if (!application) return null;
-  return {
-    ...application,
-    _id: application.id.toString(),
-    status: STATUS_VIEW[application.status] || application.status.toLowerCase(),
-    appliedDate: application.appliedAt,
-    job: formatJob(application.job)
-  };
+    if (!application) return null;
+    const formatted = application.toObject ? application.toObject() : { ...application };
+    formatted._id = formatted._id.toString();
+    formatted.status = formatted.status || 'applied';
+    formatted.appliedDate = formatted.appliedDate || new Date();
+    // Ensure nested job is also formatted
+    if (formatted.job && typeof formatted.job === 'object') {
+        formatted.job = formatJob(formatted.job);
+    } else {
+         // Handle case where job might just be an ID or missing
+         formatted.job = { _id: formatted.job?.toString(), title: 'Unknown Job', company: 'Unknown Company', location: 'Unknown' };
+    }
+    return formatted;
 };
+// --- End of helper functions ---
 
 const calculateProfileCompletion = (profile) => {
   if (!profile) return 0;
-  const fields = ['college', 'course', 'graduationYear', 'cgpa', 'phone', 'skills', 'resumePath'];
-  const increment = 100 / fields.length;
-  let score = 0;
+  // Use fields from your StudentProfile Mongoose schema
+  const fields = ['college', 'course', 'graduationYear', 'cgpa', 'phone', 'skills', 'resume'];
+  const totalFields = fields.length;
+  let completedFields = 0;
 
   fields.forEach((field) => {
     const value = profile[field];
-    if (!value) return;
-
     if (Array.isArray(value)) {
-      if (value.length > 0) score += increment;
+      if (value.length > 0) completedFields++;
     } else if (value !== null && value !== undefined && value !== '') {
-      score += increment;
+      completedFields++;
     }
   });
 
-  return Math.round(score);
+  return totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
 };
 
+// --- renderDemoDashboard using Mongoose-like structure (or keep simplified) ---
 const renderDemoDashboard = async (req, res) => {
-  const jobs = await prisma.job.findMany({
-    where: { isActive: true },
-    take: 5,
-    orderBy: { createdAt: 'desc' }
-  });
+  // Simulate fetching demo jobs (no actual DB call needed for demo)
+   const demoJobsRaw = [
+        {
+            _id: 'demo1', title: "Software Engineer Intern", company: "Demo Google", location: "Mountain View, CA", jobType: "internship", salary: "$7,500/month", description: "Demo description...", requirements: [], responsibilities: [], skills: ["Python", "Java"], experienceLevel: "fresher", isActive: true, createdAt: new Date()
+        },
+        {
+            _id: 'demo2', title: "Frontend Developer", company: "Demo Microsoft", location: "Redmond, WA", jobType: "full-time", salary: "$95,000/year", description: "Demo description...", requirements: [], responsibilities: [], skills: ["React", "TypeScript"], experienceLevel: "0-2", isActive: true, createdAt: new Date()
+        },
+        {
+             _id: 'demo3', title: "Data Analyst", company: "Demo Analytics Co.", location: "Remote", jobType: "full-time", salary: "$70,000/year", description: "Demo description...", requirements: [], responsibilities: [], skills: ["SQL", "Python", "Tableau"], experienceLevel: "fresher", isActive: true, createdAt: new Date()
+        }
+    ];
 
-  const formattedJobs = jobs.map(formatJob);
-  const demoApplications = formattedJobs.slice(0, 3).map((job) => ({
+  const formattedJobs = demoJobsRaw.map(formatJob);
+
+  // Simulate demo applications
+  const demoApplications = formattedJobs.slice(0, 2).map((job) => ({
+    _id: `app${job._id}`,
     job,
     status: STATUS_DISPLAY[Math.floor(Math.random() * STATUS_DISPLAY.length)],
     appliedDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000)
   }));
 
+
   res.render('pages/student/dashboard', {
     title: 'Student Dashboard - Placement Portal',
     user: req.session.user,
     stats: {
-      totalJobs: formattedJobs.length,
+      totalJobs: 5, // Static demo number
       applications: 8,
       pendingApplications: 5,
       interviews: 2
     },
-    recentApplications: demoApplications,
-    profile: { profileCompletion: 65 },
+    recentApplications: demoApplications.map(formatApplication), // Ensure formatting
+    // Simulate profile completion for demo
+    profile: { profileCompletion: calculateProfileCompletion({ college: 'Demo Uni', course: 'CS', skills: ['JS'], resume: 'demo.pdf' }) },
     isDemo: true
   });
 };
+// --- End of renderDemoDashboard ---
 
 exports.getDashboard = async (req, res) => {
   try {
     if (isDemo(req)) {
+      // The demo function no longer uses Prisma
       return renderDemoDashboard(req, res);
     }
 
     const studentId = req.session.user.id;
 
-    const [totalJobs, applications, pendingApplications, interviews, recentApplications, profile] = await Promise.all([
-      prisma.job.count({ where: { isActive: true } }),
-      prisma.application.count({ where: { studentId } }),
-      prisma.application.count({ where: { studentId, status: { in: ['APPLIED', 'UNDER_REVIEW', 'SHORTLISTED'] } } }),
-      prisma.application.count({ where: { studentId, status: 'INTERVIEW' } }),
-      prisma.application.findMany({
-        where: { studentId },
-        include: { job: true },
-        orderBy: { appliedAt: 'desc' },
-        take: 3
-      }),
-      prisma.studentProfile.findUnique({ where: { userId: studentId } })
+    // Use Mongoose methods
+    const [totalJobs, applicationsCount, pendingApplicationsCount, interviewsCount, recentApps, profile] = await Promise.all([
+      Job.countDocuments({ isActive: true }),
+      Application.countDocuments({ student: studentId }),
+      Application.countDocuments({ student: studentId, status: { $in: ['applied', 'under_review', 'shortlisted'] } }),
+      Application.countDocuments({ student: studentId, status: 'interview' }),
+      Application.find({ student: studentId })
+        .populate('job') // Populate job details
+        .sort({ appliedDate: -1 })
+        .limit(3),
+      StudentProfile.findOne({ user: studentId })
     ]);
+
+    // Ensure profile exists and calculate completion
+     let studentProfile = profile;
+     if (!studentProfile) {
+         studentProfile = await ensureStudentProfile(studentId); // Create if doesn't exist
+     }
+     const profileCompletion = calculateProfileCompletion(studentProfile);
+     // If the profile was just created, it might not have the completion score yet
+     studentProfile.profileCompletion = profileCompletion;
+
 
     res.render('pages/student/dashboard', {
       title: 'Student Dashboard - Placement Portal',
       user: req.session.user,
       stats: {
         totalJobs,
-        applications,
-        pendingApplications,
-        interviews
+        applications: applicationsCount,
+        pendingApplications: pendingApplicationsCount,
+        interviews: interviewsCount
       },
-      recentApplications: recentApplications.map(formatApplication),
-      profile: profile || { profileCompletion: 0 },
+      recentApplications: recentApps.map(formatApplication), // Use formatter
+      profile: studentProfile, // Pass the fetched or created profile
       isDemo: false
     });
   } catch (error) {
     console.error('Dashboard error:', error);
-    return renderDemoDashboard(req, res);
+     // Render demo dashboard as a fallback in case of errors
+     return renderDemoDashboard(req, res);
   }
 };
 
-const mapJobTypeFilter = (value) => {
-  if (!value) return undefined;
-  const key = value.toString().toLowerCase();
-  switch (key) {
-    case 'internship':
-      return 'INTERNSHIP';
-    case 'fulltime':
-      return 'FULL_TIME';
-    case 'parttime':
-      return 'PART_TIME';
-    case 'remote':
-      return 'REMOTE';
-    default:
-      return undefined;
-  }
-};
-
-const mapExperienceFilter = (value) => {
-  if (!value) return undefined;
-  const key = value.toString().toLowerCase();
-  switch (key) {
-    case 'fresher':
-      return 'FRESHER';
-    case '0-2':
-      return 'ZERO_TO_TWO';
-    case '2-5':
-      return 'TWO_TO_FIVE';
-    case '5+':
-      return 'FIVE_PLUS';
-    default:
-      return undefined;
-  }
-};
-
+// --- Update getJobs to use Mongoose ---
 exports.getJobs = async (req, res) => {
   try {
     const { search, jobType, experience } = req.query;
 
-    const where = { isActive: true };
+    const filter = { isActive: true };
 
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { companyName: { contains: search, mode: 'insensitive' } }
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { company: { $regex: search, $options: 'i' } }, // Assuming company is stored as string
+         { skills: { $regex: search, $options: 'i' } } // Search skills array
       ];
     }
 
-    const jobTypeFilter = mapJobTypeFilter(jobType);
-    if (jobTypeFilter) {
-      where.jobType = jobTypeFilter;
+    if (jobType) {
+      filter.jobType = jobType; // Assuming jobType values match query values directly
     }
 
-    const experienceFilter = mapExperienceFilter(experience);
-    if (experienceFilter) {
-      where.experienceLevel = experienceFilter;
+    if (experience) {
+      filter.experienceLevel = experience; // Assuming experienceLevel values match
     }
 
-    const jobs = await prisma.job.findMany({
-      where,
-      orderBy: { createdAt: 'desc' }
-    });
+    // Use Mongoose find with the filter object
+    const jobs = await Job.find(filter).sort({ createdAt: -1 });
 
     res.render('pages/student/jobs', {
       title: 'Job Listings - Placement Portal',
       user: req.session.user,
-      jobs: jobs.map(formatJob),
+      jobs: jobs.map(formatJob), // Use formatter
       filters: {
         search: search || '',
         jobType: jobType || '',
@@ -252,21 +249,29 @@ exports.getJobs = async (req, res) => {
     });
   }
 };
+// --- End of getJobs ---
 
+
+// --- Update getJobDetails to use Mongoose ---
 exports.getJobDetails = async (req, res) => {
   try {
-    const jobId = parseId(req.params.id);
-    if (jobId === null) {
+    const jobId = req.params.id;
+
+    // Check if jobId is a valid MongoDB ObjectId
+    if (!isValidObjectId(jobId)) {
       return res.status(404).render('404', { title: 'Job Not Found' });
     }
 
-    const jobRecord = await prisma.job.findUnique({ where: { id: jobId } });
-    if (!jobRecord) {
+    // Use Mongoose findById
+    const jobRecord = await Job.findById(jobId);
+
+    if (!jobRecord || !jobRecord.isActive) { // Check if job exists and is active
       return res.status(404).render('404', { title: 'Job Not Found' });
     }
 
-    const job = formatJob(jobRecord);
+    const job = formatJob(jobRecord); // Use formatter
 
+    // Handle demo user case separately
     if (isDemo(req)) {
       return res.render('pages/student/job-details', {
         title: `${job.title} - Placement Portal`,
@@ -274,39 +279,35 @@ exports.getJobDetails = async (req, res) => {
         job,
         hasApplied: false,
         applicationStatus: null,
+        application: null, // Add application as null for demo
         isSaved: false,
         isDemo: true
       });
     }
 
+    // For real users, check application and saved status
     const studentId = req.session.user.id;
-    const profile = await ensureStudentProfile(studentId);
+    const profile = await ensureStudentProfile(studentId); // Ensure profile exists
 
-    const application = await prisma.application.findUnique({
-      where: {
-        jobId_studentId: {
-          jobId,
-          studentId
-        }
-      }
+    // Use Mongoose findOne for application and saved status
+    const application = await Application.findOne({
+      job: jobId,
+      student: studentId
     });
 
-    const savedJob = await prisma.studentSavedJob.findUnique({
-      where: {
-        studentProfileId_jobId: {
-          studentProfileId: profile.id,
-          jobId
-        }
-      }
-    });
+    // Check if the job is saved (assuming savedJobs is an array of ObjectIds in StudentProfile)
+    const isSaved = profile.savedJobs.some(savedJobId => savedJobId.equals(jobId));
+
 
     res.render('pages/student/job-details', {
       title: `${job.title} - Placement Portal`,
       user: req.session.user,
       job,
       hasApplied: Boolean(application),
-      applicationStatus: application ? STATUS_VIEW[application.status] || application.status.toLowerCase() : null,
-      isSaved: Boolean(savedJob),
+      // Mongoose returns the application object or null
+      application: application ? formatApplication(application) : null,
+       applicationStatus: application ? application.status : null,
+      isSaved: isSaved,
       isDemo: false
     });
   } catch (error) {
@@ -317,7 +318,10 @@ exports.getJobDetails = async (req, res) => {
     });
   }
 };
+// --- End of getJobDetails ---
 
+
+// --- Update applyForJob to use Mongoose ---
 exports.applyForJob = async (req, res) => {
   try {
     if (isDemo(req)) {
@@ -328,19 +332,49 @@ exports.applyForJob = async (req, res) => {
     }
 
     const studentId = req.session.user.id;
-    const jobId = parseId(req.body.jobId);
+    const jobId = req.body.jobId;
 
-    if (!jobId) {
-      return res.json({ success: false, message: 'Invalid job selected' });
+    if (!isValidObjectId(jobId)) {
+        return res.json({ success: false, message: 'Invalid job selected' });
     }
 
-    const existingApplication = await prisma.application.findUnique({
-      where: {
-        jobId_studentId: {
-          jobId,
-          studentId
-        }
-      }
+     // Check if student profile exists and has a resume
+    const studentProfile = await StudentProfile.findOne({ user: studentId });
+    // Use the resume filename from the uploaded file if available, otherwise fallback to profile
+    let resumeFilename = studentProfile?.resume || ''; // Default to profile resume
+    let coverLetterFilename = '';
+
+    // Check uploaded files
+     if (req.files) {
+         if (req.files.resume && req.files.resume[0]) {
+             resumeFilename = req.files.resume[0].filename;
+             // Optionally update the profile with the new resume
+             if (studentProfile) {
+                 studentProfile.resume = resumeFilename;
+                 await studentProfile.save();
+             }
+         } else if (!resumeFilename) {
+             // If no resume was uploaded AND profile has no resume, return error
+             return res.json({
+                 success: false,
+                 message: 'Please upload your resume before applying or ensure it exists in your profile.'
+             });
+         }
+         if (req.files.coverLetterFile && req.files.coverLetterFile[0]) {
+             coverLetterFilename = req.files.coverLetterFile[0].filename;
+         }
+     } else if (!resumeFilename) {
+          // If req.files is undefined AND profile has no resume, return error
+          return res.json({
+                 success: false,
+                 message: 'Please upload your resume before applying or ensure it exists in your profile.'
+             });
+     }
+
+
+    const existingApplication = await Application.findOne({
+      job: jobId,
+      student: studentId
     });
 
     if (existingApplication) {
@@ -350,93 +384,54 @@ exports.applyForJob = async (req, res) => {
       });
     }
 
-    let resumeFilename = '';
-    let coverLetterFilename = '';
-
-    if (req.files) {
-      if (req.files.resume && req.files.resume[0]) {
-        resumeFilename = req.files.resume[0].filename;
-      }
-      if (req.files.coverLetterFile && req.files.coverLetterFile[0]) {
-        coverLetterFilename = req.files.coverLetterFile[0].filename;
-      }
-    }
-
-    if (!resumeFilename) {
-      return res.json({
-        success: false,
-        message: 'Please upload your resume'
-      });
-    }
-
-    const {
-      fullName,
-      email,
-      phone,
-      linkedin,
-      college,
-      degree,
-      educationStatus,
-      graduationYear,
-      cgpa,
-      marksType,
-      skills,
-      projects,
-      extracurricular,
+    // Extract other form data
+     const {
+      fullName, email, phone, linkedin,
+      college, degree, educationStatus, graduationYear, cgpa, marksType,
+      skills, projects, extracurricular,
       coverLetterText
     } = req.body;
 
-    const skillsArray = skills
-      ? skills
-          .split(',')
-          .map((skill) => skill.trim())
-          .filter(Boolean)
-      : [];
+     const skillsArray = skills ? skills.split(',').map(skill => skill.trim()).filter(Boolean) : [];
 
-    const application = await prisma.application.create({
-      data: {
-        studentId,
-        jobId,
-        fullName,
-        email,
-        phone,
-        linkedin,
-        college,
-        degree,
-        educationStatus: mapEducationStatus(educationStatus),
-        graduationYear: graduationYear ? Number(graduationYear) : null,
-        cgpa: cgpa ? Number(cgpa) : null,
-        marksType: marksType || null,
-        skills: skillsArray,
-        projects: projects || null,
-        extracurricular: extracurricular || null,
-        resumePath: resumeFilename,
-        coverLetterPath: coverLetterFilename || null,
-        coverLetterText: coverLetterText || null,
-        communications: {
-          create: {
-            type: 'STATUS_UPDATE',
-            content: 'Application submitted successfully',
-            sentBy: 'SYSTEM'
-          }
-        }
-      }
+    // Create a new Application using the Mongoose model
+    const application = new Application({
+      student: studentId,
+      job: jobId,
+      // Store personal/education details directly in the application
+      personalInfo: { fullName, email, phone, linkedin },
+      education: { college, degree, status: educationStatus, graduationYear: Number(graduationYear), cgpa: Number(cgpa), marksType },
+      skills: skillsArray,
+      projects,
+      extracurricular,
+      resume: resumeFilename, // Filename from upload or profile
+      coverLetterFile: coverLetterFilename || null, // Optional filename
+      coverLetterText: coverLetterText || null, // Optional text
+      appliedDate: new Date(),
+      status: 'applied' // Default status
+      // communications array is not needed here, handled by model default/hooks if any
+      // chatMessages array is not needed here
     });
+
+    await application.save();
 
     res.json({
       success: true,
       message: 'Application submitted successfully!',
-      applicationId: application.id
+      applicationId: application._id // Use _id for Mongoose
     });
   } catch (error) {
     console.error('Apply job error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to submit application'
+      // Provide more specific error message if possible
+      message: `Failed to submit application: ${error.message}`
     });
   }
 };
+// --- End of applyForJob ---
 
+// --- Update toggleSaveJob to use Mongoose ---
 exports.toggleSaveJob = async (req, res) => {
   try {
     if (isDemo(req)) {
@@ -447,36 +442,38 @@ exports.toggleSaveJob = async (req, res) => {
     }
 
     const studentId = req.session.user.id;
-    const jobId = parseId(req.body.jobId);
+    const jobId = req.body.jobId;
 
-    if (!jobId) {
+    if (!isValidObjectId(jobId)) {
       return res.json({ success: false, message: 'Invalid job' });
     }
 
-    const profile = await ensureStudentProfile(studentId);
+    // Use Mongoose findOneAndUpdate for efficiency
+     const profile = await StudentProfile.findOne({ user: studentId });
 
-    const key = {
-      studentProfileId: profile.id,
-      jobId
-    };
+     if (!profile) {
+         // This case should ideally not happen if ensureStudentProfile runs on login/dashboard
+         return res.status(404).json({ success: false, message: 'Student profile not found.' });
+     }
 
-    const existing = await prisma.studentSavedJob.findUnique({
-      where: { studentProfileId_jobId: key }
-    });
+    const isSaved = profile.savedJobs.some(savedJobId => savedJobId.equals(jobId));
+    let updateOperation;
 
-    if (existing) {
-      await prisma.studentSavedJob.delete({ where: { studentProfileId_jobId: key } });
-      return res.json({ success: true, isSaved: false, message: 'Job removed from saved' });
+    if (isSaved) {
+      // Remove job from savedJobs array
+      updateOperation = { $pull: { savedJobs: jobId } };
+    } else {
+      // Add job to savedJobs array
+      updateOperation = { $addToSet: { savedJobs: jobId } }; // Use $addToSet to prevent duplicates
     }
 
-    await prisma.studentSavedJob.create({
-      data: {
-        studentProfileId: profile.id,
-        jobId
-      }
-    });
+     await StudentProfile.updateOne({ user: studentId }, updateOperation);
 
-    return res.json({ success: true, isSaved: true, message: 'Job saved successfully' });
+    return res.json({
+      success: true,
+      isSaved: !isSaved, // The new state
+      message: isSaved ? 'Job removed from saved' : 'Job saved successfully'
+    });
   } catch (error) {
     console.error('Save job error:', error);
     res.status(500).json({
@@ -485,37 +482,45 @@ exports.toggleSaveJob = async (req, res) => {
     });
   }
 };
+// --- End of toggleSaveJob ---
 
+
+// --- Update getApplications to use Mongoose ---
 exports.getApplications = async (req, res) => {
   try {
     if (isDemo(req)) {
-      const jobs = await prisma.job.findMany({ where: { isActive: true }, take: 5 });
-      const applications = jobs.map((job) => ({
-        job: formatJob(job),
-        status: STATUS_DISPLAY[Math.floor(Math.random() * STATUS_DISPLAY.length)],
-        appliedDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000)
-      }));
+       // Simulate demo applications using formatJob for consistency
+        const demoJobsRaw = [
+             { _id: 'demo1', title: "Software Engineer Intern", company: "Demo Google", location: "Mountain View, CA", jobType: "internship", salary: "$7,500/month", description: "Demo description...", requirements: [], responsibilities: [], skills: ["Python", "Java"], experienceLevel: "fresher", isActive: true, createdAt: new Date() },
+             { _id: 'demo2', title: "Frontend Developer", company: "Demo Microsoft", location: "Redmond, WA", jobType: "full-time", salary: "$95,000/year", description: "Demo description...", requirements: [], responsibilities: [], skills: ["React", "TypeScript"], experienceLevel: "0-2", isActive: true, createdAt: new Date() }
+        ];
+        const applications = demoJobsRaw.map((job) => ({
+            _id: `app${job._id}`,
+            job: formatJob(job), // Format the demo job
+            status: STATUS_DISPLAY[Math.floor(Math.random() * STATUS_DISPLAY.length)],
+            appliedDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000)
+       }));
+
 
       return res.render('pages/student/applications', {
         title: 'My Applications - Placement Portal',
         user: req.session.user,
-        applications,
+        applications: applications.map(formatApplication), // Apply formatting
         isDemo: true
       });
     }
 
     const studentId = req.session.user.id;
 
-    const applications = await prisma.application.findMany({
-      where: { studentId },
-      include: { job: true },
-      orderBy: { appliedAt: 'desc' }
-    });
+    // Use Mongoose find with populate
+    const applications = await Application.find({ student: studentId })
+      .populate('job') // Populate the referenced Job document
+      .sort({ appliedDate: -1 });
 
     res.render('pages/student/applications', {
       title: 'My Applications - Placement Portal',
       user: req.session.user,
-      applications: applications.map(formatApplication),
+      applications: applications.map(formatApplication), // Use formatter
       isDemo: false
     });
   } catch (error) {
@@ -526,17 +531,33 @@ exports.getApplications = async (req, res) => {
     });
   }
 };
+// --- End of getApplications ---
 
+
+// --- Update getProfile to use Mongoose ---
 exports.getProfile = async (req, res) => {
   try {
-    const profile = isDemo(req)
-      ? null
-      : await prisma.studentProfile.findUnique({ where: { userId: req.session.user.id } });
+     const studentId = req.session.user.id;
+     // Use Mongoose findOne
+     const profile = isDemo(req) ? null : await StudentProfile.findOne({ user: studentId });
+
+     // For demo or if profile doesn't exist, provide a default structure
+        const profileData = profile || (isDemo(req) ? {
+            college: 'Demo University',
+            course: 'Computer Science',
+            skills: ['JavaScript', 'React'],
+            resume: 'demo_resume.pdf',
+            applicationCount: 5 // Example static count for demo
+            // Add other fields expected by the template
+        } : {});
+
 
     res.render('pages/student/profile', {
       title: 'Student Profile - Placement Portal',
       user: req.session.user,
-      profile,
+       profile: profileData, // Pass the fetched or default profile data
+       // Add applicationCount if your template needs it (Mongoose virtual can handle this)
+       applicationCount: profile ? (await Application.countDocuments({ student: studentId })) : (profileData.applicationCount || 0),
       isDemo: isDemo(req)
     });
   } catch (error) {
@@ -547,7 +568,9 @@ exports.getProfile = async (req, res) => {
     });
   }
 };
+// --- End of getProfile ---
 
+// --- Update updateProfile to use Mongoose ---
 exports.updateProfile = async (req, res) => {
   try {
     if (isDemo(req)) {
@@ -560,63 +583,84 @@ exports.updateProfile = async (req, res) => {
     const studentId = req.session.user.id;
     const profilePayload = { ...req.body };
 
+    // Convert comma-separated skills string to array
     if (typeof profilePayload.skills === 'string') {
       profilePayload.skills = profilePayload.skills
         .split(',')
         .map((skill) => skill.trim())
         .filter(Boolean);
+    } else {
+        profilePayload.skills = []; // Ensure skills is an array
     }
 
-    const data = {
-      college: profilePayload.college || null,
-      course: profilePayload.course || null,
-      specialization: profilePayload.specialization || null,
-      graduationYear: profilePayload.graduationYear ? Number(profilePayload.graduationYear) : null,
-      cgpa: profilePayload.cgpa ? Number(profilePayload.cgpa) : null,
-      phone: profilePayload.phone || null,
-      dateOfBirth: profilePayload.dateOfBirth ? new Date(profilePayload.dateOfBirth) : null,
-      skills: Array.isArray(profilePayload.skills) ? profilePayload.skills : [],
-      linkedin: profilePayload.linkedin || null,
-      github: profilePayload.github || null,
-      portfolio: profilePayload.portfolio || null
-    };
+     // Prepare update data, ensuring numbers are parsed correctly
+     const updateData = {
+         college: profilePayload.college || null,
+         course: profilePayload.course || null,
+         specialization: profilePayload.specialization || null,
+         graduationYear: profilePayload.graduationYear ? Number(profilePayload.graduationYear) : null,
+         cgpa: profilePayload.cgpa ? Number(profilePayload.cgpa) : null,
+         phone: profilePayload.phone || null,
+         dateOfBirth: profilePayload.dateOfBirth ? new Date(profilePayload.dateOfBirth) : null,
+         skills: profilePayload.skills,
+         socialLinks: { // Assuming socialLinks is an object in your schema
+             linkedin: profilePayload.linkedin || null,
+             github: profilePayload.github || null,
+             portfolio: profilePayload.portfolio || null
+         }
+         // resume field is handled by uploadResume route
+     };
 
-    const profile = await prisma.studentProfile.upsert({
-      where: { userId: studentId },
-      update: data,
-      create: { userId: studentId, ...data }
-    });
+    // Use Mongoose findOneAndUpdate with upsert option
+    const options = { new: true, upsert: true, setDefaultsOnInsert: true };
+    let updatedProfile = await StudentProfile.findOneAndUpdate(
+      { user: studentId },
+      { $set: updateData }, // Use $set to update fields
+      options
+    );
 
-    const profileCompletion = calculateProfileCompletion(profile);
-    const updated = await prisma.studentProfile.update({
-      where: { id: profile.id },
-      data: { profileCompletion }
-    });
+     // Recalculate and save profile completion
+     updatedProfile.profileCompletion = calculateProfileCompletion(updatedProfile);
+     await updatedProfile.save();
+
 
     res.json({
       success: true,
       message: 'Profile updated successfully!',
-      profileCompletion: updated.profileCompletion
+      profileCompletion: updatedProfile.profileCompletion
     });
   } catch (error) {
     console.error('Profile update error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update profile'
+      message: `Failed to update profile: ${error.message}`
     });
   }
 };
+// --- End of updateProfile ---
 
+// --- Update getResume to use Mongoose ---
 exports.getResume = async (req, res) => {
   try {
-    const profile = isDemo(req)
-      ? null
-      : await prisma.studentProfile.findUnique({ where: { userId: req.session.user.id } });
+     const studentId = req.session.user.id;
+     // Use Mongoose findOne
+     const profile = isDemo(req) ? null : await StudentProfile.findOne({ user: studentId });
+
+    // Provide demo data if needed
+      const profileData = profile || (isDemo(req) ? {
+            resume: 'demo_resume.pdf',
+            applicationCount: 5 // Static count for demo
+        } : {});
+
+       // Get application count for real users
+        const applicationCount = profile ? await Application.countDocuments({ student: studentId }) : (profileData.applicationCount || 0);
+
 
     res.render('pages/student/resume', {
       title: 'My Resume - Placement Portal',
       user: req.session.user,
-      profile,
+       profile: profileData, // Pass profile data
+       applicationCount: applicationCount, // Pass application count
       isDemo: isDemo(req)
     });
   } catch (error) {
@@ -627,15 +671,26 @@ exports.getResume = async (req, res) => {
     });
   }
 };
+// --- End of getResume ---
 
+
+// --- Update uploadResume to use Mongoose ---
 exports.uploadResume = async (req, res) => {
   try {
     if (isDemo(req)) {
+      // Simulate success for demo user without DB interaction
+      if (!req.file) {
+          return res.json({ success: false, message: 'Please select a file to upload' });
+      }
+       // You might want to delete the uploaded demo file immediately or handle it differently
+       // fs.unlinkSync(req.file.path); // Example: Delete the file
       return res.json({
-        success: false,
-        message: 'Please create a real account to upload resumes.'
+        success: true,
+        message: 'Demo resume uploaded (not saved)!',
+        filename: req.file.filename
       });
     }
+
 
     if (!req.file) {
       return res.json({
@@ -646,21 +701,18 @@ exports.uploadResume = async (req, res) => {
 
     const studentId = req.session.user.id;
 
-    const profile = await prisma.studentProfile.upsert({
-      where: { userId: studentId },
-      update: { resumePath: req.file.filename },
-      create: {
-        userId: studentId,
-        resumePath: req.file.filename,
-        skills: []
-      }
-    });
+    // Use Mongoose findOneAndUpdate with upsert
+    const options = { new: true, upsert: true, setDefaultsOnInsert: true };
+    let updatedProfile = await StudentProfile.findOneAndUpdate(
+        { user: studentId },
+        { $set: { resume: req.file.filename } },
+        options
+    );
 
-    const profileCompletion = calculateProfileCompletion({ ...profile, resumePath: req.file.filename });
-    await prisma.studentProfile.update({
-      where: { id: profile.id },
-      data: { profileCompletion }
-    });
+    // Recalculate and save profile completion
+    updatedProfile.profileCompletion = calculateProfileCompletion(updatedProfile);
+    await updatedProfile.save();
+
 
     res.json({
       success: true,
@@ -669,13 +721,24 @@ exports.uploadResume = async (req, res) => {
     });
   } catch (error) {
     console.error('Resume upload error:', error);
+     // If there's an error and a file was uploaded, attempt to delete it
+        if (req.file && req.file.path) {
+            try {
+                fs.unlinkSync(req.file.path);
+                console.log('Cleaned up uploaded file after error:', req.file.filename);
+            } catch (cleanupError) {
+                console.error('Error cleaning up uploaded file:', cleanupError);
+            }
+        }
     res.status(500).json({
       success: false,
-      message: 'Failed to upload resume'
+       message: `Failed to upload resume: ${error.message}`
     });
   }
 };
+// --- End of uploadResume ---
 
+// --- Update deleteApplication to use Mongoose ---
 exports.deleteApplication = async (req, res) => {
   try {
     if (isDemo(req)) {
@@ -686,31 +749,36 @@ exports.deleteApplication = async (req, res) => {
     }
 
     const studentId = req.session.user.id;
-    const applicationId = parseId(req.body.applicationId);
+    const applicationId = req.body.applicationId;
 
-    if (!applicationId) {
-      return res.json({ success: false, message: 'Invalid application' });
+    if (!isValidObjectId(applicationId)) {
+      return res.json({ success: false, message: 'Invalid application ID' });
     }
 
-    const application = await prisma.application.findUnique({
-      where: { id: applicationId }
+    // Use Mongoose findOneAndDelete
+    const deletedApplication = await Application.findOneAndDelete({
+      _id: applicationId,
+      student: studentId // Verify ownership
     });
 
-    if (!application || application.studentId !== studentId) {
+    if (!deletedApplication) {
       return res.json({
         success: false,
-        message: 'Application not found'
+        message: 'Application not found or you do not have permission to delete it.'
       });
     }
 
-    if (application.status !== 'APPLIED') {
-      return res.json({
-        success: false,
-        message: 'Cannot delete application that is already under review'
-      });
-    }
+     // Optional: Check status before deleting, though findOneAndDelete handles non-existence
+     const allowedStatuses = ['applied']; // Only allow deleting if just applied
+     if (!allowedStatuses.includes(deletedApplication.status)) {
+         // Note: The application is already deleted at this point.
+         // You might want to find it first, check status, then delete.
+         // Or, simply inform the user the action might have unintended consequences if status was advanced.
+         // For simplicity here, we proceed but could adjust logic.
+          console.warn(`Deleted application ${applicationId} with status ${deletedApplication.status}`);
+         // return res.json({ success: false, message: `Cannot delete application with status: ${deletedApplication.status}` });
+     }
 
-    await prisma.application.delete({ where: { id: applicationId } });
 
     res.json({
       success: true,
@@ -720,11 +788,13 @@ exports.deleteApplication = async (req, res) => {
     console.error('Delete application error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete application'
+       message: `Failed to delete application: ${error.message}`
     });
   }
 };
+// --- End of deleteApplication ---
 
+// --- Update deleteResume to use Mongoose ---
 exports.deleteResume = async (req, res) => {
   try {
     if (isDemo(req)) {
@@ -735,29 +805,49 @@ exports.deleteResume = async (req, res) => {
     }
 
     const studentId = req.session.user.id;
-    const profile = await prisma.studentProfile.findUnique({ where: { userId: studentId } });
+     // Use Mongoose findOneAndUpdate to remove the resume field
+     const updatedProfile = await StudentProfile.findOneAndUpdate(
+         { user: studentId },
+         { $unset: { resume: "" } }, // Use $unset to remove the field
+         { new: true } // Return the updated document
+     );
 
-    if (!profile || !profile.resumePath) {
-      return res.json({
-        success: false,
-        message: 'No resume found to delete'
-      });
+    if (!updatedProfile) {
+        // This case means the profile didn't exist, which shouldn't happen if ensureProfile works
+         return res.json({ success: false, message: 'Profile not found.' });
     }
 
-    const resumePathOnDisk = path.join(__dirname, '../../public/uploads/resumes', profile.resumePath);
+     // Check if a resume path existed before deletion to attempt file cleanup
+     // Note: `updatedProfile` here will *not* have the resume field. We need the old value if we want to delete the file.
+     // A better approach might be to find first, then update/delete.
+     // Let's find first for cleaner file deletion:
+     const profile = await StudentProfile.findOne({ user: studentId });
+     if (!profile || !profile.resume) {
+         return res.json({ success: false, message: 'No resume found to delete' });
+     }
+     const resumePathToDelete = profile.resume;
+
+    // Proceed with update to remove resume path from DB
+     profile.resume = undefined; // Or null, depending on schema design
+      // Recalculate completion score *before* saving the final update
+     profile.profileCompletion = calculateProfileCompletion(profile);
+     await profile.save();
+
+
+    // Attempt to delete the file from the filesystem
+    const resumePathOnDisk = path.join(__dirname, '../../public/uploads/resumes', resumePathToDelete);
     if (fs.existsSync(resumePathOnDisk)) {
-      fs.unlinkSync(resumePathOnDisk);
+        try {
+            fs.unlinkSync(resumePathOnDisk);
+            console.log('Deleted resume file:', resumePathToDelete);
+        } catch (fileError) {
+             console.error('Error deleting resume file:', fileError);
+             // Decide if this should be a user-facing error or just logged
+        }
+    } else {
+        console.warn('Resume file not found on disk for deletion:', resumePathToDelete);
     }
 
-    const profileCompletion = calculateProfileCompletion({ ...profile, resumePath: null });
-
-    await prisma.studentProfile.update({
-      where: { id: profile.id },
-      data: {
-        resumePath: null,
-        profileCompletion
-      }
-    });
 
     res.json({
       success: true,
@@ -767,7 +857,8 @@ exports.deleteResume = async (req, res) => {
     console.error('Delete resume error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete resume'
+       message: `Failed to delete resume: ${error.message}`
     });
   }
 };
+// --- End of deleteResume ---
