@@ -1,5 +1,18 @@
 // Resume JavaScript with Dynamic Functionality
 document.addEventListener('DOMContentLoaded', function() {
+    const resumeDataElement = document.getElementById('resume-data');
+    let resumeConfig = { hasResume: false, resumeFilename: null };
+    if (resumeDataElement) {
+        try {
+            resumeConfig = JSON.parse(resumeDataElement.textContent || '{}');
+            resumeDataElement.remove();
+        } catch (parseError) {
+            console.error('Failed to parse resume metadata:', parseError);
+        }
+    }
+    const resumeFilename = resumeConfig && resumeConfig.resumeFilename ? resumeConfig.resumeFilename : null;
+    const resumeUrl = resumeFilename ? `/uploads/resumes/${encodeURIComponent(resumeFilename)}` : null;
+
     const uploadArea = document.getElementById('uploadArea');
     const resumeFile = document.getElementById('resumeFile');
     const browseBtn = document.getElementById('browseBtn');
@@ -147,13 +160,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function loadPdfPreview() {
-        const resumePath = '/uploads/resumes/<%= profile.resume %>';
+        if (!resumeUrl) {
+            showAlert('No resume available to preview.', 'error');
+            return;
+        }
         
         // Configure PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         
         // Load the PDF
-        const loadingTask = pdfjsLib.getDocument(resumePath);
+        const loadingTask = pdfjsLib.getDocument(resumeUrl);
         loadingTask.promise.then(function(pdf) {
             pdfDoc = pdf;
             totalPagesEl.textContent = pdf.numPages;
@@ -239,10 +255,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (downloadBtn) {
         downloadBtn.addEventListener('click', function() {
-            const resumePath = '/uploads/resumes/<%= profile.resume %>';
+            if (!resumeUrl) {
+                showAlert('No resume available to download.', 'error');
+                return;
+            }
             const link = document.createElement('a');
-            link.href = resumePath;
-            link.download = '<%= profile.resume %>';
+            link.href = resumeUrl;
+            link.download = resumeFilename || 'resume.pdf';
             link.click();
         });
     }

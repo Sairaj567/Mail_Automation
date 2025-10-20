@@ -33,6 +33,8 @@ router.post('/login', (req, res) => {
     
     if (role === 'company') {
         authController.companyLogin(req, res);
+    } else if (role === 'admin') {
+        authController.adminLogin(req, res);
     } else {
         authController.studentLogin(req, res);
     }
@@ -44,6 +46,11 @@ router.post('/signup', (req, res) => {
     
     if (role === 'company') {
         authController.companySignup(req, res);
+    } else if (role === 'admin') {
+        return res.status(400).json({
+            success: false,
+            message: 'Admin accounts are provisioned by the placement office. Please contact support.',
+        });
     } else {
         authController.studentSignup(req, res);
     }

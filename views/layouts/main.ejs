@@ -11,12 +11,18 @@
 <body>
   <%- include('../partials/header') %>
   
-  <div class="layout">
-    <%- include('../partials/sidebar', { role: "student" }) %>
-    <main class="content">
+  <% if (user) { %>
+    <div class="layout">
+      <%- include('../partials/sidebar', { role: user.role }) %>
+      <main class="content">
+        <%- body %>
+      </main>
+    </div>
+  <% } else { %>
+    <div class="layout-public">
       <%- body %>
-    </main>
-  </div>
+    </div>
+  <% } %>
 
   <%- include('../partials/footer') %>
 </body>

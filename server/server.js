@@ -8,6 +8,7 @@ const path = require('path');
 const helmet = require('helmet'); // For security headers
 const morgan = require('morgan'); // For request logging
 const cookieParser = require('cookie-parser'); // If needed, though session handles cookies
+const expressLayouts = require('express-ejs-layouts'); // Import express-ejs-layouts
 require('dotenv').config(); // Load environment variables from .env file
 
 const app = express();
@@ -56,6 +57,8 @@ app.use(session({
 
 
 // --- View Engine Setup ---
+app.use(expressLayouts); // Use express-ejs-layouts
+app.set('layout', 'layouts/main'); // Set default layout
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 

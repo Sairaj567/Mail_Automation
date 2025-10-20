@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-layout">
+        <%- include('../partials/sidebar', { role: 'admin' }) %>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1><%= title %></h1>
+                    <p><%= subtitle %></p>
+                    <% if (isDemo) { %>
+                        <div class="demo-banner">
+                            <i class="fas fa-info-circle"></i>
+                            <span>You are viewing demo data. Some actions may be disabled.</span>
+                        </div>
+                    <% } %>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <span class="user-name"><%= user.name %></span>
+                    </div>
+                </div>
+            </header>
+
+            <% const flashMessages = (typeof messages !== 'undefined' && messages) ? messages : {}; %>
+            <% if (flashMessages.error) { %>
+                <div class="alert alert-danger"><%= flashMessages.error %></div>
+            <% } %>
+            <% if (flashMessages.success) { %>
+                <div class="alert alert-success"><%= flashMessages.success %></div>
+            <% } %>
+            
+            <div class="page-content">
+                <%- body %>
+            </div>
+        </main>
+    </div>
+    <script src="/js/main.js"></script>
+</body>
+</html>

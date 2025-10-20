@@ -1,40 +1,50 @@
 # Copilot Instructions for Mail_Automation
 
-These notes teach AI coding agents how to work productively in this repo. Keep changes aligned with the current implementation (Express + EJS + Mongoose). Treat Prisma/Postgres files as future plans unless explicitly working on Docker deploy.
+These reminders keep AI agents productive in this repo. Focus on the running Express + EJS + Mongoose stack; Prisma + Postgres files under `docs/` and `prisma/` describe a future path only.
 
-## Big picture
-- Monolith web app: Express 5 + EJS views + sessions; MongoDB via Mongoose. Entrypoint: `server/server.js`.
-- UI is server-rendered EJS under `views/` with a global layout `views/layouts/main.ejs`. Static assets in `public/` and `client/` (served via `/css`, `/js`, `/uploads`).
-- Business domains (students, companies, jobs, applications) live under `server/models/*` (Mongoose) with route/controller pairs in `server/routers/*` and `server/controllers/*`.
-- Docs + Prisma (`prisma/schema.prisma`, `docs/*`, Docker files) describe a Postgres/Prisma-based future “email ingestion + opportunities” service. That stack isn’t wired into the running app yet.
+## Current architecture
+- Entrypoint: `server/server.js` wires Express 5, Mongo-backed sessions, static mounts, and global EJS config. Ignore `server/app.js`; it’s legacy scaffolding.
+- Static assets live in `public/` (served at `/`), `client/css|js` (served at `/css` and `/js`), and user uploads under `public/uploads/{resumes,cover-letters,company-logos}`.
+- Layouts and pages: `views/layouts/main.ejs` wraps `views/pages/{auth|student|company|admin}/**`. Rendered views should receive the session user (already exposed via `res.locals.user`).
 
-## Where to change what
-- Web routes: update `server/routers/*Routes.js` and call controller functions. Example routes: `authRoutes`, `studentRoutes`, `companyRoutes`, `adminRoutes`.
-- Controllers: return either EJS pages (`res.render`) or JSON APIs (`res.json({ success, message, ... })`) depending on the route. See `authController.js` patterns, including `redirectTo` in JSON.
-- Models (Mongo): use existing Mongoose schemas: `User`, `StudentProfile`, `CompanyProfile`, `Job`, `Application`. Prefer `Job.postedBy` (ObjectId) to relate jobs to companies; avoid introducing new relation fields (some code mixes `company` vs `postedBy`—normalize on `postedBy`).
-- Views: pages under `views/pages/{student|company|auth|admin}/`. Always pass `user: req.session.user` and page-specific props used by the templates.
+## Routing & controllers
+- Route files end with `*Routes.js` in `server/routers/`; they own session/role guards (`requireStudent`, `requireCompany`) and `multer` setups.
+- Controllers in `server/controllers/` render EJS or reply JSON. JSON handlers follow `{ success, message, redirectTo? }` (see `authController`).
+- The global error handler in `server/server.js` switches to JSON for `/api/`, `/student/`, `/company/`, `/auth/` paths—keep new endpoints under those prefixes if you expect JSON.
+- Prefer delegating heavy logic to controllers instead of anonymous route handlers; several routes still mix both, so align new work with the controller pattern.
 
-## Conventions and patterns
-- Session and roles: `req.session.user = { id, email, name, role }`. Gate access via helpers in routers (e.g., `requireStudent`, `requireCompany`).
-- “Demo user” mode: many routes use `!mongoose.Types.ObjectId.isValid(req.session.user.id)` to return stub data and block writes. Preserve this behavior in new endpoints.
-- Error responses: Global error/404 handlers choose JSON vs HTML by path prefix (e.g., `/company/`, `/student/`, `/auth/`). If you add routes under those prefixes, follow the same response shape.
-- File uploads: use `multer` with disk storage. Student applies via `upload.fields([{ name: 'resume' }, { name: 'coverLetterFile' }])` saved to `public/uploads/{resumes|cover-letters}`. Companies upload logos at `public/uploads/company-logos`.
-- Response shape: for APIs return `{ success: boolean, message: string, ... }` and optionally `redirectTo`.
+## Data models & conventions
+- Mongoose models live in `server/models/`. Key shapes:
+  - `Job`: `company` stores the display name, `postedBy` references the owning `User`, `jobType` enum is `['internship','full-time','part-time','remote']`, `experienceLevel` is `['fresher','0-2','2-5','5+']`.
+  - `Application`: embeds `personalInfo`, `education`, document filenames (`resume`, `coverLetterFile`), and status enum `['applied','under_review','shortlisted','interview','rejected','accepted']`.
+  - `StudentProfile`: tracks `resume`, `skills`, `savedJobs` (Job ObjectIds), and `profileCompletion`.
+  - `CompanyProfile`: stores company metadata plus optional `jobsPosted` list.
+  - `User`: passwords hash in a `pre('save')`; call `user.comparePassword()` during auth.
+- Normalize multiline/comma-delimited text fields into arrays (see `companyController.postJob`).
+- Stick to `Job.postedBy` for joins; avoid adding alternative relationship fields.
 
-## Run/debug (local)
-- Env: `MONGODB_URI` (defaults to `mongodb://localhost:27017/placement_portal`), `SESSION_SECRET`, `PORT` (default 3000).
-- Install and start:
-  - `npm install`
-  - `npm run dev` (nodemon) or `npm start` (plain node)
-- Seed demo jobs (local Mongo): `npm run seed`.
+## Sessions, roles, and demo mode
+- Sessions use `express-session` + `connect-mongo`; `req.session.user` looks like `{ id, email, name, role, isDemo? }`.
+- Demo users are detected via `req.session.user.isDemo` or `!mongoose.Types.ObjectId.isValid(id)`. Controllers often short-circuit to canned data or block writes for demos—preserve that behavior for new flows.
+- Role checks live beside each router; failed access should redirect to `/auth/login?role=…`.
 
-## Deploy (Docker/Prisma path)
-- The `docker-compose.example.yml` and `Dockerfile` target a Postgres/Prisma deployment (service named `backend` running `node server.js` with `prisma migrate deploy`). Use only when building the future email-ingestion service described in `docs/` and `prisma/schema.prisma`.
-- If you edit Prisma schema, run `npx prisma generate` and migrations within that containerized workflow—do not inject Prisma calls into the current Express/Mongoose app.
+## File uploads & assets
+- `studentRoutes.js` configures `multer` `upload.fields([{name:'resume'},{name:'coverLetterFile'}])` writing to `public/uploads/resumes` and `public/uploads/cover-letters` (PDF/DOC/DOCX only, 5 MB cap).
+- `companyRoutes.js` sets up logo uploads to `public/uploads/company-logos`; reuse that storage pattern for new image fields.
+- Persisted filenames are later served from `/uploads/...`; ensure new uploads land in `public/uploads` so EJS templates can link them.
 
-## Integration points
-- n8n → backend webhook (planned): see `docs/07-n8n-integration.md` and `docs/06-api-spec.md`. Implement under a dedicated router when needed (e.g., `POST /mails`), guarded by `x-webhook-secret`.
+## Integrations & automation
+- n8n webhook endpoints live under `/api/n8n` (`server/routers/n8nRoutes.js`). `companyController.handleN8nCompanyUpdate` checks `x-webhook-secret` (or `x-n8n-secret`) against `process.env.N8N_WEBHOOK_SECRET`, then creates/updates a `User` + `CompanyProfile` and hashes a temp password.
+- `server/config/{db,mailer,session}.js` are placeholders; real configuration is inline in `server/server.js`.
 
-## Do/Don’t
-- Do: keep new features in the Mongoose models and existing session/role patterns. Prefer `Job.postedBy` for company lookups.
-- Don’t: mix Prisma into `server/` code, or change entrypoint (keep `server/server.js`). Don’t break demo-mode behavior.
+## Local workflows
+- Required env vars: `MONGODB_URI` (defaults to `mongodb://localhost:27017/placement_portal`), `SESSION_SECRET`, optional `PORT`, optional `N8N_WEBHOOK_SECRET`.
+- Setup: `npm install`, then `npm run dev` (nodemon) or `npm start` (plain node).
+- Seed demo jobs (overwrites `Job` collection): `npm run seed`.
+- No automated tests yet (`npm test` exits 1); rely on manual verification or ad-hoc scripts.
+
+## Do / Don’t
+- Do render pages from `views/pages/...` and rely on `res.locals.user` inside templates.
+- Do mirror the existing JSON response contract and error handling prefixes when adding APIs.
+- Don’t resurrect the Prisma/Postgres runtime or edit `server/app.js` unless explicitly working on the Docker/Prisma deployment track in `docs/`.
+- Don’t bypass demo-mode guardrails or role checks—use the established helpers for new routes.

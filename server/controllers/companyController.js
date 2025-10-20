@@ -8,6 +8,9 @@ const User = require('../models/User'); // Make sure User model is imported
 const ExcelJS = require('exceljs'); // For Excel export
 const PDFDocument = require('pdfkit'); // For PDF export
 
+const JOB_TYPES = ['internship', 'full-time', 'part-time', 'remote'];
+const EXPERIENCE_LEVELS = ['fresher', '0-2', '2-5', '5+'];
+
 // --- Helper Functions ---
 const isDemo = (req) => Boolean(req.session?.user?.isDemo);
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -23,6 +26,12 @@ const ensureCompanyProfile = async (userId, name, industry = '') => {
             industry: industry || '',
             // Initialize other fields if necessary
         });
+    } else if (name && profile.companyName !== name) {
+        profile.companyName = name;
+        if (industry && !profile.industry) {
+            profile.industry = industry;
+        }
+        await profile.save();
     }
     return profile;
 };
@@ -682,15 +691,10 @@ exports.generateFullReport = async (req, res) => {
 
 // N8N Handler (Mongoose version)
 exports.handleN8nCompanyUpdate = async (req, res) => {
-    // 1. Verify Webhook Secret
-    const requiredSecret = process.env.N8N_WEBHOOK_SECRET;
-    if (requiredSecret) {
-        const receivedSecret = req.headers['x-webhook-secret'] || req.headers['x-n8n-secret'];
-        if (receivedSecret !== requiredSecret) {
-            console.warn("N8N Webhook: Invalid secret received.");
-            return res.status(401).json({ success: false, message: 'Unauthorized: Invalid webhook secret.' });
-        }
-    } else { console.warn("N8N_WEBHOOK_SECRET not set..."); }
+    const secretCheck = verifyN8nSecret(req);
+    if (!secretCheck.ok) {
+        return res.status(secretCheck.status).json({ success: false, message: secretCheck.message });
+    }
 
     const { email, companyName, name, industry, website, description, contactPerson, phone, street, city, state, country, zipCode, size, founded, linkedin, twitter, facebook } = req.body;
 
@@ -699,32 +703,31 @@ exports.handleN8nCompanyUpdate = async (req, res) => {
     }
 
     try {
+        const normalizedEmail = email.trim().toLowerCase();
         let user;
         let isNewUser = false;
-        user = await User.findOne({ email: email, role: 'company' });
+        user = await User.findOne({ email: normalizedEmail, role: 'company' });
 
         if (!user) {
             isNewUser = true;
-            console.log(`N8N Webhook: No company user for ${email}. Creating...`);
-            const tempPassword = Math.random().toString(36).slice(-8);
+            console.log(`N8N Webhook: No company user for ${normalizedEmail}. Creating...`);
+            const tempPassword = generateTempPassword();
             const hashedPassword = await bcrypt.hash(tempPassword, 12);
-            user = new User({ name: name || companyName, email: email, password: hashedPassword, role: 'company', isVerified: false });
+            user = new User({ name: name || companyName, email: normalizedEmail, password: hashedPassword, role: 'company', isVerified: false });
             await user.save();
             console.log(`N8N Webhook: Created company user ${user._id}.`);
-            // NOTE: Consider how to handle the temp password or activation for this user.
         } else {
-            console.log(`N8N Webhook: Found existing company user ${user._id} for ${email}.`);
+            console.log(`N8N Webhook: Found existing company user ${user._id} for ${normalizedEmail}.`);
         }
 
         const profileData = { user: user._id, companyName };
-        // Conditionally add fields only if they exist in the payload
         if (industry) profileData.industry = industry;
         if (website) profileData.website = website;
         if (description) profileData.description = description;
         if (contactPerson) profileData.contactPerson = contactPerson;
         if (phone) profileData.phone = phone;
         if (size) profileData.size = size;
-        if (founded && !isNaN(parseInt(founded)) && parseInt(founded) > 0) profileData.founded = parseInt(founded);
+        if (founded && !Number.isNaN(parseInt(founded, 10)) && parseInt(founded, 10) > 0) profileData.founded = parseInt(founded, 10);
 
         const address = {};
         if (street) address.street = street;
@@ -753,6 +756,205 @@ exports.handleN8nCompanyUpdate = async (req, res) => {
         console.error('N8N Company Update Error:', error);
         res.status(500).json({ success: false, message: `Server error: ${error.message}` });
     }
+};
+
+// N8N Job Ingestion Handler
+exports.handleN8nJobCreate = async (req, res) => {
+    const secretCheck = verifyN8nSecret(req);
+    if (!secretCheck.ok) {
+        return res.status(secretCheck.status).json({ success: false, message: secretCheck.message });
+    }
+
+    const {
+        email,
+        companyEmail,
+        companyName,
+        title,
+        location,
+        jobType,
+        salary,
+        description,
+        requirements,
+        responsibilities,
+        benefits,
+        skills,
+        experienceLevel,
+        applicationDeadline,
+        industry,
+        vacancies
+    } = req.body || {};
+
+    const normalizedEmail = (companyEmail || email || '').trim().toLowerCase();
+    if (!normalizedEmail) {
+        return res.status(400).json({ success: false, message: 'Missing required field: company email.' });
+    }
+
+    const trimmedTitle = safeTrim(title);
+    const trimmedLocation = safeTrim(location);
+    const trimmedSalary = safeTrim(salary);
+    const trimmedDescription = safeTrim(description);
+
+    if (!trimmedTitle || !trimmedLocation || !safeTrim(jobType) || !trimmedSalary || !trimmedDescription) {
+        return res.status(400).json({
+            success: false,
+            message: 'Missing required job fields: title, location, jobType, salary, and description are mandatory.'
+        });
+    }
+
+    try {
+        let user = await User.findOne({ email: normalizedEmail, role: 'company' });
+        let createdUser = false;
+        let tempPasswordPlain = null;
+
+        if (!user) {
+            createdUser = true;
+            tempPasswordPlain = generateTempPassword();
+            const hashedPassword = await bcrypt.hash(tempPasswordPlain, 12);
+            user = await User.create({
+                name: companyName || title,
+                email: normalizedEmail,
+                password: hashedPassword,
+                role: 'company',
+                isVerified: false
+            });
+            console.log(`N8N Webhook: Created company user ${user._id} for job ingestion.`);
+        } else if (companyName && user.name !== companyName) {
+            user.name = companyName;
+            await user.save();
+        }
+
+        const profileName = companyName || user.name || normalizedEmail.split('@')[0];
+        const companyProfile = await ensureCompanyProfile(user._id, profileName, industry);
+
+    const normalizedJobType = normalizeJobTypeValue(jobType);
+    const normalizedExperience = normalizeExperienceValue(experienceLevel);
+
+        let deadline = null;
+        if (applicationDeadline) {
+            const parsedDeadline = new Date(applicationDeadline);
+            if (!Number.isNaN(parsedDeadline.getTime())) {
+                deadline = parsedDeadline;
+            }
+        }
+
+        const jobPayload = {
+            title: trimmedTitle,
+            company: profileName,
+            location: trimmedLocation,
+            jobType: normalizedJobType,
+            salary: trimmedSalary,
+            description: trimmedDescription,
+            requirements: normalizeMultiValue(requirements),
+            responsibilities: normalizeMultiValue(responsibilities),
+            benefits: normalizeMultiValue(benefits),
+            skills: normalizeMultiValue(skills),
+            experienceLevel: normalizedExperience,
+            applicationDeadline: deadline,
+            postedBy: user._id,
+            isActive: false // Jobs created via email should be reviewed by an admin
+        };
+
+        const job = await Job.create(jobPayload);
+
+        if (companyProfile?._id) {
+            await CompanyProfile.updateOne(
+                { _id: companyProfile._id },
+                { $addToSet: { jobsPosted: job._id } }
+            );
+        }
+
+        return res.status(201).json({
+            success: true,
+            message: 'Job ingested successfully and is pending admin activation.',
+            jobId: job._id,
+            createdUser,
+            temporaryPassword: tempPasswordPlain || undefined
+        });
+    } catch (error) {
+        console.error('N8N Job Create Error:', error);
+        return res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+    }
+};
+
+// --- Utility Functions ---
+
+const normalizeMultiValue = (value) => {
+    if (!value) return [];
+    if (Array.isArray(value)) {
+        return value
+            .map((item) => (typeof item === 'string' ? item.trim() : item))
+            .filter(Boolean);
+    }
+    if (typeof value === 'string') {
+        return value
+            .split(/[\n,;]+/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+    }
+    return [];
+};
+
+const verifyN8nSecret = (req) => {
+    const requiredSecret = process.env.N8N_WEBHOOK_SECRET;
+    if (!requiredSecret) {
+        console.warn('N8N_WEBHOOK_SECRET not set; proceeding without secret validation.');
+        return { ok: true };
+    }
+
+    const receivedSecret = req.headers['x-webhook-secret'] || req.headers['x-n8n-secret'];
+    if (receivedSecret !== requiredSecret) {
+        console.warn('N8N Webhook: Invalid secret received.');
+        return { ok: false, status: 401, message: 'Unauthorized: Invalid webhook secret.' };
+    }
+
+    return { ok: true };
+};
+
+const generateTempPassword = () => Math.random().toString(36).slice(-8);
+
+const safeTrim = (value, fallback = '') => {
+    if (value === undefined || value === null) return fallback;
+    if (typeof value === 'string') return value.trim();
+    return String(value).trim();
+};
+
+// Normalize job type and experience level from n8n payloads
+const normalizeJobTypeValue = (value) => {
+    if (!value) return 'full-time';
+    const raw = value.toString().trim().toLowerCase();
+    const cleaned = raw.replace(/[\s_]+/g, '-');
+    const variants = {
+        internship: 'internship',
+        intern: 'internship',
+        'full-time': 'full-time',
+        fulltime: 'full-time',
+        'part-time': 'part-time',
+        parttime: 'part-time',
+        remote: 'remote'
+    };
+    const candidate = variants[cleaned] || variants[raw] || variants[cleaned.replace(/-+/g, '-')];
+    if (candidate && JOB_TYPES.includes(candidate)) {
+        return candidate;
+    }
+    const fallback = cleaned.replace(/-+/g, '-');
+    if (JOB_TYPES.includes(fallback)) {
+        return fallback;
+    }
+    return 'full-time';
+};
+
+const normalizeExperienceValue = (value) => {
+    if (!value) return 'fresher';
+    const raw = value.toString().trim().toLowerCase();
+    const cleaned = raw.replace(/[\s_]+/g, '');
+    if (['fresher', 'freshers', 'entrylevel', 'entry'].includes(cleaned)) return 'fresher';
+    if (['0-2', '0to2', '0-2years', '0–2', '0_2'].includes(cleaned)) return '0-2';
+    if (['2-5', '2to5', '2-5years', '2–5', '2_5'].includes(cleaned)) return '2-5';
+    if (['5+', '5plus', '5+years', '5orplus', '5plusyears'].includes(cleaned)) return '5+';
+    if (EXPERIENCE_LEVELS.includes(raw)) return raw;
+    const hyphenized = raw.replace(/[\s_]+/g, '-');
+    if (EXPERIENCE_LEVELS.includes(hyphenized)) return hyphenized;
+    return 'fresher';
 };
 
 

@@ -46,6 +46,38 @@ const handleLoginSuccess = (req, res, user, redirectPath) => {
 
 const getHashedPassword = async (password) => bcrypt.hash(password, 12);
 
+// Admin Login
+const adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user || user.role !== 'admin') {
+      return res.status(400).json({
+        success: false,
+        message: 'No admin account found with this email. Contact support to provision access.',
+      });
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid password',
+      });
+    }
+
+    handleLoginSuccess(req, res, user, '/admin/dashboard');
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during admin login',
+    });
+  }
+};
+
 // Student Login
 const studentLogin = async (req, res) => {
   try {
@@ -245,6 +277,7 @@ const logout = (req, res) => {
 };
 
 module.exports = {
+  adminLogin,
   studentLogin,
   companyLogin,
   studentSignup,

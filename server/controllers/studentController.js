@@ -699,20 +699,33 @@ exports.uploadResume = async (req, res) => {
       });
     }
 
-    const studentId = req.session.user.id;
+  const studentId = req.session.user.id;
+  const existingProfile = await StudentProfile.findOne({ user: studentId });
+  const previousResume = existingProfile?.resume;
 
-    // Use Mongoose findOneAndUpdate with upsert
-    const options = { new: true, upsert: true, setDefaultsOnInsert: true };
-    let updatedProfile = await StudentProfile.findOneAndUpdate(
-        { user: studentId },
-        { $set: { resume: req.file.filename } },
-        options
-    );
+  // Use Mongoose findOneAndUpdate with upsert
+  const options = { new: true, upsert: true, setDefaultsOnInsert: true };
+  let updatedProfile = await StudentProfile.findOneAndUpdate(
+    { user: studentId },
+    { $set: { resume: req.file.filename } },
+    options
+  );
 
-    // Recalculate and save profile completion
-    updatedProfile.profileCompletion = calculateProfileCompletion(updatedProfile);
-    await updatedProfile.save();
+  // Recalculate and save profile completion
+  updatedProfile.profileCompletion = calculateProfileCompletion(updatedProfile);
+  await updatedProfile.save();
 
+  // Clean up previous resume file if replaced
+  if (previousResume && previousResume !== req.file.filename) {
+    const previousResumePath = path.join(__dirname, '../../public/uploads/resumes', previousResume);
+    if (fs.existsSync(previousResumePath)) {
+      try {
+        fs.unlinkSync(previousResumePath);
+      } catch (cleanupError) {
+        console.error('Error removing previous resume:', cleanupError);
+      }
+    }
+  }
 
     res.json({
       success: true,
@@ -805,34 +818,16 @@ exports.deleteResume = async (req, res) => {
     }
 
     const studentId = req.session.user.id;
-     // Use Mongoose findOneAndUpdate to remove the resume field
-     const updatedProfile = await StudentProfile.findOneAndUpdate(
-         { user: studentId },
-         { $unset: { resume: "" } }, // Use $unset to remove the field
-         { new: true } // Return the updated document
-     );
-
-    if (!updatedProfile) {
-        // This case means the profile didn't exist, which shouldn't happen if ensureProfile works
-         return res.json({ success: false, message: 'Profile not found.' });
-    }
-
-     // Check if a resume path existed before deletion to attempt file cleanup
-     // Note: `updatedProfile` here will *not* have the resume field. We need the old value if we want to delete the file.
-     // A better approach might be to find first, then update/delete.
-     // Let's find first for cleaner file deletion:
      const profile = await StudentProfile.findOne({ user: studentId });
      if (!profile || !profile.resume) {
          return res.json({ success: false, message: 'No resume found to delete' });
      }
+
      const resumePathToDelete = profile.resume;
 
-    // Proceed with update to remove resume path from DB
-     profile.resume = undefined; // Or null, depending on schema design
-      // Recalculate completion score *before* saving the final update
+     profile.resume = undefined;
      profile.profileCompletion = calculateProfileCompletion(profile);
      await profile.save();
-
 
     // Attempt to delete the file from the filesystem
     const resumePathOnDisk = path.join(__dirname, '../../public/uploads/resumes', resumePathToDelete);

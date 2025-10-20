@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        .admin-table thead {
+            background: #1d4ed8;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        .admin-table th,
+        .admin-table td {
+            padding: 1rem 1.5rem;
+            text-align: left;
+        }
+        .admin-table tbody tr:nth-child(odd) {
+            background: #f8fafc;
+        }
+        .admin-table tbody tr:hover {
+            background: #eef2ff;
+        }
+        .table-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .table-actions form {
+            display: inline;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border: none;
+            border-radius: 999px;
+            padding: 0.5rem 1.25rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            color: #fff;
+        }
+        .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.25);
+        }
+        .empty-state {
+            background: #fff;
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #22c55e;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #e0e7ff;
+            color: #312e81;
+            border-radius: 999px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .job-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .job-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="auth-header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>PlacementPortal</span>
+            </div>
+            <nav class="auth-nav">
+                <a href="/admin/dashboard" class="nav-link">Dashboard</a>
+                <a href="/admin/jobs/review" class="nav-link active">Job Review</a>
+                <a href="/auth/logout" class="nav-link">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container-fluid mt-4">
+            <div class="row">
+                <div class="col-12">
+                    <% if (jobs && jobs.length > 0) { %>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Pending Job Postings</h3>
+                            </div>
+                            <div class="card-body table-responsive p-0">
+                                <table class="table table-hover text-nowrap">
+                                    <thead>
+                                        <tr>
+                                            <th>Job Title</th>
+                                            <th>Company</th>
+                                            <th>Location</th>
+                                            <th>Job Type</th>
+                                            <th>Experience</th>
+                                            <th>Posted On</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% jobs.forEach(job => { %>
+                                            <tr>
+                                                <td><%= job.title %></td>
+                                                <td><%= job.companyDisplayName %></td>
+                                                <td><%= job.location %></td>
+                                                <td><span class="badge bg-info"><%= job.jobType %></span></td>
+                                                <td><span class="badge bg-secondary"><%= job.experienceLevel %></span></td>
+                                                <td><%= new Date(job.createdAt).toLocaleDateString() %></td>
+                                                <td class="table-actions">
+                                                    <form action="/admin/jobs/<%= job._id %>/activate" method="POST" style="display: inline;">
+                                                        <button type="submit" class="btn btn-success btn-sm">
+                                                            <i class="fas fa-check"></i> Activate
+                                                        </button>
+                                                    </form>
+                                                    <form action="/admin/jobs/<%= job._id %>/delete" method="POST" style="display: inline;">
+                                                        <button type="submit" class="btn btn-danger btn-sm">
+                                                            <i class="fas fa-trash"></i> Delete
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    <% } else { %>
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">No Pending Jobs</h5>
+                                <p class="card-text">All jobs are reviewed. Great work!</p>
+                                <i class="fas fa-check-circle fa-4x text-success"></i>
+                            </div>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="auth-footer">
+        <div class="container">
+            <p>&copy; <%= new Date().getFullYear() %> Placement Portal. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

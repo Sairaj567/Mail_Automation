@@ -285,6 +285,10 @@
 
     <!-- PDF.js Library for PDF preview -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script type="application/json" id="resume-data"><%- JSON.stringify({
+        hasResume: Boolean(profile && profile.resume),
+        resumeFilename: profile && profile.resume ? profile.resume : null
+    }) %></script>
     <script src="/js/resume.js"></script>
 </body>
 </html>

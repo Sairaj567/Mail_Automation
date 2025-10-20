@@ -14,6 +14,9 @@ router.get('/', (req, res) => {
 // Route for n8n to POST company profile data
 router.post('/company-profile', companyController.handleN8nCompanyUpdate);
 
+// Route for n8n to POST new job data
+router.post('/jobs', companyController.handleN8nJobCreate);
+
 // Route for n8n to POST new mail data (if you implemented it)
 // router.post('/mail', mailController.createMail);
 

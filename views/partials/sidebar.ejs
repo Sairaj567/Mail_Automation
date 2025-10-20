@@ -1,8 +1,82 @@
+<% const sidebarRole = typeof role !== 'undefined' && role ? role : (typeof user !== 'undefined' && user ? user.role : 'student'); %>
+
 <aside class="sidebar">
-  <ul>
-    <li><a href="/student/dashboard">📊 Dashboard</a></li>
-    <li><a href="/student/jobs">💼 Jobs</a></li>
-    <li><a href="/student/profile">👤 Profile</a></li>
-    <li><a href="/student/resume">📄 Resume</a></li>
-  </ul>
+  <% if (sidebarRole === 'admin') { %>
+    <nav class="sidebar-nav">
+      <a href="/admin/dashboard" class="nav-item">
+        <i class="fas fa-chart-line"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/admin/jobs/review" class="nav-item">
+        <i class="fas fa-clipboard-check"></i>
+        <span>Pending Jobs</span>
+      </a>
+      <a href="/admin/students" class="nav-item">
+        <i class="fas fa-user-graduate"></i>
+        <span>Students</span>
+      </a>
+      <a href="/admin/companies" class="nav-item">
+        <i class="fas fa-building"></i>
+        <span>Companies</span>
+      </a>
+      <a href="/admin/reports" class="nav-item">
+        <i class="fas fa-chart-pie"></i>
+        <span>Reports</span>
+      </a>
+      <a href="/auth/logout" class="nav-item logout">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+      </a>
+    </nav>
+  <% } else if (sidebarRole === 'company') { %>
+    <nav class="sidebar-nav">
+      <a href="/company/dashboard" class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/company/jobs" class="nav-item">
+        <i class="fas fa-briefcase"></i>
+        <span>Jobs</span>
+      </a>
+      <a href="/company/applicants" class="nav-item">
+        <i class="fas fa-users"></i>
+        <span>Applicants</span>
+      </a>
+      <a href="/company/profile" class="nav-item">
+        <i class="fas fa-id-badge"></i>
+        <span>Profile</span>
+      </a>
+      <a href="/auth/logout" class="nav-item logout">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+      </a>
+    </nav>
+  <% } else { %>
+    <nav class="sidebar-nav">
+      <a href="/student/dashboard" class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/student/jobs" class="nav-item">
+        <i class="fas fa-briefcase"></i>
+        <span>Jobs</span>
+      </a>
+      <a href="/student/applications" class="nav-item">
+        <i class="fas fa-file-alt"></i>
+        <span>Applications</span>
+      </a>
+      <a href="/student/profile" class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+      </a>
+      <a href="/student/resume" class="nav-item">
+        <i class="fas fa-file-pdf"></i>
+        <span>Resume</span>
+      </a>
+      <a href="/auth/logout" class="nav-item logout">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+      </a>
+    </nav>
+  <% } %>
 </aside>

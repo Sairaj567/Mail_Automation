@@ -2,7 +2,13 @@
   <div class="logo">Placement<span>Portal</span></div>
   <nav class="nav">
     <a href="/">Home</a>
-    <a href="/student/dashboard">Dashboard</a>
-    <a href="/auth/logout" class="btn-logout">Logout</a>
+    <% if (user) { %>
+      <% const dashboardRoutes = { student: '/student/dashboard', company: '/company/dashboard', admin: '/admin/dashboard' }; %>
+      <a href="<%= dashboardRoutes[user.role] || '/student/dashboard' %>">Dashboard</a>
+      <a href="/auth/logout" class="btn-logout">Logout</a>
+    <% } else { %>
+  <a href="/auth">Login</a>
+  <a href="/auth/signup?role=student">Sign Up</a>
+    <% } %>
   </nav>
 </header>

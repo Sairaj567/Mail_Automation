@@ -1,42 +1,275 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    <link rel="stylesheet" href="/css/global.css">
-    <link rel="stylesheet" href="/css/auth.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-    <header class="auth-header">
-        <div class="container">
-            <div class="logo">
-                <i class="fas fa-graduation-cap"></i>
-                <span>PlacementPortal</span>
-            </div>
-            <nav class="auth-nav">
-                <a href="/admin/dashboard" class="nav-link">Dashboard</a>
-                <a href="/admin/students" class="nav-link">Students</a>
-                <a href="/auth/logout" class="nav-link">Logout</a>
-            </nav>
-        </div>
-    </header>
-
-    <main style="padding: 2rem 0; min-height: 60vh;">
-        <div class="container">
-            <div class="dashboard-welcome">
-                <h1>Welcome, <%= user.name %>! 🔧</h1>
-                <p>Admin Dashboard - Manage the placement portal</p>
+<div class="dashboard-content">
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-users"></i></div>
+            <div class="stat-info">
+                <h3><%= stats.totalStudents || 0 %></h3>
+                <p>Total Students</p>
             </div>
         </div>
-    </main>
-
-    <footer class="auth-footer">
-        <div class="container">
-            <p>&copy; 2023 Placement Portal. All rights reserved.</p>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-building"></i></div>
+            <div class="stat-info">
+                <h3><%= stats.totalCompanies || 0 %></h3>
+                <p>Partner Companies</p>
+            </div>
         </div>
-    </footer>
-</body>
-</html>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-briefcase"></i></div>
+            <div class="stat-info">
+                <h3><%= stats.activeJobs || 0 %></h3>
+                <p>Active Jobs</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+            <div class="stat-info">
+                <h3><%= stats.pendingJobs || 0 %></h3>
+                <p>Jobs Awaiting Review</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
+            <div class="stat-info">
+                <h3><%= stats.totalJobs || 0 %></h3>
+                <p>Total Jobs</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-paper-plane"></i></div>
+            <div class="stat-info">
+                <h3><%= stats.totalApplications || 0 %></h3>
+                <p>Total Applications</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+            <div class="stat-info">
+                <h3><%= stats.placedStudents || 0 %></h3>
+                <p>Students Placed</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-rupee-sign"></i></div>
+            <div class="stat-info">
+                <h3>
+                    <% if (typeof stats.averagePackage === 'number' && !Number.isNaN(stats.averagePackage)) { %>
+                        <%= stats.averagePackage.toFixed(1) %> LPA
+                    <% } else { %>
+                        —
+                    <% } %>
+                </h3>
+                <p>Average Package</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <section class="section-card" style="margin: 2rem 0 1.5rem;">
+        <div class="section-header" style="margin-bottom: 1rem;">
+            <h2>Quick Actions</h2>
+            <p>Jump straight into your most frequent workflows.</p>
+        </div>
+        <div class="quick-links">
+            <a class="quick-link-card" href="/admin/jobs/review">
+                <div class="quick-link-icon"><i class="fas fa-clipboard-check"></i></div>
+                <div>
+                    <h3>Review Pending Jobs</h3>
+                    <p>Approve opportunities created automatically by n8n.</p>
+                </div>
+            </a>
+            <a class="quick-link-card secondary" href="/admin/students">
+                <div class="quick-link-icon"><i class="fas fa-user-graduate"></i></div>
+                <div>
+                    <h3>Manage Students</h3>
+                    <p>Browse student profiles and track placement readiness.</p>
+                </div>
+            </a>
+            <a class="quick-link-card warning" href="/admin/companies">
+                <div class="quick-link-icon"><i class="fas fa-building"></i></div>
+                <div>
+                    <h3>Support Companies</h3>
+                    <p>Verify company onboarding data and recent job postings.</p>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- Activity Tables -->
+    <div class="tables-grid">
+        <section class="section-card">
+            <div class="section-header" style="margin-bottom: 1rem;">
+                <h2>Jobs Pending Activation</h2>
+                <a href="/admin/jobs/review" class="view-all">View all pending jobs</a>
+            </div>
+            <% if (pendingJobs && pendingJobs.length) { %>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Job</th>
+                            <th>Company</th>
+                            <th style="text-align:right;">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% pendingJobs.slice(0,5).forEach(function(job) { %>
+                            <tr>
+                                <td>
+                                    <strong><%= job.title %></strong><br>
+                                    <span style="font-size:0.85rem; color:#64748b;">
+                                        <i class="fas fa-map-marker-alt"></i> <%= job.location || '—' %>
+                                    </span>
+                                </td>
+                                <td><%= job.companyDisplayName %></td>
+                                <td style="text-align:right; font-size:0.85rem; color:#475569;">
+                                    <%= job.createdAt ? new Date(job.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—' %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <div class="no-data">
+                    <i class="fas fa-check-circle"></i> No pending jobs. Great work!
+                </div>
+            <% } %>
+        </section>
+
+        <section class="section-card">
+            <div class="section-header" style="margin-bottom: 1rem;">
+                <h2>Recent Applications</h2>
+                <a href="/admin/reports" class="view-all">Run reports</a>
+            </div>
+            <% if (recentApplications && recentApplications.length) { %>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Opportunity</th>
+                            <th style="text-align:right;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% recentApplications.forEach(function(application) { %>
+                            <tr>
+                                <td>
+                                    <strong><%= application.studentName %></strong><br>
+                                    <% if (application.studentEmail) { %>
+                                        <span style="font-size:0.85rem; color:#64748b;"><%= application.studentEmail %></span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <strong><%= application.jobTitle %></strong><br>
+                                    <span style="font-size:0.85rem; color:#64748b;"><%= application.company %></span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <span class="status-badge <%= application.status %>">
+                                        <%= application.status ? application.status.replace('_', ' ') : 'applied' %>
+                                    </span><br>
+                                    <span style="font-size:0.78rem; color:#94a3b8;">
+                                        <%= application.appliedDate ? new Date(application.appliedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '' %>
+                                    </span>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <div class="no-data">
+                    <i class="fas fa-inbox"></i> No applications recorded yet.
+                </div>
+            <% } %>
+        </section>
+    </div>
+
+    <!-- Recent Jobs and Users -->
+    <div class="tables-grid" style="margin-top: 1.5rem;">
+        <section class="section-card">
+            <div class="section-header" style="margin-bottom: 1rem;">
+                <h2>Newest Job Postings</h2>
+            </div>
+            <% if (recentJobs && recentJobs.length) { %>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>Type</th>
+                            <th style="text-align:right;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% recentJobs.forEach(function(job){ %>
+                            <tr>
+                                <td>
+                                    <strong><%= job.title %></strong><br>
+                                    <span style="font-size:0.85rem; color:#64748b;"><%= job.companyDisplayName %></span>
+                                </td>
+                                <td><%= job.jobType %></td>
+                                <td style="text-align:right; font-size:0.85rem; color:#475569;">
+                                    <%= job.isActive ? 'Active' : 'Pending' %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <div class="no-data">
+                    <i class="fas fa-briefcase"></i> No jobs have been posted yet.
+                </div>
+            <% } %>
+        </section>
+
+        <section class="section-card">
+            <div class="section-header" style="margin-bottom: 1rem;">
+                <h2>Newest Members</h2>
+            </div>
+            <div class="user-lists" style="display:grid; gap:1.25rem;">
+                <div>
+                    <h3 style="margin-bottom:0.75rem;">Students</h3>
+                    <% if (recentStudents && recentStudents.length) { %>
+                        <div class="user-list">
+                            <% recentStudents.forEach(function(student){ %>
+                                <div class="user-item">
+                                    <div class="user-meta">
+                                        <strong><%= student.name %></strong>
+                                        <span><%= student.email %></span>
+                                    </div>
+                                    <span style="font-size:0.78rem; color:#94a3b8;">
+                                        <%= student.createdAt ? new Date(student.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '' %>
+                                    </span>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } else { %>
+                        <div class="no-data" style="padding:1rem 0;">
+                            <i class="fas fa-user-graduate"></i> No student signups yet.
+                        </div>
+                    <% } %>
+                </div>
+                <div>
+                    <h3 style="margin-bottom:0.75rem;">Companies</h3>
+                    <% if (recentCompanies && recentCompanies.length) { %>
+                        <div class="user-list">
+                            <% recentCompanies.forEach(function(company){ %>
+                                <div class="user-item">
+                                    <div class="user-meta">
+                                        <strong><%= company.name %></strong>
+                                        <span><%= company.email %></span>
+                                    </div>
+                                    <span style="font-size:0.78rem; color:#94a3b8;">
+                                        <%= company.createdAt ? new Date(company.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '' %>
+                                    </span>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } else { %>
+                        <div class="no-data" style="padding:1rem 0;">
+                            <i class="fas fa-building"></i> No new company accounts yet.
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
