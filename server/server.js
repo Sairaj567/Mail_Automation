@@ -9,6 +9,7 @@ const helmet = require('helmet'); // For security headers
 const morgan = require('morgan'); // For request logging
 const cookieParser = require('cookie-parser'); // If needed, though session handles cookies
 const expressLayouts = require('express-ejs-layouts'); // Import express-ejs-layouts
+const User = require('./models/User');
 require('dotenv').config(); // Load environment variables from .env file
 
 const app = express();
@@ -65,6 +66,7 @@ app.set('views', path.join(__dirname, '../views'));
 // Middleware to pass user session data to all views
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null; // Make user available in EJS templates
+    res.locals.currentPath = req.path;
   next();
 });
 
@@ -81,8 +83,25 @@ app.locals.getRoleIcon = function(role) {
 
 // --- MongoDB Connection ---
 // MONGODB_URI is already defined above for session store
+const removeLegacyUserIndexes = async () => {
+    try {
+        const indexes = await User.collection.indexes();
+        const legacyUsernameIndex = indexes.find((index) => index.key && index.key.username === 1);
+
+        if (legacyUsernameIndex) {
+            await User.collection.dropIndex(legacyUsernameIndex.name);
+            console.log(`Dropped legacy MongoDB index: ${legacyUsernameIndex.name}`);
+        }
+    } catch (error) {
+        console.error('Failed to reconcile legacy user indexes:', error);
+    }
+};
+
 mongoose.connect(MONGODB_URI)
-.then(() => console.log('Connected to MongoDB'))
+.then(async () => {
+    console.log('Connected to MongoDB');
+    await removeLegacyUserIndexes();
+})
 .catch(err => {
     console.error('MongoDB connection error:', err);
     // Exit process if DB connection fails on startup
