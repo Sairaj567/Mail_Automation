@@ -17,6 +17,9 @@ router.post('/company-profile', companyController.handleN8nCompanyUpdate);
 // Route for n8n to POST new job data
 router.post('/jobs', companyController.handleN8nJobCreate);
 
+// Route for n8n to POST combined company + job payload
+router.post('/company-job', companyController.handleN8nCompanyAndJob);
+
 // Route for n8n to POST new mail data (if you implemented it)
 // router.post('/mail', mailController.createMail);
 

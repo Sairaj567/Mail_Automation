@@ -58,7 +58,7 @@ app.use(session({
 
 // --- View Engine Setup ---
 app.use(expressLayouts); // Use express-ejs-layouts
-app.set('layout', 'layouts/main'); // Set default layout
+app.set('layout', false); // Views are full-page templates; avoid wrapping with a global layout
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 

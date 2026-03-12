@@ -79,9 +79,9 @@ document.addEventListener('DOMContentLoaded', function() {
     exportBtn.innerHTML = '<i class="fas fa-download"></i> Export Applications';
     exportBtn.style.marginBottom = '1rem';
     
-    const sectionHeader = document.querySelector('.section-header');
-    if (sectionHeader) {
-        sectionHeader.appendChild(exportBtn);
+    const applicationsContent = document.querySelector('.applications-content');
+    if (applicationsContent) {
+        applicationsContent.insertBefore(exportBtn, applicationsContent.querySelector('.applications-list-container'));
         
         exportBtn.addEventListener('click', exportApplications);
     }
@@ -125,6 +125,7 @@ function updateStatusColor(statusElement) {
 // Filter applications
 function filterApplications(filter) {
     const applicationCards = document.querySelectorAll('.application-card');
+    let visibleCount = 0;
     
     applicationCards.forEach(card => {
         const statusElement = card.querySelector('.status');
@@ -133,28 +134,33 @@ function filterApplications(filter) {
         switch(filter) {
             case 'all':
                 card.style.display = 'block';
+                visibleCount++;
                 break;
             case 'pending':
                 if (['applied', 'under-review', 'shortlisted'].includes(status)) {
                     card.style.display = 'block';
+                    visibleCount++;
                 } else {
                     card.style.display = 'none';
                 }
                 break;
             case 'interview':
                 card.style.display = status === 'interview' ? 'block' : 'none';
+                if (status === 'interview') visibleCount++;
                 break;
             case 'accepted':
                 card.style.display = status === 'accepted' ? 'block' : 'none';
+                if (status === 'accepted') visibleCount++;
                 break;
             case 'rejected':
                 card.style.display = status === 'rejected' ? 'block' : 'none';
+                if (status === 'rejected') visibleCount++;
                 break;
         }
     });
     
     // Show message if no applications match filter
-    showNoResultsMessage();
+    showNoResultsMessage(visibleCount === 0);
 }
 
 // Search applications

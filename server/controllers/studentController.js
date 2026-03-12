@@ -1,7 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-// Remove Prisma client import
-// const prisma = require('../prismaClient');
 const mongoose = require('mongoose'); // Make sure mongoose is required if not already global
 
 // Import Mongoose models
@@ -155,7 +153,6 @@ const renderDemoDashboard = async (req, res) => {
 exports.getDashboard = async (req, res) => {
   try {
     if (isDemo(req)) {
-      // The demo function no longer uses Prisma
       return renderDemoDashboard(req, res);
     }
 

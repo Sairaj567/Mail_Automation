@@ -10,6 +10,15 @@ const PDFDocument = require('pdfkit'); // For PDF export
 
 const JOB_TYPES = ['internship', 'full-time', 'part-time', 'remote'];
 const EXPERIENCE_LEVELS = ['fresher', '0-2', '2-5', '5+'];
+const COMPANY_SIZE_OPTIONS = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
+
+class IntegrationValidationError extends Error {
+    constructor(message, status = 400) {
+        super(message);
+        this.name = 'IntegrationValidationError';
+        this.status = status;
+    }
+}
 
 // --- Helper Functions ---
 const isDemo = (req) => Boolean(req.session?.user?.isDemo);
@@ -696,63 +705,29 @@ exports.handleN8nCompanyUpdate = async (req, res) => {
         return res.status(secretCheck.status).json({ success: false, message: secretCheck.message });
     }
 
-    const { email, companyName, name, industry, website, description, contactPerson, phone, street, city, state, country, zipCode, size, founded, linkedin, twitter, facebook } = req.body;
-
-    if (!email || !companyName) {
-        return res.status(400).json({ success: false, message: 'Missing required fields: email and companyName' });
+    const payload = req.body || {};
+    if (!safeTrim(payload.companyName)) {
+        return res.status(400).json({ success: false, message: 'Missing required field: companyName' });
     }
 
     try {
-        const normalizedEmail = email.trim().toLowerCase();
-        let user;
-        let isNewUser = false;
-        user = await User.findOne({ email: normalizedEmail, role: 'company' });
+        const identity = await ensureCompanyUserIdentity(payload);
+        const profileResult = await upsertCompanyProfileFromPayload(identity.user, payload);
 
-        if (!user) {
-            isNewUser = true;
-            console.log(`N8N Webhook: No company user for ${normalizedEmail}. Creating...`);
-            const tempPassword = generateTempPassword();
-            const hashedPassword = await bcrypt.hash(tempPassword, 12);
-            user = new User({ name: name || companyName, email: normalizedEmail, password: hashedPassword, role: 'company', isVerified: false });
-            await user.save();
-            console.log(`N8N Webhook: Created company user ${user._id}.`);
-        } else {
-            console.log(`N8N Webhook: Found existing company user ${user._id} for ${normalizedEmail}.`);
-        }
+        const statusCode = identity.createdUser || profileResult.createdProfile ? 201 : 200;
 
-        const profileData = { user: user._id, companyName };
-        if (industry) profileData.industry = industry;
-        if (website) profileData.website = website;
-        if (description) profileData.description = description;
-        if (contactPerson) profileData.contactPerson = contactPerson;
-        if (phone) profileData.phone = phone;
-        if (size) profileData.size = size;
-        if (founded && !Number.isNaN(parseInt(founded, 10)) && parseInt(founded, 10) > 0) profileData.founded = parseInt(founded, 10);
-
-        const address = {};
-        if (street) address.street = street;
-        if (city) address.city = city;
-        if (state) address.state = state;
-        if (country) address.country = country;
-        if (zipCode) address.zipCode = zipCode;
-        if (Object.keys(address).length > 0) profileData.address = address;
-
-        const socialLinks = {};
-        if (linkedin) socialLinks.linkedin = linkedin;
-        if (twitter) socialLinks.twitter = twitter;
-        if (facebook) socialLinks.facebook = facebook;
-        if (Object.keys(socialLinks).length > 0) profileData.socialLinks = socialLinks;
-
-        const updatedProfile = await CompanyProfile.findOneAndUpdate(
-            { user: user._id },
-            { $set: profileData },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-
-        console.log(`N8N Webhook: ${isNewUser ? 'Created' : 'Updated'} company profile ${updatedProfile._id}.`);
-        res.status(isNewUser ? 201 : 200).json({ success: true, message: `Company profile ${isNewUser ? 'created' : 'updated'}.`, userId: user._id, profileId: updatedProfile._id });
-
+        return res.status(statusCode).json({
+            success: true,
+            message: `Company profile ${profileResult.createdProfile ? 'created' : 'updated'}.`,
+            userId: identity.user._id,
+            profileId: profileResult.profile?._id,
+            createdUser: identity.createdUser,
+            temporaryPassword: identity.tempPasswordPlain || undefined
+        });
     } catch (error) {
+        if (error instanceof IntegrationValidationError) {
+            return res.status(error.status).json({ success: false, message: error.message });
+        }
         console.error('N8N Company Update Error:', error);
         res.status(500).json({ success: false, message: `Server error: ${error.message}` });
     }
@@ -765,100 +740,25 @@ exports.handleN8nJobCreate = async (req, res) => {
         return res.status(secretCheck.status).json({ success: false, message: secretCheck.message });
     }
 
-    const {
-        email,
-        companyEmail,
-        companyName,
-        title,
-        location,
-        jobType,
-        salary,
-        description,
-        requirements,
-        responsibilities,
-        benefits,
-        skills,
-        experienceLevel,
-        applicationDeadline,
-        industry,
-        vacancies
-    } = req.body || {};
-
-    const normalizedEmail = (companyEmail || email || '').trim().toLowerCase();
-    if (!normalizedEmail) {
-        return res.status(400).json({ success: false, message: 'Missing required field: company email.' });
-    }
-
-    const trimmedTitle = safeTrim(title);
-    const trimmedLocation = safeTrim(location);
-    const trimmedSalary = safeTrim(salary);
-    const trimmedDescription = safeTrim(description);
-
-    if (!trimmedTitle || !trimmedLocation || !safeTrim(jobType) || !trimmedSalary || !trimmedDescription) {
-        return res.status(400).json({
-            success: false,
-            message: 'Missing required job fields: title, location, jobType, salary, and description are mandatory.'
-        });
-    }
-
     try {
-        let user = await User.findOne({ email: normalizedEmail, role: 'company' });
-        let createdUser = false;
-        let tempPasswordPlain = null;
+        const payload = req.body || {};
+        const identity = await ensureCompanyUserIdentity(payload);
+        const profileResult = await upsertCompanyProfileFromPayload(identity.user, payload);
 
-        if (!user) {
-            createdUser = true;
-            tempPasswordPlain = generateTempPassword();
-            const hashedPassword = await bcrypt.hash(tempPasswordPlain, 12);
-            user = await User.create({
-                name: companyName || title,
-                email: normalizedEmail,
-                password: hashedPassword,
-                role: 'company',
-                isVerified: false
-            });
-            console.log(`N8N Webhook: Created company user ${user._id} for job ingestion.`);
-        } else if (companyName && user.name !== companyName) {
-            user.name = companyName;
-            await user.save();
-        }
+        const companyNameForJob = profileResult.profile?.companyName
+            || identity.fallbackCompanyName
+            || identity.user.name;
 
-        const profileName = companyName || user.name || normalizedEmail.split('@')[0];
-        const companyProfile = await ensureCompanyProfile(user._id, profileName, industry);
-
-    const normalizedJobType = normalizeJobTypeValue(jobType);
-    const normalizedExperience = normalizeExperienceValue(experienceLevel);
-
-        let deadline = null;
-        if (applicationDeadline) {
-            const parsedDeadline = new Date(applicationDeadline);
-            if (!Number.isNaN(parsedDeadline.getTime())) {
-                deadline = parsedDeadline;
-            }
-        }
-
-        const jobPayload = {
-            title: trimmedTitle,
-            company: profileName,
-            location: trimmedLocation,
-            jobType: normalizedJobType,
-            salary: trimmedSalary,
-            description: trimmedDescription,
-            requirements: normalizeMultiValue(requirements),
-            responsibilities: normalizeMultiValue(responsibilities),
-            benefits: normalizeMultiValue(benefits),
-            skills: normalizeMultiValue(skills),
-            experienceLevel: normalizedExperience,
-            applicationDeadline: deadline,
-            postedBy: user._id,
-            isActive: false // Jobs created via email should be reviewed by an admin
-        };
+        const jobPayload = sanitizeJobPayload(payload, {
+            companyName: companyNameForJob,
+            postedBy: identity.user._id
+        });
 
         const job = await Job.create(jobPayload);
 
-        if (companyProfile?._id) {
+        if (profileResult.profile?._id) {
             await CompanyProfile.updateOne(
-                { _id: companyProfile._id },
+                { _id: profileResult.profile._id },
                 { $addToSet: { jobsPosted: job._id } }
             );
         }
@@ -867,16 +767,251 @@ exports.handleN8nJobCreate = async (req, res) => {
             success: true,
             message: 'Job ingested successfully and is pending admin activation.',
             jobId: job._id,
-            createdUser,
-            temporaryPassword: tempPasswordPlain || undefined
+            createdUser: identity.createdUser,
+            temporaryPassword: identity.tempPasswordPlain || undefined
         });
     } catch (error) {
+        if (error instanceof IntegrationValidationError) {
+            return res.status(error.status).json({ success: false, message: error.message });
+        }
         console.error('N8N Job Create Error:', error);
         return res.status(500).json({ success: false, message: `Server error: ${error.message}` });
     }
 };
 
+exports.handleN8nCompanyAndJob = async (req, res) => {
+    const secretCheck = verifyN8nSecret(req);
+    if (!secretCheck.ok) {
+        return res.status(secretCheck.status).json({ success: false, message: secretCheck.message });
+    }
+
+    const payload = req.body || {};
+    if (!safeTrim(payload.companyName)) {
+        return res.status(400).json({ success: false, message: 'Missing required field: companyName' });
+    }
+
+    try {
+        const identity = await ensureCompanyUserIdentity(payload);
+        const profileResult = await upsertCompanyProfileFromPayload(identity.user, payload);
+
+        const companyNameForJob = profileResult.profile?.companyName
+            || identity.fallbackCompanyName
+            || identity.user.name;
+
+        const jobPayload = sanitizeJobPayload(payload, {
+            companyName: companyNameForJob,
+            postedBy: identity.user._id
+        });
+
+        const job = await Job.create(jobPayload);
+
+        if (profileResult.profile?._id) {
+            await CompanyProfile.updateOne(
+                { _id: profileResult.profile._id },
+                { $addToSet: { jobsPosted: job._id } }
+            );
+        }
+
+        return res.status(201).json({
+            success: true,
+            message: 'Company profile synchronized and job ingested successfully. Job is pending admin activation.',
+            userId: identity.user._id,
+            profileId: profileResult.profile?._id,
+            jobId: job._id,
+            createdUser: identity.createdUser,
+            createdProfile: profileResult.createdProfile,
+            temporaryPassword: identity.tempPasswordPlain || undefined
+        });
+    } catch (error) {
+        if (error instanceof IntegrationValidationError) {
+            return res.status(error.status).json({ success: false, message: error.message });
+        }
+        console.error('N8N Combined Company + Job Error:', error);
+        return res.status(500).json({ success: false, message: `Server error: ${error.message}` });
+    }
+};
+
 // --- Utility Functions ---
+
+async function ensureCompanyUserIdentity(payload = {}) {
+    const emailCandidate = safeTrim(payload.companyEmail || payload.email);
+    if (!emailCandidate) {
+        throw new IntegrationValidationError('Missing required field: company email.');
+    }
+
+    const normalizedEmail = emailCandidate.toLowerCase();
+    let user = await User.findOne({ email: normalizedEmail, role: 'company' });
+    let createdUser = false;
+    let tempPasswordPlain = null;
+
+    const preferredName = safeTrim(payload.name) || safeTrim(payload.companyName);
+    const fallbackName = preferredName || normalizedEmail.split('@')[0];
+
+    if (!user) {
+        createdUser = true;
+        tempPasswordPlain = generateTempPassword();
+        const hashedPassword = await bcrypt.hash(tempPasswordPlain, 12);
+        user = await User.create({
+            name: preferredName || fallbackName,
+            email: normalizedEmail,
+            password: hashedPassword,
+            role: 'company',
+            isVerified: false
+        });
+        console.log(`N8N Webhook: Created company user ${user._id} for ${normalizedEmail}.`);
+    } else if (preferredName && user.name !== preferredName) {
+        user.name = preferredName;
+        await user.save();
+    }
+
+    return {
+        normalizedEmail,
+        user,
+        createdUser,
+        tempPasswordPlain,
+        fallbackCompanyName: safeTrim(payload.companyName) || user.name || fallbackName
+    };
+}
+
+async function upsertCompanyProfileFromPayload(user, payload = {}) {
+    const existingProfile = await CompanyProfile.findOne({ user: user._id }).lean();
+    const profileData = buildCompanyProfilePayload(
+        user._id,
+        payload,
+        safeTrim(payload.companyName) || user.name || user.email
+    );
+
+    const updatedProfile = await CompanyProfile.findOneAndUpdate(
+        { user: user._id },
+        { $set: profileData },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    console.log(`N8N Webhook: ${existingProfile ? 'Updated' : 'Created'} company profile ${updatedProfile._id}.`);
+
+    return { profile: updatedProfile, createdProfile: !existingProfile };
+}
+
+function buildCompanyProfilePayload(userId, payload = {}, fallbackName) {
+    const profileData = {
+        user: userId,
+        companyName: safeTrim(payload.companyName) || fallbackName
+    };
+
+    const maybeSet = (field, value) => {
+        const trimmed = safeTrim(value);
+        if (trimmed) {
+            profileData[field] = trimmed;
+        }
+    };
+
+    maybeSet('industry', payload.industry);
+    maybeSet('website', payload.website);
+    maybeSet('description', payload.description);
+    maybeSet('contactPerson', payload.contactPerson);
+    maybeSet('phone', payload.phone);
+
+    const normalizedSize = normalizeCompanySize(payload.size);
+    if (normalizedSize) {
+        profileData.size = normalizedSize;
+    }
+
+    const foundedYear = parseInt(payload.founded, 10);
+    if (!Number.isNaN(foundedYear) && foundedYear > 0) {
+        profileData.founded = foundedYear;
+    }
+
+    const address = {
+        street: safeTrim(payload.street),
+        city: safeTrim(payload.city),
+        state: safeTrim(payload.state),
+        country: safeTrim(payload.country),
+        zipCode: safeTrim(payload.zipCode)
+    };
+    if (Object.values(address).some(Boolean)) {
+        profileData.address = address;
+    }
+
+    const socialLinks = {
+        linkedin: safeTrim(payload.linkedin),
+        twitter: safeTrim(payload.twitter),
+        facebook: safeTrim(payload.facebook)
+    };
+    Object.keys(socialLinks).forEach((key) => {
+        if (!socialLinks[key]) {
+            delete socialLinks[key];
+        }
+    });
+    if (Object.keys(socialLinks).length > 0) {
+        profileData.socialLinks = socialLinks;
+    }
+
+    return profileData;
+}
+
+function normalizeCompanySize(value) {
+    if (!value && value !== 0) return undefined;
+    const trimmed = safeTrim(value);
+    if (!trimmed) return undefined;
+
+    const canonical = trimmed
+        .replace(/\s*(to|–|—)\s*/gi, '-')
+        .replace(/\s+/g, '')
+        .toLowerCase();
+
+    return COMPANY_SIZE_OPTIONS.find((option) =>
+        option.replace(/\s+/g, '').toLowerCase() === canonical
+    );
+}
+
+function sanitizeJobPayload(payload = {}, { companyName, postedBy }) {
+    const trimmedTitle = safeTrim(payload.jobTitle ?? payload.title);
+    const trimmedLocation = safeTrim(payload.location);
+    const rawJobType = safeTrim(payload.jobType);
+    const trimmedSalary = safeTrim(payload.salary);
+    const trimmedDescription = safeTrim(payload.jobDescription ?? payload.description);
+
+    if (!trimmedTitle || !trimmedLocation || !rawJobType || !trimmedSalary || !trimmedDescription) {
+        throw new IntegrationValidationError('Missing required job fields: title, location, jobType, salary, and description are mandatory.');
+    }
+
+    const jobPayload = {
+        title: trimmedTitle,
+        company: companyName,
+        location: trimmedLocation,
+        jobType: normalizeJobTypeValue(rawJobType),
+        salary: trimmedSalary,
+        description: trimmedDescription,
+        requirements: normalizeMultiValue(payload.requirements),
+        responsibilities: normalizeMultiValue(payload.responsibilities),
+        benefits: normalizeMultiValue(payload.benefits),
+        skills: normalizeMultiValue(payload.skills),
+        experienceLevel: normalizeExperienceValue(payload.experienceLevel),
+        applicationDeadline: parseApplicationDeadline(payload.applicationDeadline),
+        postedBy,
+        isActive: false
+    };
+
+    const applyLink = safeTrim(payload.applyLink);
+    if (applyLink) {
+        jobPayload.externalApplyLink = applyLink;
+    }
+
+    return jobPayload;
+}
+
+function parseApplicationDeadline(value) {
+    if (!value && value !== 0) {
+        return null;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+
+    return parsed;
+}
 
 const normalizeMultiValue = (value) => {
     if (!value) return [];

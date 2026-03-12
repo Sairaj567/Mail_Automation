@@ -153,12 +153,12 @@
     color: var(--primary-purple);
 }
 
-.job-type.fulltime {
+.job-type.full-time {
     background: rgba(16, 185, 129, 0.1);
     color: var(--success);
 }
 
-.job-type.parttime {
+.job-type.part-time {
     background: rgba(245, 158, 11, 0.1);
     color: var(--warning);
 }

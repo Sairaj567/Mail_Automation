@@ -335,13 +335,13 @@
                                             </td>
                                             <td>
                                                 <div class="action-buttons">
-                                                    <button class="btn-icon" title="View Applicants">
+                                                    <a class="btn-icon" title="View Applicants" href="/company/jobs/<%= job._id %>">
                                                         <i class="fas fa-users"></i>
-                                                    </button>
-                                                    <button class="btn-icon" title="Edit Job">
+                                                    </a>
+                                                    <a class="btn-icon" title="Edit Job" href="/company/edit-job/<%= job._id %>">
                                                         <i class="fas fa-edit"></i>
-                                                    </button>
-                                                    <button class="btn-icon" title="Toggle Status" onclick="toggleJobStatus('<%= job._id %>', '<%= job.isActive %>')">
+                                                    </a>
+                                                    <button class="btn-icon" title="Toggle Status" onclick="toggleJobStatus('<%= job._id %>', <%= job.isActive ? 'true' : 'false' %>)">
                                                         <i class="fas <%= job.isActive ? 'fa-pause' : 'fa-play' %>"></i>
                                                     </button>
                                                     <button class="btn-icon" title="Delete Job" onclick="deleteJob('<%= job._id %>')" style="color: #EF4444;">
@@ -370,6 +370,7 @@
         </main>
     </div>
 
+    <script src="/js/main.js"></script>
     <script>
         // Toggle job status (active/inactive)
         async function toggleJobStatus(jobId, currentStatus) {

@@ -82,8 +82,8 @@
                         <select id="jobTypeFilter">
                             <option value="">All Job Types</option>
                             <option value="internship" <%= filters.jobType === 'internship' ? 'selected' : '' %>>Internship</option>
-                            <option value="fulltime" <%= filters.jobType === 'fulltime' ? 'selected' : '' %>>Full Time</option>
-                            <option value="parttime" <%= filters.jobType === 'parttime' ? 'selected' : '' %>>Part Time</option>
+                            <option value="full-time" <%= filters.jobType === 'full-time' ? 'selected' : '' %>>Full Time</option>
+                            <option value="part-time" <%= filters.jobType === 'part-time' ? 'selected' : '' %>>Part Time</option>
                             <option value="remote" <%= filters.jobType === 'remote' ? 'selected' : '' %>>Remote</option>
                         </select>
                         <select id="experienceFilter">
@@ -120,7 +120,7 @@
                                         </div>
                                     </div>
                                     <div class="job-type <%= job.jobType %>">
-                                        <%= job.jobType.charAt(0).toUpperCase() + job.jobType.slice(1) %>
+                                        <%= job.jobType.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ') %>
                                     </div>
                                 </div>
                                 

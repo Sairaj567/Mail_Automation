@@ -3,6 +3,18 @@
     padding: 2rem;
 }
 
+.demo-banner {
+    background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
 .profile-container {
     max-width: 1000px;
     margin: 0 auto;

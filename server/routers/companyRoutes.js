@@ -971,6 +971,8 @@ router.post('/update-application-status', requireCompany, async (req, res) => {
         const { applicationId, status } = req.body;
         const companyId = req.session.user.id;
         const isDemoUser = !mongoose.Types.ObjectId.isValid(companyId);
+        const allowedStatuses = ['applied', 'under_review', 'shortlisted', 'interview', 'rejected', 'accepted'];
+        const normalizedStatus = status === 'hired' ? 'accepted' : status;
         
         if (isDemoUser) {
             return res.json({
@@ -979,7 +981,14 @@ router.post('/update-application-status', requireCompany, async (req, res) => {
             });
         }
 
-        await Application.findByIdAndUpdate(applicationId, { status });
+        if (!allowedStatuses.includes(normalizedStatus)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid application status provided.'
+            });
+        }
+
+        await Application.findByIdAndUpdate(applicationId, { status: normalizedStatus });
 
         res.json({
             success: true,

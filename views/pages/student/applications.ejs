@@ -124,8 +124,7 @@
                                     <!-- DELETE BUTTON - Only show for certain statuses -->
                                     <% if (['applied', 'under_review', 'shortlisted'].includes(application.status)) { %>
                                         <button class="btn-danger delete-application-btn" 
-                                                data-application-id="<%= application._id %>"
-                                                onclick="deleteApplication('<%= application._id %>')">
+                                                data-application-id="<%= application._id %>">
                                             <i class="fas fa-trash"></i> Delete Application
                                         </button>
                                     <% } %>

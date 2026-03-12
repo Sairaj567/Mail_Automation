@@ -49,7 +49,7 @@
         .stat-card.applied { border-left-color: #7E57C2; }
         .stat-card.review { border-left-color: #5C6BC0; }
         .stat-card.interview { border-left-color: #FF9800; }
-        .stat-card.hired { border-left-color: #48BB78; }
+        .stat-card.accepted { border-left-color: #48BB78; }
         .stat-card.rejected { border-left-color: #EF4444; }
         
         .stat-card h3 {
@@ -201,7 +201,7 @@
         .status-under_review { color: #5C6BC0; border-color: #5C6BC0; }
         .status-shortlisted { color: #9575CD; border-color: #9575CD; }
         .status-interview { color: #FF9800; border-color: #FF9800; }
-        .status-hired { color: #48BB78; border-color: #48BB78; }
+        .status-accepted { color: #48BB78; border-color: #48BB78; }
         .status-rejected { color: #EF4444; border-color: #EF4444; }
         
         .action-buttons {
@@ -433,9 +433,9 @@
                             <h3><%= applications.filter(app => app.status === 'interview').length %></h3>
                             <p>Interview</p>
                         </div>
-                        <div class="stat-card hired">
-                            <h3><%= applications.filter(app => app.status === 'hired').length %></h3>
-                            <p>Hired</p>
+                        <div class="stat-card accepted">
+                            <h3><%= applications.filter(app => app.status === 'accepted').length %></h3>
+                            <p>Accepted</p>
                         </div>
                         <div class="stat-card rejected">
                             <h3><%= applications.filter(app => app.status === 'rejected').length %></h3>
@@ -465,7 +465,7 @@
                                 <option value="under_review" <%= filters.status === 'under_review' ? 'selected' : '' %>>Under Review</option>
                                 <option value="shortlisted" <%= filters.status === 'shortlisted' ? 'selected' : '' %>>Shortlisted</option>
                                 <option value="interview" <%= filters.status === 'interview' ? 'selected' : '' %>>Interview</option>
-                                <option value="hired" <%= filters.status === 'hired' ? 'selected' : '' %>>Hired</option>
+                                <option value="accepted" <%= filters.status === 'accepted' ? 'selected' : '' %>>Accepted</option>
                                 <option value="rejected" <%= filters.status === 'rejected' ? 'selected' : '' %>>Rejected</option>
                             </select>
                         </div>
@@ -522,13 +522,13 @@
                                                 <option value="under_review" <%= application.status === 'under_review' ? 'selected' : '' %>>Under Review</option>
                                                 <option value="shortlisted" <%= application.status === 'shortlisted' ? 'selected' : '' %>>Shortlisted</option>
                                                 <option value="interview" <%= application.status === 'interview' ? 'selected' : '' %>>Interview</option>
-                                                <option value="hired" <%= application.status === 'hired' ? 'selected' : '' %>>Hired</option>
+                                                <option value="accepted" <%= application.status === 'accepted' ? 'selected' : '' %>>Accepted</option>
                                                 <option value="rejected" <%= application.status === 'rejected' ? 'selected' : '' %>>Rejected</option>
                                             </select>
                                             
                                             <div class="action-buttons">
                                                 <button class="btn-icon view-cover-letter" title="View Cover Letter" 
-                                                        data-content="<%= application.coverLetter || 'No cover letter provided' %>"
+                                                        data-content="<%= application.coverLetterText || 'No cover letter provided' %>"
                                                         data-student="<%= application.student.name %>">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
@@ -568,6 +568,7 @@
         </main>
     </div>
 
+    <script src="/js/main.js"></script>
     <!-- Cover Letter Modal -->
     <div id="coverLetterModal" class="modal">
         <div class="modal-content">
