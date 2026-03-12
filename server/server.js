@@ -211,7 +211,7 @@ app.use((req, res) => {
 
 
 // --- Start Server ---
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3345;
 // Listen on 0.0.0.0 to be accessible from outside the host (e.g., from n8n Docker container)
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
