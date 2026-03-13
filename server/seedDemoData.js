@@ -19,7 +19,7 @@ const demoJobs = [
         title: "Frontend Developer",
         company: "Microsoft",
         location: "Redmond, WA",
-        jobType: "fulltime",
+        jobType: "full-time",
         salary: "$95,000/year",
         description: "Microsoft is looking for a passionate Frontend Developer to join our dynamic team...",
         requirements: ["React", "TypeScript", "JavaScript", "CSS"],

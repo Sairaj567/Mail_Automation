@@ -64,7 +64,12 @@ const formatJob = (job) => {
     formatted.requirements = formatted.requirements || [];
     formatted.responsibilities = formatted.responsibilities || [];
     formatted.skills = formatted.skills || [];
-    formatted.jobType = formatted.jobType || 'full-time'; // Default if missing
+    const jobTypeMap = {
+      fulltime: 'full-time',
+      parttime: 'part-time'
+    };
+
+    formatted.jobType = jobTypeMap[formatted.jobType] || formatted.jobType || 'full-time'; // Default if missing
     formatted.experienceLevel = formatted.experienceLevel || 'fresher'; // Default if missing
     formatted.salary = formatted.salary || 'Not specified'; // Default if missing
 
@@ -150,6 +155,54 @@ const renderDemoDashboard = async (req, res) => {
 };
 // --- End of renderDemoDashboard ---
 
+const getDemoJobs = () => ([
+  {
+    _id: 'demo-job-1',
+    title: 'Software Engineer Intern',
+    company: 'Google',
+    location: 'Mountain View, CA',
+    jobType: 'internship',
+    salary: '$7,500/month',
+    description: 'Work with product teams to build and ship features at scale.',
+    requirements: ['Data Structures', 'Algorithms'],
+    responsibilities: ['Build features', 'Write tests'],
+    skills: ['Python', 'JavaScript', 'Git'],
+    experienceLevel: 'fresher',
+    isActive: true,
+    createdAt: new Date()
+  },
+  {
+    _id: 'demo-job-2',
+    title: 'Frontend Developer',
+    company: 'Microsoft',
+    location: 'Redmond, WA',
+    jobType: 'full-time',
+    salary: '$95,000/year',
+    description: 'Build modern, accessible UI experiences for enterprise applications.',
+    requirements: ['React', 'TypeScript'],
+    responsibilities: ['Develop UI', 'Optimize performance'],
+    skills: ['React', 'TypeScript', 'CSS'],
+    experienceLevel: '0-2',
+    isActive: true,
+    createdAt: new Date(Date.now() - 86400000)
+  },
+  {
+    _id: 'demo-job-3',
+    title: 'Backend Engineer',
+    company: 'Amazon',
+    location: 'Bengaluru, IN',
+    jobType: 'remote',
+    salary: '$110,000/year',
+    description: 'Design reliable backend services and APIs for high-traffic systems.',
+    requirements: ['Node.js', 'MongoDB'],
+    responsibilities: ['Design APIs', 'Improve reliability'],
+    skills: ['Node.js', 'MongoDB', 'Docker'],
+    experienceLevel: '2-5',
+    isActive: true,
+    createdAt: new Date(Date.now() - 2 * 86400000)
+  }
+]);
+
 exports.getDashboard = async (req, res) => {
   try {
     if (isDemo(req)) {
@@ -206,7 +259,22 @@ exports.getJobs = async (req, res) => {
   try {
     const { search, jobType, experience } = req.query;
 
-    const filter = { isActive: true };
+    if (isDemo(req)) {
+      const demoJobs = getDemoJobs().map(formatJob);
+      return res.render('pages/student/jobs', {
+        title: 'Job Listings - Placement Portal',
+        user: req.session.user,
+        jobs: demoJobs,
+        filters: {
+          search: search || '',
+          jobType: jobType || '',
+          experience: experience || ''
+        },
+        isDemo: true
+      });
+    }
+
+    const filter = { isActive: { $ne: false } };
 
     if (search) {
       filter.$or = [
@@ -217,7 +285,13 @@ exports.getJobs = async (req, res) => {
     }
 
     if (jobType) {
-      filter.jobType = jobType; // Assuming jobType values match query values directly
+      if (jobType === 'full-time') {
+        filter.jobType = { $in: ['full-time', 'fulltime'] };
+      } else if (jobType === 'part-time') {
+        filter.jobType = { $in: ['part-time', 'parttime'] };
+      } else {
+        filter.jobType = jobType; // Assuming jobType values match query values directly
+      }
     }
 
     if (experience) {
@@ -225,12 +299,17 @@ exports.getJobs = async (req, res) => {
     }
 
     // Use Mongoose find with the filter object
-    const jobs = await Job.find(filter).sort({ createdAt: -1 });
+    const jobs = await Job.find(filter).sort({ createdAt: -1 }).lean();
+
+    // Fallback for older datasets where isActive might be missing or inconsistent
+    const jobsToRender = jobs.length === 0 && !search && !jobType && !experience
+      ? await Job.find({}).sort({ createdAt: -1 }).limit(20).lean()
+      : jobs;
 
     res.render('pages/student/jobs', {
       title: 'Job Listings - Placement Portal',
       user: req.session.user,
-      jobs: jobs.map(formatJob), // Use formatter
+      jobs: jobsToRender.map(formatJob), // Use formatter
       filters: {
         search: search || '',
         jobType: jobType || '',

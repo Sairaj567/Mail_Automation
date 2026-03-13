@@ -195,35 +195,35 @@
                     </div>
 
                     <div class="builder-options">
-                        <div class="builder-card">
+                        <div class="builder-card builder-card-ai">
                             <div class="builder-icon">
                                 <i class="fas fa-magic"></i>
                             </div>
                             <h4>AI Resume Builder</h4>
                             <p>Generate a professional resume automatically from your profile</p>
-                            <button class="btn-primary" id="aiBuilderBtn">
+                            <button class="btn-primary builder-action builder-action-ai" id="aiBuilderBtn">
                                 <i class="fas fa-robot"></i> Generate with AI
                             </button>
                         </div>
 
-                        <div class="builder-card">
+                        <div class="builder-card builder-card-template">
                             <div class="builder-icon">
                                 <i class="fas fa-edit"></i>
                             </div>
                             <h4>Template Builder</h4>
                             <p>Choose from professional templates and customize</p>
-                            <button class="btn-primary" id="templateBuilderBtn">
+                            <button class="btn-primary builder-action builder-action-template" id="templateBuilderBtn">
                                 <i class="fas fa-palette"></i> Choose Template
                             </button>
                         </div>
 
-                        <div class="builder-card">
+                        <div class="builder-card builder-card-upload">
                             <div class="builder-icon">
                                 <i class="fas fa-upload"></i>
                             </div>
                             <h4>Upload Existing</h4>
                             <p>Already have a resume? Upload it directly</p>
-                            <button class="btn-primary" id="uploadExistingBtn">
+                            <button class="btn-primary builder-action builder-action-upload" id="uploadExistingBtn">
                                 <i class="fas fa-file-upload"></i> Upload Resume
                             </button>
                         </div>
@@ -253,7 +253,7 @@
                                 <i class="fas fa-briefcase"></i>
                             </div>
                             <div class="analytic-info">
-                                <h3><%= applicationCount || 0 %></h3>
+                                <h3><%= typeof applicationCount !== 'undefined' ? applicationCount : 0 %></h3>
                                 <p>Applications Sent</p>
                             </div>
                         </div>
@@ -263,7 +263,7 @@
                                 <i class="fas fa-check-circle"></i>
                             </div>
                             <div class="analytic-info">
-                                <h3><%= shortlistedCount || 0 %></h3>
+                                <h3><%= typeof shortlistedCount !== 'undefined' ? shortlistedCount : 0 %></h3>
                                 <p>Shortlisted</p>
                             </div>
                         </div>
@@ -273,7 +273,7 @@
                                 <i class="fas fa-star"></i>
                             </div>
                             <div class="analytic-info">
-                                <h3><%= profileMatchScore || 0 %>%</h3>
+                                <h3><%= typeof profileMatchScore !== 'undefined' ? profileMatchScore : 0 %>%</h3>
                                 <p>Profile Match Score</p>
                             </div>
                         </div>

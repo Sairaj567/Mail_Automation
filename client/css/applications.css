@@ -507,3 +507,112 @@
     background: #f8d7da;
     color: #721c24;
 }
+
+/* --- Modernized Pending Applications UI --- */
+.application-stats .stat-card {
+    border: 1px solid rgba(139, 95, 191, 0.12);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.application-stats .stat-card:nth-child(2) {
+    background: linear-gradient(135deg, rgba(139, 95, 191, 0.1), rgba(95, 123, 244, 0.08));
+    border-color: rgba(139, 95, 191, 0.28);
+}
+
+.application-stats .stat-card:nth-child(2) .stat-number {
+    color: #6f4dc9;
+}
+
+.applications-list-container {
+    border: 1px solid rgba(139, 95, 191, 0.12);
+}
+
+.application-card {
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.application-card:hover {
+    box-shadow: 0 14px 30px rgba(139, 95, 191, 0.13);
+}
+
+.application-filters,
+.application-search {
+    margin-bottom: 1rem;
+}
+
+.filter-btn {
+    border: 1px solid rgba(139, 95, 191, 0.22);
+    color: var(--text-dark);
+    background: #fff;
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, var(--primary-purple), var(--primary-blue));
+    border-color: transparent;
+}
+
+.search-container {
+    max-width: 100%;
+}
+
+.search-container input {
+    border-radius: 12px;
+}
+
+.application-status .status {
+    border-radius: 999px;
+    padding: 0.42rem 0.95rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.status-applied,
+.status-under-review,
+.status-shortlisted {
+    background: rgba(245, 158, 11, 0.1);
+    color: #a16207;
+    border-color: rgba(245, 158, 11, 0.28);
+}
+
+.status-interview {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+    border-color: rgba(59, 130, 246, 0.26);
+}
+
+.status-accepted {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border-color: rgba(16, 185, 129, 0.26);
+}
+
+.status-rejected {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+    border-color: rgba(239, 68, 68, 0.26);
+}
+
+.application-actions .btn-secondary,
+.application-actions .btn-primary,
+.application-actions .btn-danger {
+    border-radius: 10px;
+    padding: 0.62rem 1rem;
+}
+
+@media (max-width: 768px) {
+    .application-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .application-actions {
+        width: 100%;
+    }
+
+    .application-actions .btn-secondary,
+    .application-actions .btn-primary,
+    .application-actions .btn-danger {
+        width: 100%;
+        justify-content: center;
+    }
+}
