@@ -527,7 +527,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showNotification('Job posted successfully!', 'success');
+                    showNotification(data.message || 'Job submitted successfully and is pending admin review.', 'success');
                     // Redirect to manage jobs page after success
                     setTimeout(() => {
                         window.location.href = '/company/jobs';

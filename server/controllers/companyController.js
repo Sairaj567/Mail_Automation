@@ -269,7 +269,7 @@ exports.postJob = async (req, res) => {
             applicationDeadline: applicationDeadline ? new Date(applicationDeadline) : null,
             vacancies: vacancies ? parseInt(vacancies) : 1,
             postedBy: companyId, // Link to the User ID
-            isActive: true
+            isActive: false
         };
 
         const job = new Job(jobData);
@@ -281,7 +281,7 @@ exports.postJob = async (req, res) => {
         }
 
 
-        res.json({ success: true, message: 'Job posted successfully!', jobId: job._id });
+        res.json({ success: true, message: 'Job submitted successfully and is pending admin review.', jobId: job._id });
     } catch (error) {
         console.error('Post job error:', error);
         res.status(500).json({ success: false, message: `Failed to post job: ${error.message}` });

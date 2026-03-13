@@ -939,7 +939,7 @@ router.post('/post-job', requireCompany, async (req, res) => {
             applicationDeadline: applicationDeadline || null,
             vacancies: vacancies ? parseInt(vacancies) : 1,
             postedBy: companyId,
-            isActive: true
+            isActive: false
         };
 
         const newJob = new Job(jobData);
@@ -953,7 +953,7 @@ router.post('/post-job', requireCompany, async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Job posted successfully!',
+            message: 'Job submitted successfully and is pending admin review.',
             jobId: newJob._id
         });
     } catch (error) {
