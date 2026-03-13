@@ -305,7 +305,10 @@ exports.getJobsForReview = async (req, res) => {
 			subtitle: 'Activate or delete job postings submitted via n8n.',
 			user: req.session.user,
 			jobs: jobsWithMeta,
+			status: req.query.status || null,
+			error: req.query.error || null,
 			isDemo: isDemo(req),
+			currentPath: req.path,
 			layout: 'layouts/admin', // Use the admin layout
 		});
 	} catch (error) {
