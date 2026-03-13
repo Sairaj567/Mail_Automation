@@ -1,0 +1,791 @@
+{
+  "name": "main sheet maker",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-application",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        -656
+      ],
+      "id": "88216a68-10b5-4fc6-98a6-694c186b1497",
+      "webhookId": "your-webhook-id-will-go-here"
+    },
+    {
+      "parameters": {
+        "collection": "jobs",
+        "options": {
+          "limit": 1
+        },
+        "query": "={\n  \"$expr\": {\n    \"$eq\": [\"$_id\", { \"$toObjectId\": \"{{ $json.query.job_id }}\" }]\n  }\n}\n"
+      },
+      "name": "MongoDB",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        -656
+      ],
+      "id": "03877702-0964-4ba2-8643-312d6b2b5628",
+      "credentials": {
+        "mongoDb": {
+          "id": "UbkPDNcR91JPvluC",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('MongoDB').item.json.company_name }}",
+        "options": {}
+      },
+      "name": "Create Company Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        -736
+      ],
+      "id": "9d10bd4e-ee8b-4fde-a2e0-7e66f566bd5e",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "gTbLzculoJySrCsa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        -656
+      ],
+      "id": "6350a97d-ef4e-4819-8077-c9c187c7a392"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7658d773-fc15-4a2a-bf5c-322e5def5e89",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -256,
+        -656
+      ],
+      "id": "3d4c0d27-70a9-48a6-94cf-615adf1c7c09",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        192,
+        -656
+      ],
+      "id": "093cd2a9-b3ba-4e78-9e54-4b492a8b3921",
+      "name": "Merge",
+      "alwaysOutputData": true,
+      "retryOnFail": false,
+      "executeOnce": false,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3e58c3be-bd75-4f50-95c2-faef3c96c3f1",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        -656
+      ],
+      "id": "1ef318b3-7503-4c77-a207-f3ee09c7a3f1",
+      "name": "if sheet found"
+    },
+    {
+      "parameters": {
+        "resource": "spreadsheet",
+        "title": "={{ $('MongoDB').item.json.company_name }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        864,
+        -752
+      ],
+      "id": "92000b15-1322-4870-97ce-b6bddbbe413a",
+      "name": "Create spreadsheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "jGehSobTHr29gfBE",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1b057c4-6082-4848-a203-4f7cee3e0b45",
+              "name": "stu_name",
+              "value": "={{ $('Webhook').item.json.query.stu_name }}",
+              "type": "string"
+            },
+            {
+              "id": "3c88f889-8473-4d02-b49c-1f7136514a3c",
+              "name": "stu_mail",
+              "value": "={{ $('Webhook').item.json.query.stu_mail }}",
+              "type": "string"
+            },
+            {
+              "id": "b3ef7f92-bd4b-4f7e-a7ee-b6d0fb292dc5",
+              "name": "company_name",
+              "value": "={{ $('MongoDB').item.json.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "0474d8ea-cd95-41e7-86c1-8fe036d6007c",
+              "name": "compensation",
+              "value": "={{ $('MongoDB').item.json.compensation }}",
+              "type": "string"
+            },
+            {
+              "id": "c328a41a-eb37-4a51-88b6-51b3f2ea52f0",
+              "name": "resume_url",
+              "value": "={{ $('Webhook').item.json.query.resume_url }}",
+              "type": "string"
+            },
+            {
+              "id": "0974b0a8-a043-460f-b625-7b138fe532f5",
+              "name": "portfolio",
+              "value": "={{ $('Webhook').item.json.query.portfolio }}",
+              "type": "string"
+            },
+            {
+              "id": "45f0f364-69af-4338-b7ea-96f1a5691dfd",
+              "name": "link",
+              "value": "={{ $('MongoDB').item.json.link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1088,
+        -560
+      ],
+      "id": "78b4ee9d-b0a8-4ba5-bbac-105c63f6a79b",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Search files and folders').item.json.id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "0",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "stu_name",
+              "displayName": "stu_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stu_mail",
+              "displayName": "stu_mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "compensation",
+              "displayName": "compensation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resume_url",
+              "displayName": "resume_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "portfolio",
+              "displayName": "portfolio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "useAppend": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1312,
+        -560
+      ],
+      "id": "19aa0d7a-b504-4fc2-8c4c-7ae73cacdc12",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "jGehSobTHr29gfBE",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Create spreadsheet').item.json.spreadsheetId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Create spreadsheet').item.json.sheets[0].properties.sheetId }}",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "stu_name",
+              "displayName": "stu_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "stu_mail",
+              "displayName": "stu_mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "compensation",
+              "displayName": "compensation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "resume_url",
+              "displayName": "resume_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "portfolio",
+              "displayName": "portfolio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1520,
+        -752
+      ],
+      "id": "9431cb68-1a39-489d-81eb-334d96955fd9",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "jGehSobTHr29gfBE",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1b057c4-6082-4848-a203-4f7cee3e0b45",
+              "name": "stu_name",
+              "value": "={{ $('Webhook').item.json.query.stu_name }}",
+              "type": "string"
+            },
+            {
+              "id": "3c88f889-8473-4d02-b49c-1f7136514a3c",
+              "name": "stu_mail",
+              "value": "={{ $('Webhook').item.json.query.stu_mail }}",
+              "type": "string"
+            },
+            {
+              "id": "b3ef7f92-bd4b-4f7e-a7ee-b6d0fb292dc5",
+              "name": "company_name",
+              "value": "={{ $('MongoDB').item.json.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "0474d8ea-cd95-41e7-86c1-8fe036d6007c",
+              "name": "compensation",
+              "value": "={{ $('MongoDB').item.json.compensation }}",
+              "type": "string"
+            },
+            {
+              "id": "c328a41a-eb37-4a51-88b6-51b3f2ea52f0",
+              "name": "resume_url",
+              "value": "={{ $('Webhook').item.json.query.resume_url }}",
+              "type": "string"
+            },
+            {
+              "id": "0974b0a8-a043-460f-b625-7b138fe532f5",
+              "name": "portfolio",
+              "value": "={{ $('Webhook').item.json.query.portfolio }}",
+              "type": "string"
+            },
+            {
+              "id": "45f0f364-69af-4338-b7ea-96f1a5691dfd",
+              "name": "link",
+              "value": "={{ $('MongoDB').item.json.link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1296,
+        -752
+      ],
+      "id": "c6556383-0acb-45f2-9e96-bbce8f33cb1b",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=name = \"{{ $json.company_name }}\" and mimeType = 'application/vnd.google-apps.folder'",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -480,
+        -656
+      ],
+      "id": "bde46615-9058-45c9-b843-d30095f8355e",
+      "name": "Search files and folders1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "gTbLzculoJySrCsa",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "={{ \"name = '\" + $('MongoDB').item.json.company_name + \"' and mimeType = 'application/vnd.google-apps.spreadsheet'\" }}",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        416,
+        -656
+      ],
+      "id": "b550568b-4f0a-4737-a8c2-4169892a9f1b",
+      "name": "Search files and folders",
+      "alwaysOutputData": true,
+      "notesInFlow": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "gTbLzculoJySrCsa",
+          "name": "Google Drive account"
+        }
+      },
+      "notes": "empty"
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.spreadsheetId }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Create Company Folder').item.json.id }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1072,
+        -752
+      ],
+      "id": "fccabfb4-fd61-4ca5-9288-752748bef1b1",
+      "name": "Move file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "gTbLzculoJySrCsa",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "MongoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MongoDB": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Company Folder": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create Company Folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if sheet found": {
+      "main": [
+        [
+          {
+            "node": "Create spreadsheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create spreadsheet": {
+      "main": [
+        [
+          {
+            "node": "Move file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "if sheet found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move file": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "ceea91f7-b31b-49f0-9a8b-af184f375344",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "25573b5880dff047710085f003e7d3a3eca864b646cd42be446b014b1a490fac"
+  },
+  "id": "6mHulmjC6KppUsyJ",
+  "tags": []
+}

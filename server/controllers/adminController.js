@@ -11,6 +11,31 @@ const wantsJson = (req) =>
 	req.xhr || req.headers.accept?.includes('application/json') || req.headers['content-type'] === 'application/json';
 
 const ADMIN_REVIEW_ROUTE = '/admin/jobs/review';
+const ADMIN_MAIL_ROUTE = '/admin/mail-manager';
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const toReadableText = (value) => {
+	if (value === null || value === undefined) return 'Not available';
+	if (typeof value === 'string') return value;
+	if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+
+	if (Array.isArray(value)) {
+		return value
+			.map((item) => toReadableText(item))
+			.filter(Boolean)
+			.join(', ');
+	}
+
+	if (typeof value === 'object') {
+		if (value.address) return value.address;
+		if (Array.isArray(value.value) && value.value[0]?.address) {
+			return value.value[0].address;
+		}
+	}
+
+	return String(value);
+};
 
 const parseSalaryToLakhs = (salary) => {
 	if (!salary) return null;
@@ -487,5 +512,166 @@ exports.getReportsPage = async (req, res) => {
 		console.error('Error loading reports page:', error);
 		req.flash('error', 'Failed to load reports page.');
 		res.redirect('/admin/dashboard');
+	}
+};
+
+exports.getMailManager = async (req, res) => {
+	const selectedCategory = (req.query.category || 'all').toString().trim();
+	const searchQuery = (req.query.q || '').toString().trim();
+	const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 150, 1), 500);
+
+	if (isDemo(req)) {
+		const demoMails = [
+			{
+				_id: 'demo-mail-1',
+				from: 'jobs@company-example.com',
+				to: 'student@example.com',
+				subject: 'Interview Scheduling for Frontend Intern Role',
+				category: 'Reply from Company',
+				bodyPreview: 'Please share your availability for a 30-minute technical interview this week.',
+				receivedAt: new Date(Date.now() - 1000 * 60 * 90),
+			},
+			{
+				_id: 'demo-mail-2',
+				from: 'alerts@contesthub.org',
+				to: 'student@example.com',
+				subject: 'Last day to register for Hack the Future Challenge',
+				category: 'Urgent',
+				bodyPreview: 'Registration closes tonight. Submit your team details before 11:59 PM.',
+				receivedAt: new Date(Date.now() - 1000 * 60 * 60 * 10),
+			},
+			{
+				_id: 'demo-mail-3',
+				from: 'updates@internships.example',
+				to: 'student@example.com',
+				subject: 'Remote Cybersecurity Internship Openings',
+				category: 'Internships',
+				bodyPreview: 'We found three internship opportunities matching your profile and skills.',
+				receivedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
+			},
+		];
+
+		const filteredDemoMails = demoMails.filter((mail) => {
+			const matchesCategory = selectedCategory === 'all' || mail.category === selectedCategory;
+			const normalizedSearch = searchQuery.toLowerCase();
+			const matchesQuery =
+				!normalizedSearch ||
+				mail.subject.toLowerCase().includes(normalizedSearch) ||
+				mail.from.toLowerCase().includes(normalizedSearch) ||
+				mail.bodyPreview.toLowerCase().includes(normalizedSearch);
+
+			return matchesCategory && matchesQuery;
+		});
+
+		const categorySummary = filteredDemoMails.reduce((acc, mail) => {
+			acc[mail.category] = (acc[mail.category] || 0) + 1;
+			return acc;
+		}, {});
+
+		return res.render('pages/admin/mail-manager', {
+			title: 'Mail Manager',
+			subtitle: 'Review categorized incoming emails with filters and search.',
+			user: req.session.user,
+			mails: filteredDemoMails,
+			selectedCategory,
+			searchQuery,
+			availableCategories: ['Competitions', 'Internships', 'Job Opportunities', 'Reply from Company', 'Urgent'],
+			totalCount: filteredDemoMails.length,
+			categorySummary,
+			isDemo: true,
+			currentPath: ADMIN_MAIL_ROUTE,
+			layout: 'layouts/admin',
+		});
+	}
+
+	try {
+		const db = mongoose.connection?.db;
+		if (!db) {
+			throw new Error('Database connection is not ready.');
+		}
+
+		const emailCollection = db.collection('emails');
+		const filter = {};
+
+		if (selectedCategory && selectedCategory !== 'all') {
+			filter.category = selectedCategory;
+		}
+
+		if (searchQuery) {
+			const regex = new RegExp(escapeRegex(searchQuery), 'i');
+			filter.$or = [
+				{ subject: regex },
+				{ from: regex },
+				{ to: regex },
+				{ body: regex },
+				{ category: regex },
+			];
+		}
+
+		const [mailRows, totalCount, availableCategoriesRaw, groupedCounts] = await Promise.all([
+			emailCollection.find(filter).sort({ date: -1, receivedAt: -1, _id: -1 }).limit(limit).toArray(),
+			emailCollection.countDocuments(filter),
+			emailCollection.distinct('category'),
+			emailCollection
+				.aggregate([
+					{ $match: filter },
+					{ $group: { _id: '$category', count: { $sum: 1 } } },
+					{ $sort: { count: -1 } },
+				])
+				.toArray(),
+		]);
+
+		const mails = mailRows.map((row) => {
+			const subject = toReadableText(row.subject);
+			const body = toReadableText(row.body);
+			const collapsedBody = body.replace(/\s+/g, ' ').trim();
+			const preview = collapsedBody.length > 180 ? `${collapsedBody.slice(0, 180)}...` : collapsedBody;
+
+			const candidateDate = row.date || row.receivedAt || row.createdAt;
+			const parsedDate = candidateDate ? new Date(candidateDate) : null;
+
+			return {
+				_id: row._id?.toString?.() || String(row._id),
+				from: toReadableText(row.from),
+				to: toReadableText(row.to),
+				subject,
+				category: toReadableText(row.category),
+				bodyPreview: preview || 'No preview available.',
+				receivedAt: parsedDate instanceof Date && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
+			};
+		});
+
+		const categorySummary = groupedCounts.reduce((acc, item) => {
+			const key = item?._id ? String(item._id) : 'Uncategorized';
+			acc[key] = item.count || 0;
+			return acc;
+		}, {});
+
+		const availableCategories = (availableCategoriesRaw || [])
+			.filter((category) => typeof category === 'string' && category.trim())
+			.sort((a, b) => a.localeCompare(b));
+
+		return res.render('pages/admin/mail-manager', {
+			title: 'Mail Manager',
+			subtitle: 'Review categorized incoming emails with filters and search.',
+			user: req.session.user,
+			mails,
+			selectedCategory,
+			searchQuery,
+			availableCategories,
+			totalCount,
+			categorySummary,
+			isDemo: false,
+			currentPath: ADMIN_MAIL_ROUTE,
+			layout: 'layouts/admin',
+		});
+	} catch (error) {
+		console.error('Error loading admin mail manager:', error);
+		return res.status(500).render('error', {
+			title: 'Server Error',
+			message: 'Failed to load mail manager data.',
+			user: req.session.user,
+			layout: 'layouts/main',
+		});
 	}
 };

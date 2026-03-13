@@ -1,0 +1,102 @@
+<section class="section-card mail-controls-card">
+	<form method="GET" action="/admin/mail-manager" class="mail-filters-form">
+		<div class="mail-filter-inputs">
+			<label for="mail-search" class="mail-filter-label">Search</label>
+			<input
+				id="mail-search"
+				name="q"
+				type="text"
+				value="<%= searchQuery || '' %>"
+				placeholder="Subject, sender, body, or category"
+				class="mail-filter-input"
+			>
+		</div>
+
+		<div class="mail-filter-inputs">
+			<label for="mail-category" class="mail-filter-label">Category</label>
+			<select id="mail-category" name="category" class="mail-filter-select">
+				<option value="all" <%= selectedCategory === 'all' ? 'selected' : '' %>>All categories</option>
+				<% (availableCategories || []).forEach(function(category){ %>
+					<option value="<%= category %>" <%= selectedCategory === category ? 'selected' : '' %>>
+						<%= category %>
+					</option>
+				<% }) %>
+			</select>
+		</div>
+
+		<div class="mail-filter-actions">
+			<button type="submit" class="btn btn-success">
+				<i class="fas fa-search"></i>
+				Apply
+			</button>
+			<a href="/admin/mail-manager" class="btn btn-danger mail-reset-btn">
+				<i class="fas fa-rotate-left"></i>
+				Reset
+			</a>
+		</div>
+	</form>
+
+	<div class="mail-result-count">
+		Showing <strong><%= mails.length %></strong> of <strong><%= totalCount || 0 %></strong> emails
+	</div>
+
+	<div class="mail-category-chips">
+		<a href="/admin/mail-manager" class="mail-chip <%= selectedCategory === 'all' ? 'active' : '' %>">
+			All
+		</a>
+		<% Object.keys(categorySummary || {}).forEach(function(categoryKey){ %>
+			<a
+				href="/admin/mail-manager?category=<%= encodeURIComponent(categoryKey) %><%= searchQuery ? '&q=' + encodeURIComponent(searchQuery) : '' %>"
+				class="mail-chip <%= selectedCategory === categoryKey ? 'active' : '' %>"
+			>
+				<%= categoryKey %> (<%= categorySummary[categoryKey] %>)
+			</a>
+		<% }) %>
+	</div>
+</section>
+
+<section class="section-card">
+	<% if (mails && mails.length) { %>
+		<div class="review-table-wrap">
+			<table class="summary-table mail-table">
+				<thead>
+					<tr>
+						<th>From</th>
+						<th>Subject</th>
+						<th>Category</th>
+						<th>Received</th>
+					</tr>
+				</thead>
+				<tbody>
+					<% mails.forEach(function(mail){ %>
+						<tr>
+							<td>
+								<strong><%= mail.from %></strong><br>
+								<span class="mail-muted">To: <%= mail.to %></span>
+							</td>
+							<td>
+								<strong><%= mail.subject %></strong><br>
+								<span class="mail-muted"><%= mail.bodyPreview %></span>
+							</td>
+							<td>
+								<span class="status-badge"><%= mail.category || 'Uncategorized' %></span>
+							</td>
+							<td class="mail-date-cell">
+								<% if (mail.receivedAt) { %>
+									<%= mail.receivedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %><br>
+									<span class="mail-muted"><%= mail.receivedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) %></span>
+								<% } else { %>
+									<span class="mail-muted">Not available</span>
+								<% } %>
+							</td>
+						</tr>
+					<% }) %>
+				</tbody>
+			</table>
+		</div>
+	<% } else { %>
+		<div class="no-data">
+			<i class="fas fa-inbox"></i> No emails matched your filters.
+		</div>
+	<% } %>
+</section>

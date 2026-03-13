@@ -532,3 +532,111 @@
     color: #64748b;
     font-size: 0.85rem;
 }
+
+.mail-controls-card {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.mail-filters-form {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 0.9rem;
+    align-items: end;
+}
+
+.mail-filter-inputs {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.mail-filter-label {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.mail-filter-input,
+.mail-filter-select {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.92rem;
+    background: #fff;
+}
+
+.mail-filter-input:focus,
+.mail-filter-select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.mail-filter-actions {
+    display: inline-flex;
+    gap: 0.6rem;
+}
+
+.mail-reset-btn {
+    text-decoration: none;
+}
+
+.mail-result-count {
+    color: #334155;
+    font-size: 0.92rem;
+}
+
+.mail-category-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.mail-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    text-decoration: none;
+    padding: 0.38rem 0.72rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    color: #1e293b;
+    background: #e2e8f0;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.mail-chip:hover {
+    background: #cbd5e1;
+}
+
+.mail-chip.active {
+    background: #2563eb;
+    color: #fff;
+}
+
+.mail-table {
+    min-width: 980px;
+}
+
+.mail-muted {
+    color: #64748b;
+    font-size: 0.84rem;
+}
+
+.mail-date-cell {
+    white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+    .mail-filters-form {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .mail-filter-actions {
+        justify-content: flex-start;
+    }
+}

@@ -1,0 +1,725 @@
+{
+  "name": "Email categorizatino(Automation)",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Categorize this email:\n**Msg ID** {{ $json.id }}\n**From:** {{ $json.from.value[0].address }}\n**Subject:** {{ $json.subject }}\n**Content:** \n{{ $json.html }}\n\nPlease analyze this email and apply appropriate labels using the available tools.",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=You are an email categorization assistant. Your task is to analyze emails and apply appropriate labels to help organize the user's inbox.\n\nYou have access to three tools:\n\n1. **Get all Labels** - Retrieves available email labels\n2. **Add Labels** - Applies labels to emails\n3. **Mark as Read** - Marks an email as read\n\n### Instructions:\n\n* Always use \"Get all Labels\" first (to confirm available labels).\n* dont put mails in category which are predefined by the gmail expect for spam.\n* Only assign **one of the following labels** to each email:\n\n  * **Competitions**\n  * **Internships**\n  * **Job Opportunities**\n  * **Reply from Company**\n  * **Urgent**\n* Analyze email content using: `id, subject, sender, keywords, and context`.\n* Apply **1 most relevant label per email** (never multiple).\n* If an email does not fit any category, choose the **closest matching one**.\n* Be consistent in categorization patterns.\n* The last step is always to **mark the email as read**.\n\n\n### Response Format:\n\n1. Brief summary of email content (1 sentence)\n2. Chosen label with reasoning\n3. Use **\"Add Labels\"** tool with the selected label"
+        }
+      },
+      "id": "293d3b4d-a337-4ba5-bd3e-c96e42f59be0",
+      "name": "Email Classification Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        -544
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Label_Names_or_IDs', `use label id here instead of label name.`, 'string') }}"
+      },
+      "id": "255140f9-4273-4802-8a40-a911d523b966",
+      "name": "Add Label",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        400,
+        -304
+      ],
+      "webhookId": "e7289911-d937-45bd-9e91-410a0dc959f8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NzgNIUfnvWXFrdPH",
+          "name": "Sairajnagargoje567"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to get all existing labels from Gmail",
+        "resource": "label",
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        400,
+        -128
+      ],
+      "id": "05f67051-4a72-49f3-98ff-9ea728daf479",
+      "name": "Get all Labels",
+      "webhookId": "291b9995-7ae1-4f65-9ffb-ba62c980b829",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NzgNIUfnvWXFrdPH",
+          "name": "Sairajnagargoje567"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        400,
+        64
+      ],
+      "id": "524b5218-06e8-4b71-aeb9-ef3391384256",
+      "name": "Mark a message as read in Gmail",
+      "webhookId": "f1f61b81-3078-4edb-b38c-46dc03b036bf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NzgNIUfnvWXFrdPH",
+          "name": "Sairajnagargoje567"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "arcee-ai/trinity-large-preview:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -320
+      ],
+      "id": "c17e9dd4-e9e3-4b79-9ba2-13a0e9f6de3f",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "b155QdIvwFyK3C2i",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -16,
+        -544
+      ],
+      "id": "cf168265-b735-494c-a4e8-2a746d1a4740",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NzgNIUfnvWXFrdPH",
+          "name": "Sairajnagargoje567"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"from\": \"test@example.com\",\n  \"to\": \"hr@domain.com\",\n  \"subject\": \"Job Application\",\n  \"body\": \"Hello...\",\n  \"category\": \"Job Application\",\n  \"receivedAt\": \"2025-09-19T15:24:51.838Z\"\n}\n",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        512,
+        -240
+      ],
+      "id": "54c899cf-e28e-49c3-9a02-f5a1f11ba52b",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        272,
+        -816
+      ],
+      "id": "33d1fecc-c0e5-414e-ace8-a39076046c88",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "u6NKpjWLNT8fYrTv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please extract all details from the following job opportunity email:\n\n---EMAIL METADATA---\nSender: {{ $('Gmail Trigger').item.json.from.value[0].address }}\nDate: {{ $('Gmail Trigger').item.json.date }}\nSubject: {{ $('Gmail Trigger').item.json.headers.subject }}\n\n---EMAIL BODY---\n{{ $('Gmail Trigger').item.json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert data extraction agent for a recruitment pipeline. You will be given the metadata and body of an email that is known to be a job opportunity, interview request, or recruiter outreach.\n\nYour single task is to extract all relevant details and return a single, valid JSON object.\n\nDo NOT provide any conversational text, explanations, or markdown. Your entire response must be ONLY the JSON object.\n\nExtract the following fields:\n- company_name: The name of the company that is hiring.\n- job_title: The specific role being offered (e.g., \"Cybersecurity Analyst\", \"Junior Python Developer\").\n- recruiter_name: The name of the person who sent the email. Extract this from the body (e.g., \"Hi, this is Jane...\") or the Sender metadata.\n- recruiter_email: The email address of the sender. Extract this from the Sender metadata.\n- location: The job location. Must be one of: \"On-site\", \"Remote\", \"Hybrid\".\n- location_details: The city/country if \"On-site\" or \"Hybrid\" (e.g., \"Pune, India\", \"London, UK\"). Use \"N/A\" if \"Remote\".\n- compensation: Any mentioned salary or pay range (e.g., \"₹12 LPA\", \"$100,000 - $120,000\", \"Competitive\").\n- key_skills_mentioned: An array of key skills, technologies, or qualifications requested (e.g., [\"Python\", \"nmap\", \"Prisma\", \"AWS\", \"CISSP\"]).\n- summary: A one-sentence summary of the job description.\n- next_step: The call to action (e.g., \"Reply with availability\", \"Apply at link\", \"Schedule interview\").\n- link: The direct application or scheduling link, if one is provided.\n\nIf a field is not mentioned in the email, you MUST use \"Not Mentioned\" as the value, or an empty array [] for 'key_skills_mentioned'.\n\nThe required JSON output structure is:\n{\n  \"company_name\": \"string\",\n  \"job_title\": \"string\",\n  \"recruiter_name\": \"string\",\n  \"recruiter_email\": \"string\",\n  \"location\": \"string (On-site, Remote, or Hybrid)\",\n  \"location_details\": \"string\",\n  \"compensation\": \"string\",\n  \"key_skills_mentioned\": [\"string\", \"string\", ...],\n  \"summary\": \"string\",\n  \"next_step\": \"string\",\n  \"link\": \"string (URL or 'Not Mentioned')\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        928,
+        -736
+      ],
+      "id": "e42666a7-b133-4af7-a935-b9f6c9d58f32",
+      "name": "Job Opputruniotes"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bd8a5b21-5a8f-4567-922e-b807552b3569",
+              "leftValue": "={{ $json.output.category }}",
+              "rightValue": "Job Opportunities",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -544
+      ],
+      "id": "82e41214-ffcf-4ea1-bf99-22e9a78b614d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "emails",
+        "fields": "from,to,subject,body,category,receivedAt,date",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        1312,
+        -400
+      ],
+      "id": "8ba72fa3-0acf-4459-b8f5-c78790d96ff9",
+      "name": "Insert documents",
+      "credentials": {
+        "mongoDb": {
+          "id": "UbkPDNcR91JPvluC",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"company_name\": \"TechCorp\",\n  \"job_title\": \"Cybersecurity Intern\",\n  \"recruiter_name\": \"Priya Sharma\",\n  \"recruiter_email\": \"priya.sharma@techcorp.com\",\n  \"location\": \"Hybrid\",\n  \"location_details\": \"Pune, India\",\n  \"compensation\": \"Not Mentioned\",\n  \"key_skills_mentioned\": [\"Cybersecurity\", \"threat analysis\", \"nmap\"],\n  \"summary\": \"TechCorp is hiring a Cybersecurity Intern for a hybrid role in Pune, focusing on threat analysis and nmap scanning.\",\n  \"next_step\": \"Reply with availability for a chat\",\n  \"link\": \"Not Mentioned\"\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        -240
+      ],
+      "id": "b5076e6e-abd4-41d1-ac82-43d8c6a0e481",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ff345898-1db3-4390-ac91-54801cada039",
+              "name": "company_name",
+              "value": "={{ $json.output.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "5d61f1d5-105e-4810-a0d7-036402c9ebcf",
+              "name": "job_title",
+              "value": "={{ $json.output.job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "06a006b7-f550-4cad-91dd-71356b01af54",
+              "name": "recruiter_name",
+              "value": "={{ $json.output.recruiter_name }}",
+              "type": "string"
+            },
+            {
+              "id": "0da0d36b-511a-4346-b61b-3e1533de3bc0",
+              "name": "recruiter_email",
+              "value": "={{ $json.output.recruiter_email }}",
+              "type": "string"
+            },
+            {
+              "id": "99ef0b1c-4fe6-4b0f-9ff2-1c50db1ea73a",
+              "name": "location",
+              "value": "={{ $json.output.location }}",
+              "type": "string"
+            },
+            {
+              "id": "b9824cd3-f7ac-4552-9c15-91ce47d43e91",
+              "name": "location_details",
+              "value": "={{ $json.output.location_details }}",
+              "type": "string"
+            },
+            {
+              "id": "d3dd1126-d350-4b94-b952-174d45195cc3",
+              "name": "compensation",
+              "value": "={{ $json.output.compensation }}",
+              "type": "string"
+            },
+            {
+              "id": "75740033-ab72-4a4c-89db-db10f635a193",
+              "name": "key_skills_mentioned",
+              "value": "={{ $json.output.key_skills_mentioned }}",
+              "type": "array"
+            },
+            {
+              "id": "98d7ccef-59c7-4064-bbd9-25d70900aa75",
+              "name": "summary",
+              "value": "={{ $json.output.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "892d6b0b-26e0-4dbf-8363-dc1588308135",
+              "name": "next_step",
+              "value": "={{ $json.output.next_step }}",
+              "type": "string"
+            },
+            {
+              "id": "5e2630f2-d13a-4ab2-8c9b-975c4f866b5c",
+              "name": "link",
+              "value": "={{ $json.output.link }}",
+              "type": "string"
+            },
+            {
+              "id": "cbc98fb0-8480-4f97-8c25-4c59bccb5016",
+              "name": "status",
+              "value": "=new",
+              "type": "string"
+            },
+            {
+              "id": "2bef312b-016c-474f-8e26-1bcd71c717a8",
+              "name": "date",
+              "value": "={{$now}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1312,
+        -736
+      ],
+      "id": "ee46c37d-1c8a-4c10-bee4-3cfeb73a3b1d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "jobs",
+        "fields": "company_name,job_title,recruiter_name,recruiter_email,location,location_details,compensation,key_skills_mentioned,summary,next_step,link,status,date",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        1568,
+        -736
+      ],
+      "id": "326eff64-eee8-45c0-b066-99e610feaeed",
+      "name": "insert",
+      "credentials": {
+        "mongoDb": {
+          "id": "UbkPDNcR91JPvluC",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f3d9b6ff-f44d-4ea7-8e67-d5eff89b9c30",
+              "name": "from",
+              "value": "={{ $json.output.from }}",
+              "type": "string"
+            },
+            {
+              "id": "53bd6f94-9eef-4cc8-8b94-f9b137819b67",
+              "name": "to",
+              "value": "={{ $json.output.to }}",
+              "type": "string"
+            },
+            {
+              "id": "33223956-368d-4e48-8201-2d6dfb0b1171",
+              "name": "subject",
+              "value": "={{ $json.output.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "e1ab98be-a58b-4d40-b6ff-650cfee91a17",
+              "name": "body",
+              "value": "={{ $json.output.body }}",
+              "type": "string"
+            },
+            {
+              "id": "cbdd1696-b31e-4637-a53b-c83ac3a31054",
+              "name": "category",
+              "value": "={{ $json.output.category }}",
+              "type": "string"
+            },
+            {
+              "id": "c2ee2e35-eb9c-4351-a968-922f20bb29f5",
+              "name": "receivedAt",
+              "value": "={{ $json.output.receivedAt }}",
+              "type": "string"
+            },
+            {
+              "id": "2bef312b-016c-474f-8e26-1bcd71c717a8",
+              "name": "date",
+              "value": "={{$now}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        -400
+      ],
+      "id": "acad37f1-33bd-427f-8ae6-64eb796b9a9c",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        544,
+        -32
+      ],
+      "id": "fb837c9f-e03a-4b66-99ec-b33135ae7e28",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "u6NKpjWLNT8fYrTv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "19a4dd73a510b04f",
+          "threadId": "19a4dd73a510b04f",
+          "labelIds": [
+            "CATEGORY_PROMOTIONS",
+            "UNREAD",
+            "INBOX"
+          ],
+          "sizeEstimate": 16930,
+          "headers": {
+            "delivered-to": "Delivered-To: sairajnagargoje567@gmail.com",
+            "received": "Received: from NDgxMzg4MTU (unknown)\r\n\tby geopod-ismtpd-5 (SG) with HTTP\r\n\tid iJ4NPcllTyyBrFv4S_p3hg\r\n\tTue, 04 Nov 2025 07:49:00.468 +0000 (UTC)",
+            "x-google-smtp-source": "X-Google-Smtp-Source: AGHT+IH9WgBKIOdLno4MM/fanYCmhZ5xCuPtGmJdj1Z5eeTorknAUVnMO+1Ae4SfXHktxccXoAqD",
+            "x-received": "X-Received: by 2002:a05:620a:6906:b0:8a6:a566:60cc with SMTP id af79cd13be357-8b10caaf16cmr194321985a.33.1762242542465;\r\n        Mon, 03 Nov 2025 23:49:02 -0800 (PST)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1762242542; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=bMyPbXaQ3Lcp867HGXDYHMs5bZvJHVEq1e4ncTKwMZ3ukOXF0WSJpjAsK6plUpxcnR\r\n         FkMhvrekIWHN2wViYlMYdLJPaR2D80DkPvhDuasN2/a794lM3Eo6oR2Fnb2H1aChDxW4\r\n         CKie/gB6mbHG0eEWoixEYoMWPPdXdH052HHw3lgutqyqzac2MUJSBNUTRo8bfWOeoyKJ\r\n         salKcEg6UN5PJH+G+6UPQHx71fKwl4ZkM8QyS+SgvxLtx7IHCJCCNhrxdTCf4Pr+Yuzu\r\n         iL6C4y5wRGIRFC5Bx/XgJ9R7aQ8WhpQbMX9quTYZIcST/6bexCjiAKvXHEPbDmafLmZj\r\n         DnUQ==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:list-unsubscribe-post:list-unsubscribe:feedback-id:reply-to\r\n         :subject:message-id:mime-version:from:date:content-transfer-encoding\r\n         :dkim-signature:dkim-signature;\r\n        bh=Y7C62TKM4uOMSdzaUbdBijynT6pOpTMpfAsqxcMLeZc=;\r\n        fh=zWK1DDCobV8nwzuauwkLe0H32rvau4Nb1r1s4MQGhd4=;\r\n        b=ejX2DuszIjlhFpyTW29Hgx6its1Qb3NahUYpjeV71qgtXjs1a/EJ7rlNeq9MJjNE6S\r\n         /H0EelapmezdDTh4GlR4hZGcERVuFz242McMi+gfIa6PSEDsYow0y+DP8sQ1pVX3fgfY\r\n         kQaR9Os13uVOMr3XgRQ1J4iT7Ri+0i/7TCMoNLwQPjGIKSeXx5FbS5aNfMN5ey7OP7aC\r\n         9zS7h+Eq4ApkIKYutW7XIcO8uRV/bIq0yJsV3lu3seiSYOXrFAT/LTnPmHEMP5vtzYHR\r\n         kwe4SZYnNMtHAKTzybm7aMTQ/NxCFbPwZqGJnIYZ5j/0p+cW6QTN0/A24tEVFtY2RzzS\r\n         rITg==;\r\n        dara=google.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com;\r\n       dkim=pass header.i=@mailers.internshala.com header.s=ENW header.b=fFxSA0PU;\r\n       dkim=pass header.i=@sendgrid.info header.s=smtpapi header.b=GLza7sJN;\r\n       spf=pass (google.com: domain of bounces+48138815-279c-sairajnagargoje567=gmail.com@enw.mailers.internshala.com designates 159.183.106.141 as permitted sender) smtp.mailfrom=\"bounces+48138815-279c-sairajnagargoje567=gmail.com@enw.mailers.internshala.com\";\r\n       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=mailers.internshala.com",
+            "return-path": "Return-Path: <bounces+48138815-279c-sairajnagargoje567=gmail.com@enw.mailers.internshala.com>",
+            "received-spf": "Received-SPF: pass (google.com: domain of bounces+48138815-279c-sairajnagargoje567=gmail.com@enw.mailers.internshala.com designates 159.183.106.141 as permitted sender) client-ip=159.183.106.141;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       dkim=pass header.i=@mailers.internshala.com header.s=ENW header.b=fFxSA0PU;\r\n       dkim=pass header.i=@sendgrid.info header.s=smtpapi header.b=GLza7sJN;\r\n       spf=pass (google.com: domain of bounces+48138815-279c-sairajnagargoje567=gmail.com@enw.mailers.internshala.com designates 159.183.106.141 as permitted sender) smtp.mailfrom=\"bounces+48138815-279c-sairajnagargoje567=gmail.com@enw.mailers.internshala.com\";\r\n       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=mailers.internshala.com",
+            "dkim-signature": "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sendgrid.info;\r\n\th=content-transfer-encoding:content-type:date:from:mime-version:subject:\r\n\treply-to:feedback-id:list-unsubscribe:list-unsubscribe-post:to:cc:content-type:\r\n\tdate:feedback-id:from:subject:to;\r\n\ts=smtpapi; bh=Y7C62TKM4uOMSdzaUbdBijynT6pOpTMpfAsqxcMLeZc=;\r\n\tb=GLza7sJN6M3F2snoePMJ8gn1SJc7rI3mpWzzlYhfUcbhB/i9OXLwC47ENvP2wfU9gzTJ\r\n\taqX92S9zrEE7Vd8BkJ1FTKAIqvwFzwUwNZkWgciV2CTYdTXb5hNCq/d4sFyvRgr1dvvjfp\r\n\tsMvWdHQSfw+K5qxZ3SW1fdupsMuaH3AXs=",
+            "content-transfer-encoding": "Content-Transfer-Encoding: quoted-printable",
+            "content-type": "Content-Type: text/html; charset=utf-8",
+            "date": "Date: Tue, 04 Nov 2025 07:49:00 +0000 (UTC)",
+            "from": "From: Internshala <student@mailers.internshala.com>",
+            "mime-version": "Mime-Version: 1.0",
+            "message-id": "Message-ID: <iJ4NPcllTyyBrFv4S_p3hg@geopod-ismtpd-5>",
+            "subject": "Subject: Sairaj, You might be one application away from getting hired!\r\n =?UTF-8?B?8J+SvA==?=",
+            "reply-to": "Reply-To: no-reply-student@internshala.com",
+            "feedback-id": "Feedback-ID: \r\n =?us-ascii?Q?CS4zUXrzJmt2SsFisTFGhyjfxN2pd3pmtisMG98rYY4f5St3eykqb2Gtj5Yw9d?=\r\n =?us-ascii?Q?RA0P4iWg=3A9NZupwHJ1kUWt3MY4Rqbli1haBHEqi?=\r\n =?us-ascii?Q?m00kr0UPTDkduh0GySOkmz5hybf8wW4vRK3hg4p?=\r\n =?us-ascii?Q?g=3ADC03=3AMoe?=",
+            "list-unsubscribe": "List-Unsubscribe: \r\n =?us-ascii?Q?=3Chttps=3A=2F=2Flink=2Einternshala=2Ecom=2Fv1=2Femailunsubscribe=3Fqmoe=3D=5FIOtvxy?=\r\n =?us-ascii?Q?9hmKEQjxwsHHlxnPRbZoE50AB8=5F4Xzkovw3tK=5Fe?=\r\n =?us-ascii?Q?fXT206wBWZuNTo08ugPHYuzjCcvQ-E=5FyVuhi=2E8E?=\r\n =?us-ascii?Q?=5F7QK3APmznyJCGJPyqI4Efsm=2EdQaQVrsTUWD=2EFe?=\r\n =?us-ascii?Q?kWr=5FxYzmT=2ERBkmhSw4nIPRrIQ-9fiJb8UnYKZlR?=\r\n =?us-ascii?Q?q3vbv2l0l8nnVs9hpDr9KFChoZn2trKz=2EKMnazV?=\r\n =?us-ascii?Q?L8Ve=5Fd8433s5ve36MwVEoH=2EJCaHQX2hf4D23A72?=\r\n =?us-ascii?Q?v1wFJce2D=5F216b=5FHyoh1eDMHO8XXXPaka=5FQpOXM?=\r\n =?us-ascii?Q?1UogF5iDK5FhoM9FPAhvdM5HNXGG2wcdV=5F0Fd3p?=\r\n =?us-ascii?Q?qSELzsDeF6dSrgn-SLLbpcuI96knfbMvnSCswI=2E?=\r\n =?us-ascii?Q?JSIKkmXrVINYZzxeTpL7bp7201f8yMij4lGTHsU?=\r\n =?us-ascii?Q?HdKClQeRhYzQS9bTQ-EvFUMbwLmUdJJbB=5Fqcnyk?=\r\n =?us-ascii?Q?f1VjPEXN1nCGsWBY3m9buuC=3E=2C?=\r\n <mailto:unsubscribe-DC03@moengage.co?subject=Unsubscribe |\r\n =?us-ascii?Q?=5FIOtvxy9hmKEQjxwsHHlxnPRbZoE50AB8=5F4Xzkovw3tK=5FefXT206wBWZuNTo08?=\r\n =?us-ascii?Q?ugPHYuzjCcvQ-E=5FyVuhi=2E8E=5F7QK3APmznyJCGJP?=\r\n =?us-ascii?Q?yqI4Efsm=2EdQaQVrsTUWD=2EFekWr=5FxYzmT=2ERBkmhS?=\r\n =?us-ascii?Q?w4nIPRrIQ-9fiJb8UnYKZlRq3vbv2l0l8nnVs9h?=\r\n =?us-ascii?Q?pDr9KFChoZn2trKz=2EKMnazVL8Ve=5Fd8433s5ve36?=\r\n =?us-ascii?Q?MwVEoH=2EJCaHQX2hf4D23A72v1wFJce2D=5F216b=5FH?=\r\n =?us-ascii?Q?yoh1eDMHO8XXXPaka=5FQpOXM1UogF5iDK5FhoM9F?=\r\n =?us-ascii?Q?PAhvdM5HNXGG2wcdV=5F0Fd3pqSELzsDeF6dSrgn&?=\r\n =?us-ascii?Q?body=3DHi!?= I am requesting to be removed from all future\r\n marketing emails from your company.>",
+            "list-unsubscribe-post": "List-Unsubscribe-Post: List-Unsubscribe=One-Click",
+            "x-campaignid": "x-campaignid: 6773c496a798028ae3c73b98",
+            "x-sg-eid": "X-SG-EID: \r\n =?us-ascii?Q?u001=2E3DQCpPzQ7xI1J5aX+HtjcSo1qF9c6nlxWmJ+IC6cAURIpTdK4LOv5K3OM?=\r\n =?us-ascii?Q?KBNrTuinl5zb=2Fo5OP=2FNzADltauQSXJAxFCNyPM6?=\r\n =?us-ascii?Q?7VPK5CcCOgDAG0bRKTh6FVq82AfsgeQDDzLlcYs?=\r\n =?us-ascii?Q?1D5=2Fp3pJUcvOAXfaJBaKpDSw9s9fFXTaIK3s2Sd?=\r\n =?us-ascii?Q?bVxcergG5gWrVAndd4NvIwoM=2FetJllkVq9JAIag?=\r\n =?us-ascii?Q?xPAEIShVxK5a3yIPsdZNagrIGgufgCAgEeFEd4l?=\r\n =?us-ascii?Q?eB6w1CbkRMtfZZetT=2F=2FTbVkNfw=3D=3D?=",
+            "x-sg-id": "X-SG-ID: \r\n =?us-ascii?Q?u001=2ESdBcvi+Evd=2FbQef8eZF3BiXNL=2Fi5O73RDXPXSeOxS7kJ++n6xn9noh75=2F?=\r\n =?us-ascii?Q?ooY4bj8tSxwxbChQz0xv7zji5fvYFlxazn1ZkPQ?=\r\n =?us-ascii?Q?m2lmYO089Iu6oYDXZZJhf1wc316zWN3ok=2Ffw0TU?=\r\n =?us-ascii?Q?8jbzw7kzcIQ8imZtmPNjz9D6M6onfVdSLBMgDjj?=\r\n =?us-ascii?Q?5vKZ0J0oQtk1xNeBC90D0qr71YTupN2GIBQsrp2?=\r\n =?us-ascii?Q?QLVFthl9Y4Zd5cm1dUcc9k4DEUo4icTCzQn6LrA?=\r\n =?us-ascii?Q?52TSTgxyx1RHW18G6iTbArSDrla61=2Fax4in0Gjc?=\r\n =?us-ascii?Q?kryfPBek6H4nCOXoKI4Il=2FSjuj0QV=2F=2FRCw+ssZ5?=\r\n =?us-ascii?Q?Q9H=2FVEWC8UiJgjFtqNJKfCL9tB5IBZGAq2rDE=2FV?=\r\n =?us-ascii?Q?KT1HRot5jxENkL9YdBNvBv3mT1bAx+cWcr2A0xs?=\r\n =?us-ascii?Q?ebT4gEu9iq094bztuxgfNOZIvaMeclHzXqiBfjp?=\r\n =?us-ascii?Q?Suy85cj=2FXaUfARyI9lBadhJUsYINkZo+3SXA45u?=\r\n =?us-ascii?Q?BVcOc=3D?=",
+            "to": "To: sairajnagargoje567@gmail.com",
+            "x-entity-id": "X-Entity-ID: u001.vltB2qLL4/lvrGuQzHNudA=="
+          },
+          "html": "<!DOCTYPE html>\n\n<html><head><title></title><meta charset=\"utf-8\" content=\"text/html\" http-equiv=\"Content-Type\"/><meta content=\"noindex, nofollow, noarchive\" name=\"robots\"/><meta content=\"noindex, nofollow, noarchive\" name=\"googlebot\"/></head><body aria-disabled=\"false\" data-gr-ext-installed=\"\" data-new-gr-c-s-check-loaded=\"14.1120.1\" data-new-gr-c-s-loaded=\"14.1120.1\"><div style=\"max-width: 640px; margin: auto; text-align: center; font-family: Arial;\"> <span style=\"color:blue;display:none!important;height:0;opacity:0;width:0;\">Apply to more jobs and internships to increase your chances of getting hired! ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌  </span><a href=\"https://link.internshala.com/v1/emailclick?q=uVFrMoPZ2ehA6X7qkj0SXXAsFhTbaJ.S79XlJ_1WErlBIcgH5q8gdIt1-LyzSM2QBBmCBtkJtkyGH4tnQy4UYjUxKftOkyv4Xy9DD8_lUPoAGfPtI_bmb7X9A.bOUmnI8CVepH0MB0jxapv4Q6m75U4T4c6pof9Up13gOBIPyPzD4uT6TaCWa6o2JYAwsfA1Ik680s54IUcDeTp0exTRFG4bRC_KBkm39IXKksmURZ83xc7is-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-62XxTYhXSjCAejQm_yU7xWQgk88hQbxVrmuyWG9pPBBP-7e9e1gOpUdG0qgZ1C.cU8YNb9CxzAW3Oyk9AnOVYVjN2QuY13xbKV7uQNweJEsYenAh_4t2gOA1zG2LyzhjIsApdDRfUcMcDOJ9rBeBqPNcMRoaKf5x_oW44Yj_9KsooRBliepbFCI_s5T51iJhuuaZ79aTYqWjHJQjkZxxCvykHZfG8_oyL3m91Efrs_3UJ\" style=\"display: block;padding-top: 12px;padding-bottom: 16px; text-decoration: none;background: transparent;\"> <img src=\"https://internshala.com/uploads/common/image/604afd895cfdf1615527305.png\" style=\"width: 144px;display:block;margin: auto;\"/> </a><a href=\"https://link.internshala.com/v1/emailclick?q=Gja2a3hQeOWuNu_mCUKO8G2CW5Poue6Hk9dtqd.VQ3wJWYm6tRLiboKk-OEfJzBY30l_bvqKX3fX9flRTjXXJeJjSFJbiYEchDQDTixu.6F9Sp7hw6jr3nX_2ElhZQG.IeUMMWuHbFY0T1u5Tz1DyqD9II36q8iHkHOOKW31WAtikwz3J44QTvrx_sEuc.KrRuC8nBIcGk9aaeHTvQ6ju5UcnwN4AXwGMwAl0zWTQ90N1OwyA-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-aZv5eiXbcRg0dyDQ8H0Ex0Zw9nD6MAi6gQa7QmEj9pwi-9UZ_7koB72k83E9DvhwvliWnYMCFL48m7sxQ4O644UIQQ724itGX4KhArOq9f5yzuoqEbP9qSnC861WGSIcn.1mVYiXja_W6QN_CMEpHWYv.MajVNjNAJ_JguW_Lg0SknXVTLHyOlCtw1ytqK9K09b7XYHDZcINt_vzgSCZYoT8FmwNtKN4NSt2_YBSS9or8\" style=\"text-decoration: none;\"><img src=\"https://internshala.com/uploads/common/image/63a43117ab60f1671704855.png\" style=\"width: 100%;display:block;\"/> </a><a href=\"https://link.internshala.com/v1/emailclick?q=L_pDBgF3Njw7uZ36.fiJ51ezlEoXMdrdiCxnnPjhI3OxJoTMW7Rn2LpJ-bNaKN3TE5mxENDLL5EHfj59JycMeyjkRARBepRxKiN2BuGWGYsJPcvVuMAY36JgP91gYIcFKMUL27bS2_wBYeBbl0vWnusBJWgUaSWWs9sG5e.7wp72XRGAM_9WIdlDVTL25J.YtoD3RChCiLMobwCermH1mfQbsmYQQ8YPQcP1yX_n3gfE0xNvy-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-flNJXVHblDun4RnZP20Nd8LuZsdOV0KtOf4vqIGqLhI6-uYRKqJ9EgubKA6_y9uQR4W9J4nKLAqLc_u0vxp.3I3xzJ5xiMNm2vu6g2PvAbyw2zjcHthCX5zta2vYQVWGKrQKYA8EYi4bYbltjj.s7.H7RMcIs4EZ5ZwwmpOx6YEnYtw5TQ8gkccaWUUUosY1zF8ho8ZpSM2Z381Ii61Ys9eL22viv4EDOc.2fBfnoGgoJ_gMivVzd6NiV_u5pmMjHdJ2rykEk_iUNeBnG1P3JSIECp2wwBptwJingby5UtiE\" style=\"display: block;text-decoration:none;\" target=\"_blank\"><img alt=\"\" src=\"https://internshala-uploads.internshala.com/common/image/9gmjx2ijjuf.png\" style=\"margin:0 auto;padding:0;display:block;width:100%;\"/> </a><div style=\"background: transparent;text-align: center;padding: 24px 16px 24px;color: #666666;font-weight: normal;font-size: 13px;line-height: 18px;\"><div style=\"text-align: center;padding-bottom: 24px;margin-top:16px;\"><p style=\"line-height: 18px;font-size: 13px;font-weight: normal;color: #666666;margin: 0;\"> Internshala (Scholiverse Educare Pvt. Ltd.) <br> 901 A/B, Iris Tech Park, Sohna Road, Sector - 48, Gurugram </p></div><em>Not keen on career commitments? <a href=\"[UNSUBSCRIBEURL]\" style=\"text-decoration: none; color: #008BDC;\" target=\"_blank\">Unsubscribe</a> here to break up with us.</em> </div></div><img src=\"https://u48138815.ct.sendgrid.net/wf/open?upn=u001.08lYnWNCYUZFBIolenptLK1xG78-2BHopgQd7RMf3-2FYeJq8Wo7HctxwhmNe-2FStp5GprVER3MD8pzexuS06htRb5gDzTVH9pCUU4XP-2B8ubaYySqDaguxASXlJvQUOQyL-2FwJIrBNWSV0-2BS7wsZ5nzh4Mp3Xj55xGrXgMzDL-2FVRasescDP9gSLYpFFNzJjp1OWL0QD09941mOyddLr6qfR2zE7X3ocpIazUXuNfOrDc7U4b1-2BvAG6VtgvjZ-2B-2F3EvbYOna6Vz8Dkrlw51ZxZIGxloS7b4ZaEZgNtH76FNcg6DanizvzgfqD7n-2BhTbFkEW6wnfE7hcNp8nG6NvB3mEm1y4dnJ5gGa3Y8CwoCgDOT1T5Jl6Kkd-2BoTfX9NNDsiGHFGbVzKVFtFjPjE0Q0RjYbVhdl4NvNB2tLpF4SEP-2FUgdmOorksUwYhBpoZOCzR-2FAtHFd3k49CTxQwPCdmEoH-2F9hMEd73rx-2Fw3fIhGl-2Fs-2F-2FaQ-2Fx1f-2FjXUsHk8NwcGrsJHZuPolpEO4FIjUbnCJRA-2FxiKst9-2Br3Jn6A0TKo6ZOxI3erKxfhjwQMTdx74VZM-2BXIMqkmuQca0YgAe3gS2dgAhQgwWPipoI3wfdyMVgQRbO4w3Dx5TqW11kmRa5uVQbBVs3OibigolXFGUGYizo30WNlLFTpwratLhklBMA8g0y5nxDCXY-3D\" alt=\"\" width=\"1\" height=\"1\" border=\"0\" style=\"height:1px !important;width:1px !important;border-width:0 !important;margin-top:0 !important;margin-bottom:0 !important;margin-right:0 !important;margin-left:0 !important;padding-top:0 !important;padding-bottom:0 !important;padding-right:0 !important;padding-left:0 !important;\"/></body><br><p id=\"moe_internal_email_unsubscribe\">If you'd like to unsubscribe and stop receiving these emails <a href=\"https://link.internshala.com/v1/emailunsubscribe?q=JlrfMG2BIHG3hRn9xR08leVXHeTY09E1w_HqUGg.0Q.z95iNyNz7Amof-pEyQGCB.rMaU31N73NaKL_83JlcNOgmerjpfxu7jcbwgdvw1VP847vieTzb4LWA3ugBCb8y_2O7Pfcequye9FNL5msZ0n6KG3bVtygLDNcIwB7UJeCrHFR10Y.kdCDDwtgATx2UGxy12RuzL4U9X9_U4WzXDijqiBoxEuEX0Eoe.8X55JdYDxZ87-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-6mv2cIR9ONb_rDRT3xVDfcsAWLRL4Z8gslhsAE6gDMlH_LXjcRaGOgXQlihRtc_yA1GiHIbYX.XzuAHxv1nstdymz6ZsA1WX4KCio6Yh6DdRzOLV7aCwFQ\">click here</a></p></html><img src=\"https://link.internshala.com/v1/emailopen?q=zm1az9d0X3Quo.yWdmGkS23JWsi5fOCZsKP1WZppel6VlWn6YMKT5tqV-M32FcBz6OmbSeR2QDwR1HAsCdpt_P_VmSnQkixb52X0FtEMgXgjuJdYITw1KzkpQMGDsU38LJpJyANHFyqxo4HBGzulRAmqV1MpJkpGzizozEtjB1B662MV7L5gtpDtObkp5i7om7Dm88cnnwezfgppFotMTU5klrnvEt1yOL_xUf9OOGVgX37YB-GbGiCDeXVr4WcHF_ualwmC0db55tFRqwjluRSzpRM3wxN_V5N5csefhVTyaLwMUBbNAxALf69w-4hbaBRmt0RaC951bL7N0yXlKQAJJLblvkWGLoxvpqrf7.qEM.5OKb_eps7vAMCWJyuT4Pm9o4B26Neo\" alt=\"\" style=\"display:none;width:1px;height:1px;\" height=\"1\" width=\"1\">\n",
+          "text": "Apply to more jobs and internships to increase your chances of getting\nhired! ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ \n ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ \n ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌   ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ \n ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ \n[https://internshala.com/uploads/common/image/604afd895cfdf1615527305.png]\nhttps://link.internshala.com/v1/emailclick?q=uVFrMoPZ2ehA6X7qkj0SXXAsFhTbaJ.S79XlJ_1WErlBIcgH5q8gdIt1-LyzSM2QBBmCBtkJtkyGH4tnQy4UYjUxKftOkyv4Xy9DD8_lUPoAGfPtI_bmb7X9A.bOUmnI8CVepH0MB0jxapv4Q6m75U4T4c6pof9Up13gOBIPyPzD4uT6TaCWa6o2JYAwsfA1Ik680s54IUcDeTp0exTRFG4bRC_KBkm39IXKksmURZ83xc7is-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-62XxTYhXSjCAejQm_yU7xWQgk88hQbxVrmuyWG9pPBBP-7e9e1gOpUdG0qgZ1C.cU8YNb9CxzAW3Oyk9AnOVYVjN2QuY13xbKV7uQNweJEsYenAh_4t2gOA1zG2LyzhjIsApdDRfUcMcDOJ9rBeBqPNcMRoaKf5x_oW44Yj_9KsooRBliepbFCI_s5T51iJhuuaZ79aTYqWjHJQjkZxxCvykHZfG8_oyL3m91Efrs_3UJ[https://internshala.com/uploads/common/image/63a43117ab60f1671704855.png]\nhttps://link.internshala.com/v1/emailclick?q=Gja2a3hQeOWuNu_mCUKO8G2CW5Poue6Hk9dtqd.VQ3wJWYm6tRLiboKk-OEfJzBY30l_bvqKX3fX9flRTjXXJeJjSFJbiYEchDQDTixu.6F9Sp7hw6jr3nX_2ElhZQG.IeUMMWuHbFY0T1u5Tz1DyqD9II36q8iHkHOOKW31WAtikwz3J44QTvrx_sEuc.KrRuC8nBIcGk9aaeHTvQ6ju5UcnwN4AXwGMwAl0zWTQ90N1OwyA-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-aZv5eiXbcRg0dyDQ8H0Ex0Zw9nD6MAi6gQa7QmEj9pwi-9UZ_7koB72k83E9DvhwvliWnYMCFL48m7sxQ4O644UIQQ724itGX4KhArOq9f5yzuoqEbP9qSnC861WGSIcn.1mVYiXja_W6QN_CMEpHWYv.MajVNjNAJ_JguW_Lg0SknXVTLHyOlCtw1ytqK9K09b7XYHDZcINt_vzgSCZYoT8FmwNtKN4NSt2_YBSS9or8[https://internshala-uploads.internshala.com/common/image/9gmjx2ijjuf.png]\nhttps://link.internshala.com/v1/emailclick?q=L_pDBgF3Njw7uZ36.fiJ51ezlEoXMdrdiCxnnPjhI3OxJoTMW7Rn2LpJ-bNaKN3TE5mxENDLL5EHfj59JycMeyjkRARBepRxKiN2BuGWGYsJPcvVuMAY36JgP91gYIcFKMUL27bS2_wBYeBbl0vWnusBJWgUaSWWs9sG5e.7wp72XRGAM_9WIdlDVTL25J.YtoD3RChCiLMobwCermH1mfQbsmYQQ8YPQcP1yX_n3gfE0xNvy-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-flNJXVHblDun4RnZP20Nd8LuZsdOV0KtOf4vqIGqLhI6-uYRKqJ9EgubKA6_y9uQR4W9J4nKLAqLc_u0vxp.3I3xzJ5xiMNm2vu6g2PvAbyw2zjcHthCX5zta2vYQVWGKrQKYA8EYi4bYbltjj.s7.H7RMcIs4EZ5ZwwmpOx6YEnYtw5TQ8gkccaWUUUosY1zF8ho8ZpSM2Z381Ii61Ys9eL22viv4EDOc.2fBfnoGgoJ_gMivVzd6NiV_u5pmMjHdJ2rykEk_iUNeBnG1P3JSIECp2wwBptwJingby5UtiE\n\nInternshala (Scholiverse Educare Pvt. Ltd.)\n901 A/B, Iris Tech Park, Sohna Road, Sector - 48, Gurugram\n\nNot keen on career commitments? Unsubscribe [[UNSUBSCRIBEURL]] here to break up\nwith us.\n[https://u48138815.ct.sendgrid.net/wf/open?upn=u001.08lYnWNCYUZFBIolenptLK1xG78-2BHopgQd7RMf3-2FYeJq8Wo7HctxwhmNe-2FStp5GprVER3MD8pzexuS06htRb5gDzTVH9pCUU4XP-2B8ubaYySqDaguxASXlJvQUOQyL-2FwJIrBNWSV0-2BS7wsZ5nzh4Mp3Xj55xGrXgMzDL-2FVRasescDP9gSLYpFFNzJjp1OWL0QD09941mOyddLr6qfR2zE7X3ocpIazUXuNfOrDc7U4b1-2BvAG6VtgvjZ-2B-2F3EvbYOna6Vz8Dkrlw51ZxZIGxloS7b4ZaEZgNtH76FNcg6DanizvzgfqD7n-2BhTbFkEW6wnfE7hcNp8nG6NvB3mEm1y4dnJ5gGa3Y8CwoCgDOT1T5Jl6Kkd-2BoTfX9NNDsiGHFGbVzKVFtFjPjE0Q0RjYbVhdl4NvNB2tLpF4SEP-2FUgdmOorksUwYhBpoZOCzR-2FAtHFd3k49CTxQwPCdmEoH-2F9hMEd73rx-2Fw3fIhGl-2Fs-2F-2FaQ-2Fx1f-2FjXUsHk8NwcGrsJHZuPolpEO4FIjUbnCJRA-2FxiKst9-2Br3Jn6A0TKo6ZOxI3erKxfhjwQMTdx74VZM-2BXIMqkmuQca0YgAe3gS2dgAhQgwWPipoI3wfdyMVgQRbO4w3Dx5TqW11kmRa5uVQbBVs3OibigolXFGUGYizo30WNlLFTpwratLhklBMA8g0y5nxDCXY-3D]",
+          "textAsHtml": "<p>Apply to more jobs and internships to increase your chances of getting<br/>hired!&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp; &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp; &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;<br/>&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp; &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp; &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;<br/>&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp; &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp; &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;<br/>&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;<br/>[<a href=\"https://internshala.com/uploads/common/image/604afd895cfdf1615527305.png\">https://internshala.com/uploads/common/image/604afd895cfdf1615527305.png</a>]<br/><a href=\"https://link.internshala.com/v1/emailclick?q=uVFrMoPZ2ehA6X7qkj0SXXAsFhTbaJ.S79XlJ_1WErlBIcgH5q8gdIt1-LyzSM2QBBmCBtkJtkyGH4tnQy4UYjUxKftOkyv4Xy9DD8_lUPoAGfPtI_bmb7X9A.bOUmnI8CVepH0MB0jxapv4Q6m75U4T4c6pof9Up13gOBIPyPzD4uT6TaCWa6o2JYAwsfA1Ik680s54IUcDeTp0exTRFG4bRC_KBkm39IXKksmURZ83xc7is-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-62XxTYhXSjCAejQm_yU7xWQgk88hQbxVrmuyWG9pPBBP-7e9e1gOpUdG0qgZ1C.cU8YNb9CxzAW3Oyk9AnOVYVjN2QuY13xbKV7uQNweJEsYenAh_4t2gOA1zG2LyzhjIsApdDRfUcMcDOJ9rBeBqPNcMRoaKf5x_oW44Yj_9KsooRBliepbFCI_s5T51iJhuuaZ79aTYqWjHJQjkZxxCvykHZfG8_oyL3m91Efrs_3UJ[https://internshala.com/uploads/common/image/63a43117ab60f1671704855.png]\">https://link.internshala.com/v1/emailclick?q=uVFrMoPZ2ehA6X7qkj0SXXAsFhTbaJ.S79XlJ_1WErlBIcgH5q8gdIt1-LyzSM2QBBmCBtkJtkyGH4tnQy4UYjUxKftOkyv4Xy9DD8_lUPoAGfPtI_bmb7X9A.bOUmnI8CVepH0MB0jxapv4Q6m75U4T4c6pof9Up13gOBIPyPzD4uT6TaCWa6o2JYAwsfA1Ik680s54IUcDeTp0exTRFG4bRC_KBkm39IXKksmURZ83xc7is-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-62XxTYhXSjCAejQm_yU7xWQgk88hQbxVrmuyWG9pPBBP-7e9e1gOpUdG0qgZ1C.cU8YNb9CxzAW3Oyk9AnOVYVjN2QuY13xbKV7uQNweJEsYenAh_4t2gOA1zG2LyzhjIsApdDRfUcMcDOJ9rBeBqPNcMRoaKf5x_oW44Yj_9KsooRBliepbFCI_s5T51iJhuuaZ79aTYqWjHJQjkZxxCvykHZfG8_oyL3m91Efrs_3UJ[https://internshala.com/uploads/common/image/63a43117ab60f1671704855.png]</a><br/><a href=\"https://link.internshala.com/v1/emailclick?q=Gja2a3hQeOWuNu_mCUKO8G2CW5Poue6Hk9dtqd.VQ3wJWYm6tRLiboKk-OEfJzBY30l_bvqKX3fX9flRTjXXJeJjSFJbiYEchDQDTixu.6F9Sp7hw6jr3nX_2ElhZQG.IeUMMWuHbFY0T1u5Tz1DyqD9II36q8iHkHOOKW31WAtikwz3J44QTvrx_sEuc.KrRuC8nBIcGk9aaeHTvQ6ju5UcnwN4AXwGMwAl0zWTQ90N1OwyA-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-aZv5eiXbcRg0dyDQ8H0Ex0Zw9nD6MAi6gQa7QmEj9pwi-9UZ_7koB72k83E9DvhwvliWnYMCFL48m7sxQ4O644UIQQ724itGX4KhArOq9f5yzuoqEbP9qSnC861WGSIcn.1mVYiXja_W6QN_CMEpHWYv.MajVNjNAJ_JguW_Lg0SknXVTLHyOlCtw1ytqK9K09b7XYHDZcINt_vzgSCZYoT8FmwNtKN4NSt2_YBSS9or8[https://internshala-uploads.internshala.com/common/image/9gmjx2ijjuf.png]\">https://link.internshala.com/v1/emailclick?q=Gja2a3hQeOWuNu_mCUKO8G2CW5Poue6Hk9dtqd.VQ3wJWYm6tRLiboKk-OEfJzBY30l_bvqKX3fX9flRTjXXJeJjSFJbiYEchDQDTixu.6F9Sp7hw6jr3nX_2ElhZQG.IeUMMWuHbFY0T1u5Tz1DyqD9II36q8iHkHOOKW31WAtikwz3J44QTvrx_sEuc.KrRuC8nBIcGk9aaeHTvQ6ju5UcnwN4AXwGMwAl0zWTQ90N1OwyA-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-aZv5eiXbcRg0dyDQ8H0Ex0Zw9nD6MAi6gQa7QmEj9pwi-9UZ_7koB72k83E9DvhwvliWnYMCFL48m7sxQ4O644UIQQ724itGX4KhArOq9f5yzuoqEbP9qSnC861WGSIcn.1mVYiXja_W6QN_CMEpHWYv.MajVNjNAJ_JguW_Lg0SknXVTLHyOlCtw1ytqK9K09b7XYHDZcINt_vzgSCZYoT8FmwNtKN4NSt2_YBSS9or8[https://internshala-uploads.internshala.com/common/image/9gmjx2ijjuf.png]</a><br/><a href=\"https://link.internshala.com/v1/emailclick?q=L_pDBgF3Njw7uZ36.fiJ51ezlEoXMdrdiCxnnPjhI3OxJoTMW7Rn2LpJ-bNaKN3TE5mxENDLL5EHfj59JycMeyjkRARBepRxKiN2BuGWGYsJPcvVuMAY36JgP91gYIcFKMUL27bS2_wBYeBbl0vWnusBJWgUaSWWs9sG5e.7wp72XRGAM_9WIdlDVTL25J.YtoD3RChCiLMobwCermH1mfQbsmYQQ8YPQcP1yX_n3gfE0xNvy-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-flNJXVHblDun4RnZP20Nd8LuZsdOV0KtOf4vqIGqLhI6-uYRKqJ9EgubKA6_y9uQR4W9J4nKLAqLc_u0vxp.3I3xzJ5xiMNm2vu6g2PvAbyw2zjcHthCX5zta2vYQVWGKrQKYA8EYi4bYbltjj.s7.H7RMcIs4EZ5ZwwmpOx6YEnYtw5TQ8gkccaWUUUosY1zF8ho8ZpSM2Z381Ii61Ys9eL22viv4EDOc.2fBfnoGgoJ_gMivVzd6NiV_u5pmMjHdJ2rykEk_iUNeBnG1P3JSIECp2wwBptwJingby5UtiE\">https://link.internshala.com/v1/emailclick?q=L_pDBgF3Njw7uZ36.fiJ51ezlEoXMdrdiCxnnPjhI3OxJoTMW7Rn2LpJ-bNaKN3TE5mxENDLL5EHfj59JycMeyjkRARBepRxKiN2BuGWGYsJPcvVuMAY36JgP91gYIcFKMUL27bS2_wBYeBbl0vWnusBJWgUaSWWs9sG5e.7wp72XRGAM_9WIdlDVTL25J.YtoD3RChCiLMobwCermH1mfQbsmYQQ8YPQcP1yX_n3gfE0xNvy-Gqe1xPcrXDEbqeGgv2_2BMa9kaMOYL3q_vwe3Ry0tHiC4dTaki2mRSrZHc_5YnemvXlq5yyK.g-DBvWbhKM1Bm80gMRm7GGKshNMMZYLWC7pLGRRwZhsriv8mkIT8bWD2HEL9fhOJQRjSZjY6QIKQ8Zo9E-flNJXVHblDun4RnZP20Nd8LuZsdOV0KtOf4vqIGqLhI6-uYRKqJ9EgubKA6_y9uQR4W9J4nKLAqLc_u0vxp.3I3xzJ5xiMNm2vu6g2PvAbyw2zjcHthCX5zta2vYQVWGKrQKYA8EYi4bYbltjj.s7.H7RMcIs4EZ5ZwwmpOx6YEnYtw5TQ8gkccaWUUUosY1zF8ho8ZpSM2Z381Ii61Ys9eL22viv4EDOc.2fBfnoGgoJ_gMivVzd6NiV_u5pmMjHdJ2rykEk_iUNeBnG1P3JSIECp2wwBptwJingby5UtiE</a></p><p>Internshala (Scholiverse Educare Pvt. Ltd.)<br/>901 A/B, Iris Tech Park, Sohna Road, Sector - 48, Gurugram</p><p>Not keen on career commitments? Unsubscribe [[UNSUBSCRIBEURL]] here to break up<br/>with us.<br/>[<a href=\"https://u48138815.ct.sendgrid.net/wf/open?upn=u001.08lYnWNCYUZFBIolenptLK1xG78-2BHopgQd7RMf3-2FYeJq8Wo7HctxwhmNe-2FStp5GprVER3MD8pzexuS06htRb5gDzTVH9pCUU4XP-2B8ubaYySqDaguxASXlJvQUOQyL-2FwJIrBNWSV0-2BS7wsZ5nzh4Mp3Xj55xGrXgMzDL-2FVRasescDP9gSLYpFFNzJjp1OWL0QD09941mOyddLr6qfR2zE7X3ocpIazUXuNfOrDc7U4b1-2BvAG6VtgvjZ-2B-2F3EvbYOna6Vz8Dkrlw51ZxZIGxloS7b4ZaEZgNtH76FNcg6DanizvzgfqD7n-2BhTbFkEW6wnfE7hcNp8nG6NvB3mEm1y4dnJ5gGa3Y8CwoCgDOT1T5Jl6Kkd-2BoTfX9NNDsiGHFGbVzKVFtFjPjE0Q0RjYbVhdl4NvNB2tLpF4SEP-2FUgdmOorksUwYhBpoZOCzR-2FAtHFd3k49CTxQwPCdmEoH-2F9hMEd73rx-2Fw3fIhGl-2Fs-2F-2FaQ-2Fx1f-2FjXUsHk8NwcGrsJHZuPolpEO4FIjUbnCJRA-2FxiKst9-2Br3Jn6A0TKo6ZOxI3erKxfhjwQMTdx74VZM-2BXIMqkmuQca0YgAe3gS2dgAhQgwWPipoI3wfdyMVgQRbO4w3Dx5TqW11kmRa5uVQbBVs3OibigolXFGUGYizo30WNlLFTpwratLhklBMA8g0y5nxDCXY-3D\">https://u48138815.ct.sendgrid.net/wf/open?upn=u001.08lYnWNCYUZFBIolenptLK1xG78-2BHopgQd7RMf3-2FYeJq8Wo7HctxwhmNe-2FStp5GprVER3MD8pzexuS06htRb5gDzTVH9pCUU4XP-2B8ubaYySqDaguxASXlJvQUOQyL-2FwJIrBNWSV0-2BS7wsZ5nzh4Mp3Xj55xGrXgMzDL-2FVRasescDP9gSLYpFFNzJjp1OWL0QD09941mOyddLr6qfR2zE7X3ocpIazUXuNfOrDc7U4b1-2BvAG6VtgvjZ-2B-2F3EvbYOna6Vz8Dkrlw51ZxZIGxloS7b4ZaEZgNtH76FNcg6DanizvzgfqD7n-2BhTbFkEW6wnfE7hcNp8nG6NvB3mEm1y4dnJ5gGa3Y8CwoCgDOT1T5Jl6Kkd-2BoTfX9NNDsiGHFGbVzKVFtFjPjE0Q0RjYbVhdl4NvNB2tLpF4SEP-2FUgdmOorksUwYhBpoZOCzR-2FAtHFd3k49CTxQwPCdmEoH-2F9hMEd73rx-2Fw3fIhGl-2Fs-2F-2FaQ-2Fx1f-2FjXUsHk8NwcGrsJHZuPolpEO4FIjUbnCJRA-2FxiKst9-2Br3Jn6A0TKo6ZOxI3erKxfhjwQMTdx74VZM-2BXIMqkmuQca0YgAe3gS2dgAhQgwWPipoI3wfdyMVgQRbO4w3Dx5TqW11kmRa5uVQbBVs3OibigolXFGUGYizo30WNlLFTpwratLhklBMA8g0y5nxDCXY-3D</a>]</p>",
+          "subject": "Sairaj, You might be one application away from getting hired! 💼",
+          "date": "2025-11-04T07:49:00.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "sairajnagargoje567@gmail.com",
+                "name": ""
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><a href=\"mailto:sairajnagargoje567@gmail.com\" class=\"mp_address_email\">sairajnagargoje567@gmail.com</a></span>",
+            "text": "sairajnagargoje567@gmail.com"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "student@mailers.internshala.com",
+                "name": "Internshala"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Internshala</span> &lt;<a href=\"mailto:student@mailers.internshala.com\" class=\"mp_address_email\">student@mailers.internshala.com</a>&gt;</span>",
+            "text": "\"Internshala\" <student@mailers.internshala.com>"
+          },
+          "messageId": "<iJ4NPcllTyyBrFv4S_p3hg@geopod-ismtpd-5>",
+          "replyTo": {
+            "value": [
+              {
+                "address": "no-reply-student@internshala.com",
+                "name": ""
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><a href=\"mailto:no-reply-student@internshala.com\" class=\"mp_address_email\">no-reply-student@internshala.com</a></span>",
+            "text": "no-reply-student@internshala.com"
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Add Label": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get all Labels": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark a message as read in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Email Classification Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Job Opputruniotes",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job Opputruniotes": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Job Opputruniotes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Job Opputruniotes",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Insert documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "qslM3i5d4v1YAyaL"
+  },
+  "versionId": "a54fbcd1-af2a-42a3-af5f-2641c5194560",
+  "meta": {
+    "templateId": "email_triage_agent_with_gmail",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "25573b5880dff047710085f003e7d3a3eca864b646cd42be446b014b1a490fac"
+  },
+  "id": "gqxwI1e3U2F1f6Te",
+  "tags": []
+}

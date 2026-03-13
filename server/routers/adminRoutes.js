@@ -22,5 +22,6 @@ router.post('/jobs/:id/delete', requireAdmin, adminController.deleteJob);
 router.get('/students', requireAdmin, adminController.getStudentsPage);
 router.get('/companies', requireAdmin, adminController.getCompaniesPage);
 router.get('/reports', requireAdmin, adminController.getReportsPage);
+router.get('/mail-manager', requireAdmin, adminController.getMailManager);
 
 module.exports = router;
