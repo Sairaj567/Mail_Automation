@@ -651,6 +651,14 @@ exports.getResume = async (req, res) => {
 
        // Get application count for real users
         const applicationCount = profile ? await Application.countDocuments({ student: studentId }) : (profileData.applicationCount || 0);
+        const shortlistedCount = profile ? await Application.countDocuments({ student: studentId, status: 'shortlisted' }) : 2;
+        const profileMatchScore = profileData.profileCompletion || (profileData.resume ? 85 : 0);
+
+        if (profile) {
+          profile.$locals.applicationCount = applicationCount;
+        }
+
+        profileData.applicationCount = applicationCount;
 
 
     res.render('pages/student/resume', {
@@ -658,6 +666,8 @@ exports.getResume = async (req, res) => {
       user: req.session.user,
        profile: profileData, // Pass profile data
        applicationCount: applicationCount, // Pass application count
+       shortlistedCount,
+       profileMatchScore,
       isDemo: isDemo(req)
     });
   } catch (error) {

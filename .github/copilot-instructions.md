@@ -2,6 +2,12 @@
 
 These reminders keep AI agents productive in this repo. Focus on the running Express + EJS + Mongoose stack; Prisma + Postgres files under `docs/` and `prisma/` describe a future path only.
 
+## Agent operating mode
+- Prefer small, targeted edits over broad rewrites.
+- Preserve existing route/controller patterns, response formats, and guards.
+- Validate assumptions in existing code before adding new fields, enums, or relationships.
+- When uncertain, follow behavior already implemented in sibling routes/controllers.
+
 ## Current architecture
 - Entrypoint: `server/server.js` wires Express 5, Mongo-backed sessions, static mounts, and global EJS config. Ignore `server/app.js`; it’s legacy scaffolding.
 - Static assets live in `public/` (served at `/`), `client/css|js` (served at `/css` and `/js`), and user uploads under `public/uploads/{resumes,cover-letters,company-logos}`.
@@ -42,6 +48,22 @@ These reminders keep AI agents productive in this repo. Focus on the running Exp
 - Setup: `npm install`, then `npm run dev` (nodemon) or `npm start` (plain node).
 - Seed demo jobs (overwrites `Job` collection): `npm run seed`.
 - No automated tests yet (`npm test` exits 1); rely on manual verification or ad-hoc scripts.
+
+## Fast file map (where to change what)
+- Auth/session behavior: `server/controllers/authController.js`, `server/routers/authRoutes.js`, `server/middleware/auth.js`.
+- Student features: `server/controllers/studentController.js`, `server/routers/studentRoutes.js`, `views/pages/student/**`.
+- Company features: `server/controllers/companyController.js`, `server/routers/companyRoutes.js`, `views/pages/company/**`.
+- Admin features: `server/controllers/adminController.js`, `server/routers/adminRoutes.js`, `views/pages/admin/**`.
+- Shared UI shell: `views/layouts/main.ejs`, shared partials under `views/partials/**`.
+- Styling/scripts: prefer existing split between `public/css` and `client/css|js` mounts used by `server/server.js`.
+
+## Implementation checklist for new features
+1. Add/adjust route in `server/routers/*Routes.js` with correct auth/role middleware.
+2. Keep business logic in the matching controller.
+3. Reuse existing JSON contract: `{ success, message, redirectTo? }`.
+4. Respect demo-mode restrictions for write actions.
+5. If adding uploads, store under `public/uploads/...` and persist filename only.
+6. Render EJS from `views/pages/...` and rely on `res.locals.user` for session context.
 
 ## Do / Don’t
 - Do render pages from `views/pages/...` and rely on `res.locals.user` inside templates.

@@ -30,9 +30,8 @@ const studentProfileSchema = new mongoose.Schema({
     }]
 });
 
-// Add application count virtual
 studentProfileSchema.virtual('applicationCount').get(function() {
-    return this.constructor.countDocuments({ user: this.user });
+    return this.$locals?.applicationCount ?? 0;
 });
 
 module.exports = mongoose.model('StudentProfile', studentProfileSchema);

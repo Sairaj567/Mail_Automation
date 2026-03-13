@@ -90,7 +90,7 @@
                                 <strong>Last Updated:</strong> Just now
                             </div>
                             <div class="status-item">
-                                <strong>Used in:</strong> <%= profile.applicationCount || 0 %> applications
+                                <strong>Used in:</strong> <%= applicationCount || 0 %> applications
                             </div>
                         <% } else { %>
                             <div class="status-item warning">
@@ -253,7 +253,7 @@
                                 <i class="fas fa-briefcase"></i>
                             </div>
                             <div class="analytic-info">
-                                <h3><%= profile && profile.applicationCount || 0 %></h3>
+                                <h3><%= applicationCount || 0 %></h3>
                                 <p>Applications Sent</p>
                             </div>
                         </div>
@@ -263,7 +263,7 @@
                                 <i class="fas fa-check-circle"></i>
                             </div>
                             <div class="analytic-info">
-                                <h3>12</h3>
+                                <h3><%= shortlistedCount || 0 %></h3>
                                 <p>Shortlisted</p>
                             </div>
                         </div>
@@ -273,7 +273,7 @@
                                 <i class="fas fa-star"></i>
                             </div>
                             <div class="analytic-info">
-                                <h3>85%</h3>
+                                <h3><%= profileMatchScore || 0 %>%</h3>
                                 <p>Profile Match Score</p>
                             </div>
                         </div>

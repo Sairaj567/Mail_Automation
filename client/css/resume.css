@@ -328,6 +328,8 @@
     border-radius: 15px;
     text-align: center;
     transition: all 0.3s;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .analytic-card:hover {
@@ -352,6 +354,9 @@
     font-size: 2rem;
     margin-bottom: 0.5rem;
     color: var(--text-dark);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .analytic-info p {
@@ -389,5 +394,11 @@
     
     .pdf-controls {
         flex-direction: column;
+    }
+}
+
+@media (max-width: 576px) {
+    .analytics-grid {
+        grid-template-columns: 1fr;
     }
 }
