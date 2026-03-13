@@ -293,7 +293,9 @@ exports.getDashboard = async (req, res) => {
 
 exports.getJobsForReview = async (req, res) => {
 	try {
-		const jobs = await Job.find({ isActive: false })
+		const pendingFilter = { $or: [{ isActive: false }, { isActive: { $exists: false } }] };
+
+		const jobs = await Job.find(pendingFilter)
 			.populate({ path: 'postedBy', select: 'name email role' })
 			.sort({ createdAt: -1 })
 			.lean();
@@ -319,6 +321,37 @@ exports.getJobsForReview = async (req, res) => {
 			user: req.session.user,
 			layout: 'layouts/main',
 		});
+	}
+};
+
+exports.getJobsFromMongo = async (req, res) => {
+	try {
+		const status = (req.query.status || 'all').toString().toLowerCase();
+		let filter = {};
+
+		if (status === 'pending') {
+			filter = { $or: [{ isActive: false }, { isActive: { $exists: false } }] };
+		} else if (status === 'active') {
+			filter = { isActive: true };
+		}
+
+		const jobs = await Job.find(filter)
+			.populate({ path: 'postedBy', select: 'name email role' })
+			.sort({ createdAt: -1 })
+			.limit(200)
+			.lean();
+
+		const jobsWithMeta = await attachCompanyMeta(jobs);
+
+		return res.json({
+			success: true,
+			count: jobsWithMeta.length,
+			status,
+			jobs: jobsWithMeta,
+		});
+	} catch (error) {
+		console.error('Admin fetch jobs from MongoDB error:', error);
+		return res.status(500).json({ success: false, message: 'Failed to fetch jobs from MongoDB.' });
 	}
 };
 

@@ -9,6 +9,7 @@ router.get('/dashboard', requireAdmin, adminController.getDashboard);
 
 // Review pending jobs
 router.get('/jobs/review', requireAdmin, adminController.getJobsForReview);
+router.get('/jobs/data', requireAdmin, adminController.getJobsFromMongo);
 
 // Activate a job posting
 router.post('/jobs/:id/activate', requireAdmin, adminController.activateJob);
