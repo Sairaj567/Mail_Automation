@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/company.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .job-details-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .job-header-card,
+        .details-card,
+        .applicants-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 1.5rem;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 1.25rem;
+        }
+
+        .job-title {
+            margin: 0;
+            color: #2d3748;
+            font-size: 1.8rem;
+        }
+
+        .job-subtitle {
+            margin-top: 0.4rem;
+            color: #6b7280;
+        }
+
+        .job-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .meta-chip {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 0.65rem 0.75rem;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+
+        .section-title {
+            margin: 0 0 0.9rem 0;
+            color: #7E57C2;
+            font-size: 1.15rem;
+        }
+
+        .bulleted-list {
+            margin: 0;
+            padding-left: 1.2rem;
+            color: #374151;
+            line-height: 1.6;
+        }
+
+        .skills-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+
+        .skill-tag {
+            background: #7E57C2;
+            color: #fff;
+            border-radius: 999px;
+            padding: 0.32rem 0.7rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .applicants-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .applicants-table th,
+        .applicants-table td {
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+            padding: 0.75rem 0.4rem;
+            font-size: 0.92rem;
+        }
+
+        .applicants-table th {
+            color: #374151;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 0.2rem 0.55rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: capitalize;
+            background: #edf2f7;
+            color: #334155;
+        }
+
+        .empty-note {
+            color: #64748b;
+            margin: 0;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #7E57C2;
+            text-decoration: none;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .job-details-container {
+                padding: 1rem;
+            }
+
+            .job-title {
+                font-size: 1.45rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="student-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-building"></i>
+                    <span>PlacementPortal</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/company/dashboard" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/company/jobs" class="nav-item active">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Manage Jobs</span>
+                </a>
+                <a href="/company/applicants" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>Applicants</span>
+                </a>
+                <a href="/company/analytics" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="/auth/logout" class="nav-item logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <h1>Job Details</h1>
+                    <p>View posting details and applicant activity</p>
+                </div>
+            </header>
+
+            <div class="job-details-container">
+                <a href="/company/jobs" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Jobs
+                </a>
+
+                <section class="job-header-card">
+                    <h2 class="job-title"><%= job?.title || 'Untitled Job' %></h2>
+                    <p class="job-subtitle"><%= job?.company || user?.name || 'Company' %></p>
+
+                    <div class="job-meta">
+                        <div class="meta-chip"><i class="fas fa-location-dot"></i> <%= job?.location || 'Location not specified' %></div>
+                        <div class="meta-chip"><i class="fas fa-briefcase"></i> <%= job?.jobType || 'full-time' %></div>
+                        <div class="meta-chip"><i class="fas fa-sack-dollar"></i> <%= job?.salary || 'Not specified' %></div>
+                        <div class="meta-chip"><i class="fas fa-chart-line"></i> Status: <%= job?.isActive ? 'Active' : 'Pending / Inactive' %></div>
+                        <div class="meta-chip"><i class="fas fa-clock"></i> Posted: <%= job?.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'N/A' %></div>
+                        <div class="meta-chip"><i class="fas fa-user-group"></i> Applicants: <%= Array.isArray(applications) ? applications.length : 0 %></div>
+                    </div>
+                </section>
+
+                <section class="details-card">
+                    <h3 class="section-title">Description</h3>
+                    <p><%= job?.description || 'No description provided.' %></p>
+                </section>
+
+                <section class="details-card">
+                    <h3 class="section-title">Requirements</h3>
+                    <% if (Array.isArray(job?.requirements) && job.requirements.length) { %>
+                        <ul class="bulleted-list">
+                            <% job.requirements.forEach(item => { %>
+                                <li><%= item %></li>
+                            <% }) %>
+                        </ul>
+                    <% } else { %>
+                        <p class="empty-note">No requirements listed.</p>
+                    <% } %>
+                </section>
+
+                <section class="details-card">
+                    <h3 class="section-title">Skills</h3>
+                    <% if (Array.isArray(job?.skills) && job.skills.length) { %>
+                        <div class="skills-wrap">
+                            <% job.skills.forEach(skill => { %>
+                                <span class="skill-tag"><%= skill %></span>
+                            <% }) %>
+                        </div>
+                    <% } else { %>
+                        <p class="empty-note">No skills listed.</p>
+                    <% } %>
+                </section>
+
+                <section class="applicants-card">
+                    <h3 class="section-title">Applicants</h3>
+                    <% if (Array.isArray(applications) && applications.length) { %>
+                        <table class="applicants-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Applied On</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% applications.forEach(application => { %>
+                                    <tr>
+                                        <td><%= application?.student?.name || 'Unknown' %></td>
+                                        <td><%= application?.student?.email || 'N/A' %></td>
+                                        <td><%= application?.appliedDate ? new Date(application.appliedDate).toLocaleDateString() : 'N/A' %></td>
+                                        <td>
+                                            <span class="status-badge"><%= application?.status || 'applied' %></span>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } else { %>
+                        <p class="empty-note">No applications received yet for this job.</p>
+                    <% } %>
+                </section>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

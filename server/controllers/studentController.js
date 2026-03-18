@@ -35,11 +35,131 @@ const STATUS_VIEW = {
 const STATUS_DISPLAY = Object.values(STATUS_VIEW);
 // --- End of constants ---
 
+const APPLICATION_WEBHOOK_URL = process.env.N8N_JOB_APPLICATION_WEBHOOK_URL || '';
+
 
 const isDemo = (req) => Boolean(req.session?.user?.isDemo);
 
 // Helper function to check for valid ObjectId
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const pickFirstText = (...values) => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+};
+
+const normalizeDisplayLocation = (job) => {
+  const locationType = pickFirstText(job.location);
+  const locationDetails = pickFirstText(job.location_details);
+
+  if (!locationType && !locationDetails) {
+    return 'Location not specified';
+  }
+
+  if (!locationDetails || locationDetails.toLowerCase() === 'n/a') {
+    return locationType || 'Location not specified';
+  }
+
+  if (!locationType) {
+    return locationDetails;
+  }
+
+  return `${locationType} - ${locationDetails}`;
+};
+
+const normalizeDisplayJobType = (job) => {
+  const rawJobType = pickFirstText(job.jobType).toLowerCase().replace(/[\s_]+/g, '-');
+  const jobTypeMap = {
+    fulltime: 'full-time',
+    'full-time': 'full-time',
+    parttime: 'part-time',
+    'part-time': 'part-time',
+    internship: 'internship',
+    intern: 'internship',
+    remote: 'remote'
+  };
+
+  if (jobTypeMap[rawJobType]) {
+    return jobTypeMap[rawJobType];
+  }
+
+  const rawLocationType = pickFirstText(job.location).toLowerCase();
+  if (rawLocationType === 'remote') {
+    return 'remote';
+  }
+
+  return 'full-time';
+};
+
+const normalizeStringArray = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === 'string' && value.trim()) {
+    return value.split(/[\n,;]+/).map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+};
+
+const toIdString = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value._id) return String(value._id);
+  if (typeof value.toString === 'function') {
+    const id = value.toString();
+    return id && id !== '[object Object]' ? id : null;
+  }
+  return null;
+};
+
+const getPublicBaseUrl = (req) => {
+  const configured = process.env.APP_BASE_URL;
+  if (configured && configured.trim()) {
+    return configured.replace(/\/+$/, '');
+  }
+
+  return `${req.protocol}://${req.get('host')}`;
+};
+
+const buildResumeUrl = (req, resumeFilename) => {
+  if (!resumeFilename) return '';
+  const baseUrl = getPublicBaseUrl(req);
+  return `${baseUrl}/uploads/resumes/${encodeURIComponent(resumeFilename)}`;
+};
+
+const triggerApplicationSheetWebhook = async (req, payload) => {
+  if (!APPLICATION_WEBHOOK_URL) {
+    return { sent: false, reason: 'missing_webhook_url' };
+  }
+
+  const webhookUrl = new URL(APPLICATION_WEBHOOK_URL);
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim()) {
+      webhookUrl.searchParams.set(key, String(value));
+    }
+  });
+
+  const headers = {};
+  if (process.env.N8N_WEBHOOK_SECRET) {
+    headers['x-webhook-secret'] = process.env.N8N_WEBHOOK_SECRET;
+  }
+
+  const response = await fetch(webhookUrl.toString(), {
+    method: 'POST',
+    headers,
+  });
+
+  if (!response.ok) {
+    const bodyText = await response.text();
+    throw new Error(`Webhook failed (${response.status}): ${bodyText.slice(0, 300)}`);
+  }
+
+  return { sent: true };
+};
 
 const ensureStudentProfile = async (userId) => {
   let profile = await StudentProfile.findOne({ user: userId });
@@ -58,20 +178,23 @@ const formatJob = (job) => {
     if (!job) return null;
     // Mongoose documents have _id, not id by default
     const formatted = job.toObject ? job.toObject() : { ...job }; // Handle both Mongoose docs and plain objects
-    formatted._id = formatted._id.toString(); // Ensure _id is a string
-    // You might need additional transformations depending on your model vs. view needs
-    formatted.company = formatted.company || 'Unknown Company'; // Assuming 'company' is a string field in Job model
-    formatted.requirements = formatted.requirements || [];
-    formatted.responsibilities = formatted.responsibilities || [];
-    formatted.skills = formatted.skills || [];
-    const jobTypeMap = {
-      fulltime: 'full-time',
-      parttime: 'part-time'
-    };
-
-    formatted.jobType = jobTypeMap[formatted.jobType] || formatted.jobType || 'full-time'; // Default if missing
-    formatted.experienceLevel = formatted.experienceLevel || 'fresher'; // Default if missing
-    formatted.salary = formatted.salary || 'Not specified'; // Default if missing
+  formatted._id = toIdString(formatted._id || formatted.id || job);
+    formatted.title = pickFirstText(formatted.title, formatted.job_title) || 'Untitled Opportunity';
+    formatted.company = pickFirstText(formatted.company, formatted.company_name, formatted.recruiter_name) || 'Unknown Company';
+    formatted.location = normalizeDisplayLocation(formatted);
+    formatted.requirements = normalizeStringArray(formatted.requirements);
+    formatted.responsibilities = normalizeStringArray(formatted.responsibilities);
+    formatted.benefits = normalizeStringArray(formatted.benefits);
+    formatted.skills = normalizeStringArray(formatted.skills).length
+      ? normalizeStringArray(formatted.skills)
+      : normalizeStringArray(formatted.key_skills_mentioned);
+    formatted.jobType = normalizeDisplayJobType(formatted);
+    formatted.experienceLevel = formatted.experienceLevel || 'fresher';
+    formatted.salary = pickFirstText(formatted.salary, formatted.compensation) || 'Not specified';
+    formatted.description = pickFirstText(formatted.description, formatted.summary) || 'No description available.';
+    formatted.externalApplyLink = pickFirstText(formatted.externalApplyLink, formatted.link) || null;
+    formatted.createdAt = formatted.createdAt || formatted.date || formatted.receivedAt || new Date();
+    formatted.isActive = formatted.isActive !== false;
 
     return formatted;
 };
@@ -79,15 +202,25 @@ const formatJob = (job) => {
 const formatApplication = (application) => {
     if (!application) return null;
     const formatted = application.toObject ? application.toObject() : { ...application };
-    formatted._id = formatted._id.toString();
+    formatted._id = toIdString(formatted._id) || null;
     formatted.status = formatted.status || 'applied';
     formatted.appliedDate = formatted.appliedDate || new Date();
     // Ensure nested job is also formatted
-    if (formatted.job && typeof formatted.job === 'object') {
+    const hasPopulatedJobObject =
+      formatted.job &&
+      typeof formatted.job === 'object' &&
+      (formatted.job._id || formatted.job.title || formatted.job.job_title || formatted.job.company || formatted.job.company_name);
+
+    if (hasPopulatedJobObject) {
         formatted.job = formatJob(formatted.job);
     } else {
          // Handle case where job might just be an ID or missing
-         formatted.job = { _id: formatted.job?.toString(), title: 'Unknown Job', company: 'Unknown Company', location: 'Unknown' };
+         formatted.job = {
+           _id: toIdString(formatted.job),
+           title: 'Unknown Job',
+           company: 'Unknown Company',
+           location: 'Unknown'
+         };
     }
     return formatted;
 };
@@ -213,7 +346,7 @@ exports.getDashboard = async (req, res) => {
 
     // Use Mongoose methods
     const [totalJobs, applicationsCount, pendingApplicationsCount, interviewsCount, recentApps, profile] = await Promise.all([
-      Job.countDocuments({ isActive: true }),
+      Job.countDocuments({ isActive: { $ne: false } }),
       Application.countDocuments({ student: studentId }),
       Application.countDocuments({ student: studentId, status: { $in: ['applied', 'under_review', 'shortlisted'] } }),
       Application.countDocuments({ student: studentId, status: 'interview' }),
@@ -280,7 +413,11 @@ exports.getJobs = async (req, res) => {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
         { company: { $regex: search, $options: 'i' } }, // Assuming company is stored as string
-         { skills: { $regex: search, $options: 'i' } } // Search skills array
+         { skills: { $regex: search, $options: 'i' } },
+         { job_title: { $regex: search, $options: 'i' } },
+         { company_name: { $regex: search, $options: 'i' } },
+         { key_skills_mentioned: { $regex: search, $options: 'i' } },
+         { summary: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -299,17 +436,23 @@ exports.getJobs = async (req, res) => {
     }
 
     // Use Mongoose find with the filter object
-    const jobs = await Job.find(filter).sort({ createdAt: -1 }).lean();
+    const jobs = await Job.find(filter).lean();
 
     // Fallback for older datasets where isActive might be missing or inconsistent
     const jobsToRender = jobs.length === 0 && !search && !jobType && !experience
-      ? await Job.find({}).sort({ createdAt: -1 }).limit(20).lean()
+      ? await Job.find({}).limit(20).lean()
       : jobs;
+
+    const sortedJobs = jobsToRender.sort((left, right) => {
+      const leftDate = new Date(left.createdAt || left.date || left.receivedAt || 0).getTime();
+      const rightDate = new Date(right.createdAt || right.date || right.receivedAt || 0).getTime();
+      return rightDate - leftDate;
+    });
 
     res.render('pages/student/jobs', {
       title: 'Job Listings - Placement Portal',
       user: req.session.user,
-      jobs: jobsToRender.map(formatJob), // Use formatter
+      jobs: sortedJobs.map(formatJob), // Use formatter
       filters: {
         search: search || '',
         jobType: jobType || '',
@@ -341,7 +484,7 @@ exports.getJobDetails = async (req, res) => {
     // Use Mongoose findById
     const jobRecord = await Job.findById(jobId);
 
-    if (!jobRecord || !jobRecord.isActive) { // Check if job exists and is active
+    if (!jobRecord || jobRecord.isActive === false) { // Check if job exists and is active
       return res.status(404).render('404', { title: 'Job Not Found' });
     }
 
@@ -491,10 +634,30 @@ exports.applyForJob = async (req, res) => {
 
     await application.save();
 
+    const resumeUrl = buildResumeUrl(req, resumeFilename);
+    const sheetPayload = {
+      job_id: jobId,
+      stu_name: pickFirstText(fullName, req.session?.user?.name) || 'Student',
+      stu_mail: pickFirstText(email, req.session?.user?.email) || '',
+      resume_url: resumeUrl,
+      portfolio: pickFirstText(req.body.portfolio, linkedin),
+    };
+
+    let sheetSync = { sent: false, reason: 'not_attempted' };
+    try {
+      sheetSync = await triggerApplicationSheetWebhook(req, sheetPayload);
+    } catch (webhookError) {
+      console.error('Application webhook sync failed:', webhookError.message);
+      sheetSync = { sent: false, reason: 'webhook_error' };
+    }
+
     res.json({
       success: true,
-      message: 'Application submitted successfully!',
-      applicationId: application._id // Use _id for Mongoose
+      message: sheetSync.sent
+        ? 'Application submitted and pushed to sheet workflow.'
+        : 'Application submitted successfully. Sheet sync is pending.',
+      applicationId: application._id, // Use _id for Mongoose
+      sheetSync: sheetSync.sent,
     });
   } catch (error) {
     console.error('Apply job error:', error);

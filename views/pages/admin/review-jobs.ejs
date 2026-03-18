@@ -2,6 +2,12 @@
     <% if (status === 'activated') { %>
         <div class="alert alert-success">Job activated successfully.</div>
     <% } %>
+    <% if (status === 'activated' && sync === 'ok') { %>
+        <div class="alert alert-success">Sheet-maker webhook sync triggered.</div>
+    <% } %>
+    <% if (status === 'activated' && sync && sync !== 'ok') { %>
+        <div class="alert alert-danger">Job activated, but webhook sync is pending (<%= sync %>).</div>
+    <% } %>
     <% if (status === 'deleted') { %>
         <div class="alert alert-success">Job deleted successfully.</div>
     <% } %>
@@ -20,9 +26,21 @@
 
     <div class="section-header" style="margin-bottom: 1rem;">
         <div>
-            <h2>Pending Job Postings</h2>
+            <% const headingMap = { pending: 'Pending Job Postings', active: 'Active Job Postings', all: 'All Job Postings' }; %>
+            <h2><%= headingMap[selectedStatus] || 'Job Postings' %></h2>
             <p>Review, activate, or delete jobs submitted via automation.</p>
         </div>
+        <form method="GET" action="/admin/jobs/review" style="display:flex; align-items:flex-end; gap:0.5rem;">
+            <div>
+                <label for="status" style="font-size:0.85rem; color:#475569;">Show</label>
+                <select id="status" name="status" class="search-input" style="min-width:140px;">
+                    <option value="pending" <%= selectedStatus === 'pending' ? 'selected' : '' %>>Pending</option>
+                    <option value="active" <%= selectedStatus === 'active' ? 'selected' : '' %>>Active</option>
+                    <option value="all" <%= selectedStatus === 'all' ? 'selected' : '' %>>All</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success"><i class="fas fa-filter"></i> Filter</button>
+        </form>
     </div>
 
     <% if (jobs && jobs.length > 0) { %>

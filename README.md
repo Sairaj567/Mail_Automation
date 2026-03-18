@@ -24,6 +24,9 @@ Colleges receive many emails (Immediate Joining, Campus Drives, Internships, Hac
 ## Quick start
 - Ensure MongoDB is running and set `MONGODB_URI` (optional if using default localhost URI)
 - Set `SESSION_SECRET`
+- Set `N8N_JOB_APPLICATION_WEBHOOK_URL` (example: `http://localhost:5678/webhook/job-application`) if you want student applications to trigger the sheet-maker workflow
+- Optional: set `N8N_MAIL_SHEET_MAKER_WEBHOOK_URL` if admin job activation should also trigger the sheet-maker workflow (falls back to `N8N_JOB_APPLICATION_WEBHOOK_URL`)
+- Optional: set `APP_BASE_URL` (example: `http://localhost:3345`) so resume links sent to n8n are fully qualified
 - Install dependencies with `npm install`
 - Start server with `npm run dev` (or `npm start`)
 

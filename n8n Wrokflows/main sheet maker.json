@@ -43,7 +43,7 @@
     {
       "parameters": {
         "resource": "folder",
-        "name": "={{ $('MongoDB').item.json.company_name }}",
+        "name": "={{ $('MongoDB').item.json.company_name || $('MongoDB').item.json.company || $('MongoDB').item.json.recruiter_name || 'Unknown Company' }}",
         "options": {}
       },
       "name": "Create Company Folder",
@@ -170,7 +170,7 @@
     {
       "parameters": {
         "resource": "spreadsheet",
-        "title": "={{ $('MongoDB').item.json.company_name }}",
+        "title": "={{ $('MongoDB').item.json.company_name || $('MongoDB').item.json.company || $('MongoDB').item.json.recruiter_name || 'Unknown Company' }}",
         "options": {}
       },
       "type": "n8n-nodes-base.googleSheets",
@@ -207,7 +207,7 @@
             {
               "id": "b3ef7f92-bd4b-4f7e-a7ee-b6d0fb292dc5",
               "name": "company_name",
-              "value": "={{ $('MongoDB').item.json.company_name }}",
+              "value": "={{ $('MongoDB').item.json.company_name || $('MongoDB').item.json.company || $('MongoDB').item.json.recruiter_name || 'Unknown Company' }}",
               "type": "string"
             },
             {
@@ -479,7 +479,7 @@
             {
               "id": "b3ef7f92-bd4b-4f7e-a7ee-b6d0fb292dc5",
               "name": "company_name",
-              "value": "={{ $('MongoDB').item.json.company_name }}",
+              "value": "={{ $('MongoDB').item.json.company_name || $('MongoDB').item.json.company || $('MongoDB').item.json.recruiter_name || 'Unknown Company' }}",
               "type": "string"
             },
             {
@@ -523,7 +523,7 @@
       "parameters": {
         "resource": "fileFolder",
         "searchMethod": "query",
-        "queryString": "=name = \"{{ $json.company_name }}\" and mimeType = 'application/vnd.google-apps.folder'",
+        "queryString": "=name = \"{{ $json.company_name || $json.company || $json.recruiter_name || 'Unknown Company' }}\" and mimeType = 'application/vnd.google-apps.folder'",
         "filter": {},
         "options": {}
       },
@@ -547,7 +547,7 @@
       "parameters": {
         "resource": "fileFolder",
         "searchMethod": "query",
-        "queryString": "={{ \"name = '\" + $('MongoDB').item.json.company_name + \"' and mimeType = 'application/vnd.google-apps.spreadsheet'\" }}",
+        "queryString": "={{ \"name = '\" + ($('MongoDB').item.json.company_name || $('MongoDB').item.json.company || $('MongoDB').item.json.recruiter_name || 'Unknown Company') + \"' and mimeType = 'application/vnd.google-apps.spreadsheet'\" }}",
         "filter": {},
         "options": {}
       },

@@ -7,7 +7,8 @@
     "start": "node server/server.js",
     "dev": "nodemon server/server.js",
     "seed": "node server/seedDemoData.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test --test-reporter=spec",
+    "test:watch": "node --test --watch"
   },
   "keywords": [],
   "author": "",
@@ -36,6 +37,7 @@
     "@types/node": "^24.5.2",
     "nodemon": "^3.1.7",
     "prisma": "^6.17.1",
+    "supertest": "^7.2.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }

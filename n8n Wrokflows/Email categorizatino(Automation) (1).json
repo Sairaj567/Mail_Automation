@@ -1,0 +1,626 @@
+{
+  "name": "Email categorizatino(Automation)",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Categorize this email:\n**Msg ID** {{ $json.id }}\n**From:** {{ $json.from.value[0].address }}\n**Subject:** {{ $json.subject }}\n**Content:** \n{{ $json.html }}\n\nPlease analyze this email and apply appropriate labels using the available tools.",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=You are an email categorization assistant. Your goal is to classify each incoming email with exactly one custom label and keep the inbox clean of low-value marketing content.\n\nYou can use these tools:\n1) Get all Labels\n2) Add Labels\n3) Mark as Read\n\nOperational rules (must follow):\n- Always call \"Get all Labels\" first.\n- Use only these custom labels:\n  - Competitions\n  - Internships\n  - Job Opportunities\n  - Reply from Company\n  - Urgent\n- Never assign Gmail system categories (Primary, Promotions, Social, Updates, Forums). Spam is the only exception if relevant.\n- Apply exactly one label per email.\n- Always call \"Mark as Read\" as the final step.\n- Be conservative with \"Job Opportunities\". If uncertain, do NOT use \"Job Opportunities\".\n\nStrict rule for \"Job Opportunities\":\nUse \"Job Opportunities\" only when the email is a concrete hiring message with clear role intent, such as:\n- specific role title or requisition\n- identifiable company/recruiter context\n- actionable next step (apply link, interview scheduling, reply request)\n- email is not a newsletter/digest/marketing blast\n\nHard exclusions from \"Job Opportunities\":\nIf any of these are true, do NOT use \"Job Opportunities\":\n- bulk promotional/newsletter language (\"you might be one application away\", \"top picks\", \"recommended for you\", \"weekly digest\")\n- many tracking links, campaign-style CTAs, unsubscribe-heavy layout\n- generic hiring motivation content without a specific role/company action\n- platform marketing emails (Internshala-like promotional blasts)\n\nLabel mapping guidance:\n- Reply from Company: direct response from recruiter/company to prior application, shortlist, rejection, interview, or follow-up.\n- Urgent: strict deadlines, immediate action required, interview within short window, expiring links/tasks.\n- Competitions: hackathons/challenges/contests/events with participation focus.\n- Internships: internship listings, internship digests, early-career opportunity newsletters.\n- Job Opportunities: concrete non-internship hiring opportunity messages meeting strict criteria above.\n\nTie-break policy:\n- If promotional + opportunities mixed, prefer Internships or Competitions based on dominant content, not Job Opportunities.\n- If still ambiguous, pick the safest non-Job-Opportunities label.\n\nRequired response format:\n1) One-sentence email summary.\n2) Selected label with brief reason.\n3) Execute \"Add Labels\" with the selected label ID.\n4) Execute \"Mark as Read\"."
+        }
+      },
+      "id": "293d3b4d-a337-4ba5-bd3e-c96e42f59be0",
+      "name": "Email Classification Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Label_Names_or_IDs', `use label id here instead of label name.`, 'string') }}"
+      },
+      "id": "255140f9-4273-4802-8a40-a911d523b966",
+      "name": "Add Label",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        -176
+      ],
+      "webhookId": "e7289911-d937-45bd-9e91-410a0dc959f8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NzgNIUfnvWXFrdPH",
+          "name": "Sairajnagargoje567"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to get all existing labels from Gmail",
+        "resource": "label",
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "05f67051-4a72-49f3-98ff-9ea728daf479",
+      "name": "Get all Labels",
+      "webhookId": "291b9995-7ae1-4f65-9ffb-ba62c980b829",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NzgNIUfnvWXFrdPH",
+          "name": "Sairajnagargoje567"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_ID', ``, 'string') }}"
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        176
+      ],
+      "id": "524b5218-06e8-4b71-aeb9-ef3391384256",
+      "name": "Mark a message as read in Gmail",
+      "webhookId": "f1f61b81-3078-4edb-b38c-46dc03b036bf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NzgNIUfnvWXFrdPH",
+          "name": "Sairajnagargoje567"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "arcee-ai/trinity-large-preview:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        768,
+        80
+      ],
+      "id": "c17e9dd4-e9e3-4b79-9ba2-13a0e9f6de3f",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "b155QdIvwFyK3C2i",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -16,
+        -416
+      ],
+      "id": "cf168265-b735-494c-a4e8-2a746d1a4740",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NzgNIUfnvWXFrdPH",
+          "name": "Sairajnagargoje567"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"from\": \"test@example.com\",\n  \"to\": \"hr@domain.com\",\n  \"subject\": \"Job Application\",\n  \"body\": \"Hello...\",\n  \"category\": \"Job Application\",\n  \"receivedAt\": \"2025-09-19T15:24:51.838Z\"\n}\n",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        640,
+        -256
+      ],
+      "id": "54c899cf-e28e-49c3-9a02-f5a1f11ba52b",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please extract all details from the following job opportunity email:\n\n---EMAIL METADATA---\nSender: {{ $('Gmail Trigger').item.json.from.value[0].address }}\nDate: {{ $('Gmail Trigger').item.json.date }}\nSubject: {{ $('Gmail Trigger').item.json.headers.subject }}\n\n---EMAIL BODY---\n{{ $('Gmail Trigger').item.json.text }}",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "You are an expert data extraction agent for a recruitment pipeline. You will be given the metadata and body of an email that is known to be a job opportunity, interview request, or recruiter outreach.\n\nYour single task is to extract all relevant details and return a single, valid JSON object.\n\nDo NOT provide any conversational text, explanations, or markdown. Your entire response must be ONLY the JSON object.\n\nExtract the following fields:\n- company_name: The name of the company that is hiring.\n- job_title: The specific role being offered (e.g., \"Cybersecurity Analyst\", \"Junior Python Developer\").\n- recruiter_name: The name of the person who sent the email. Extract this from the body (e.g., \"Hi, this is Jane...\") or the Sender metadata.\n- recruiter_email: The email address of the sender. Extract this from the Sender metadata.\n- location: The job location. Must be one of: \"On-site\", \"Remote\", \"Hybrid\".\n- location_details: The city/country if \"On-site\" or \"Hybrid\" (e.g., \"Pune, India\", \"London, UK\"). Use \"N/A\" if \"Remote\".\n- compensation: Any mentioned salary or pay range (e.g., \"₹12 LPA\", \"$100,000 - $120,000\", \"Competitive\").\n- key_skills_mentioned: An array of key skills, technologies, or qualifications requested (e.g., [\"Python\", \"nmap\", \"Prisma\", \"AWS\", \"CISSP\"]).\n- summary: A one-sentence summary of the job description.\n- next_step: The call to action (e.g., \"Reply with availability\", \"Apply at link\", \"Schedule interview\").\n- link: The direct application or scheduling link, if one is provided.\n\nIf a field is not mentioned in the email, you MUST use \"Not Mentioned\" as the value, or an empty array [] for 'key_skills_mentioned'.\n\nThe required JSON output structure is:\n{\n  \"company_name\": \"string\",\n  \"job_title\": \"string\",\n  \"recruiter_name\": \"string\",\n  \"recruiter_email\": \"string\",\n  \"location\": \"string (On-site, Remote, or Hybrid)\",\n  \"location_details\": \"string\",\n  \"compensation\": \"string\",\n  \"key_skills_mentioned\": [\"string\", \"string\", ...],\n  \"summary\": \"string\",\n  \"next_step\": \"string\",\n  \"link\": \"string (URL or 'Not Mentioned')\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        -576
+      ],
+      "id": "e42666a7-b133-4af7-a935-b9f6c9d58f32",
+      "name": "Job Opputruniotes"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bd8a5b21-5a8f-4567-922e-b807552b3569",
+              "leftValue": "={{ $json.output.category }}",
+              "rightValue": "Job Opportunities",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        -416
+      ],
+      "id": "82e41214-ffcf-4ea1-bf99-22e9a78b614d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "emails",
+        "fields": "from,to,subject,body,category,receivedAt,date",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        -208
+      ],
+      "id": "8ba72fa3-0acf-4459-b8f5-c78790d96ff9",
+      "name": "Insert documents",
+      "credentials": {
+        "mongoDb": {
+          "id": "UbkPDNcR91JPvluC",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"company_name\": \"TechCorp\",\n  \"job_title\": \"Cybersecurity Intern\",\n  \"recruiter_name\": \"Priya Sharma\",\n  \"recruiter_email\": \"priya.sharma@techcorp.com\",\n  \"location\": \"Hybrid\",\n  \"location_details\": \"Pune, India\",\n  \"compensation\": \"Not Mentioned\",\n  \"key_skills_mentioned\": [\"Cybersecurity\", \"threat analysis\", \"nmap\"],\n  \"summary\": \"TechCorp is hiring a Cybersecurity Intern for a hybrid role in Pune, focusing on threat analysis and nmap scanning.\",\n  \"next_step\": \"Reply with availability for a chat\",\n  \"link\": \"Not Mentioned\"\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        640,
+        -128
+      ],
+      "id": "b5076e6e-abd4-41d1-ac82-43d8c6a0e481",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ff345898-1db3-4390-ac91-54801cada039",
+              "name": "company_name",
+              "value": "={{ $json.output.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "5d61f1d5-105e-4810-a0d7-036402c9ebcf",
+              "name": "job_title",
+              "value": "={{ $json.output.job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "06a006b7-f550-4cad-91dd-71356b01af54",
+              "name": "recruiter_name",
+              "value": "={{ $json.output.recruiter_name }}",
+              "type": "string"
+            },
+            {
+              "id": "0da0d36b-511a-4346-b61b-3e1533de3bc0",
+              "name": "recruiter_email",
+              "value": "={{ $json.output.recruiter_email }}",
+              "type": "string"
+            },
+            {
+              "id": "99ef0b1c-4fe6-4b0f-9ff2-1c50db1ea73a",
+              "name": "location",
+              "value": "={{ $json.output.location }}",
+              "type": "string"
+            },
+            {
+              "id": "b9824cd3-f7ac-4552-9c15-91ce47d43e91",
+              "name": "location_details",
+              "value": "={{ $json.output.location_details }}",
+              "type": "string"
+            },
+            {
+              "id": "d3dd1126-d350-4b94-b952-174d45195cc3",
+              "name": "compensation",
+              "value": "={{ $json.output.compensation }}",
+              "type": "string"
+            },
+            {
+              "id": "75740033-ab72-4a4c-89db-db10f635a193",
+              "name": "key_skills_mentioned",
+              "value": "={{ $json.output.key_skills_mentioned }}",
+              "type": "array"
+            },
+            {
+              "id": "98d7ccef-59c7-4064-bbd9-25d70900aa75",
+              "name": "summary",
+              "value": "={{ $json.output.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "892d6b0b-26e0-4dbf-8363-dc1588308135",
+              "name": "next_step",
+              "value": "={{ $json.output.next_step }}",
+              "type": "string"
+            },
+            {
+              "id": "5e2630f2-d13a-4ab2-8c9b-975c4f866b5c",
+              "name": "link",
+              "value": "={{ $json.output.link }}",
+              "type": "string"
+            },
+            {
+              "id": "cbc98fb0-8480-4f97-8c25-4c59bccb5016",
+              "name": "status",
+              "value": "=new",
+              "type": "string"
+            },
+            {
+              "id": "2bef312b-016c-474f-8e26-1bcd71c717a8",
+              "name": "date",
+              "value": "={{$now}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1584,
+        -576
+      ],
+      "id": "ee46c37d-1c8a-4c10-bee4-3cfeb73a3b1d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "jobs",
+        "fields": "company_name,job_title,recruiter_name,recruiter_email,location,location_details,compensation,key_skills_mentioned,summary,next_step,link,status,date",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        1776,
+        -576
+      ],
+      "id": "326eff64-eee8-45c0-b066-99e610feaeed",
+      "name": "insert",
+      "credentials": {
+        "mongoDb": {
+          "id": "UbkPDNcR91JPvluC",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f3d9b6ff-f44d-4ea7-8e67-d5eff89b9c30",
+              "name": "from",
+              "value": "={{ $json.output.from }}",
+              "type": "string"
+            },
+            {
+              "id": "53bd6f94-9eef-4cc8-8b94-f9b137819b67",
+              "name": "to",
+              "value": "={{ $json.output.to }}",
+              "type": "string"
+            },
+            {
+              "id": "33223956-368d-4e48-8201-2d6dfb0b1171",
+              "name": "subject",
+              "value": "={{ $json.output.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "e1ab98be-a58b-4d40-b6ff-650cfee91a17",
+              "name": "body",
+              "value": "={{ $json.output.body }}",
+              "type": "string"
+            },
+            {
+              "id": "cbdd1696-b31e-4637-a53b-c83ac3a31054",
+              "name": "category",
+              "value": "={{ $json.output.category }}",
+              "type": "string"
+            },
+            {
+              "id": "c2ee2e35-eb9c-4351-a968-922f20bb29f5",
+              "name": "receivedAt",
+              "value": "={{ $json.output.receivedAt }}",
+              "type": "string"
+            },
+            {
+              "id": "2bef312b-016c-474f-8e26-1bcd71c717a8",
+              "name": "date",
+              "value": "={{$now}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        -208
+      ],
+      "id": "acad37f1-33bd-427f-8ae6-64eb796b9a9c",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "model": "mistralai/mistral-small-3.1-24b-instruct:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        768,
+        256
+      ],
+      "id": "dc51e3b4-8dc6-4836-a5fb-1ff0bd42c5ed",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "53DI4yplRBd1I1RX",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Add Label": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get all Labels": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark a message as read in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          },
+          {
+            "node": "Job Opputruniotes",
+            "type": "ai_languageModel",
+            "index": 1
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Classification Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job Opputruniotes": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Job Opputruniotes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Job Opputruniotes",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Insert documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Job Opputruniotes",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Email Classification Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "qslM3i5d4v1YAyaL"
+  },
+  "versionId": "5bfa268e-2fde-479f-9c42-bd74718a3254",
+  "meta": {
+    "templateId": "email_triage_agent_with_gmail",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "25573b5880dff047710085f003e7d3a3eca864b646cd42be446b014b1a490fac"
+  },
+  "id": "gqxwI1e3U2F1f6Te",
+  "tags": []
+}

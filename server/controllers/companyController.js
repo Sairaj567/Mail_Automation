@@ -11,6 +11,7 @@ const PDFDocument = require('pdfkit'); // For PDF export
 const JOB_TYPES = ['internship', 'full-time', 'part-time', 'remote'];
 const EXPERIENCE_LEVELS = ['fresher', '0-2', '2-5', '5+'];
 const COMPANY_SIZE_OPTIONS = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
+const STATUS_DISPLAY = ['applied', 'under_review', 'shortlisted', 'interview', 'rejected', 'accepted'];
 
 class IntegrationValidationError extends Error {
     constructor(message, status = 400) {

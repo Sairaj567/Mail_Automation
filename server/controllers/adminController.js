@@ -12,6 +12,10 @@ const wantsJson = (req) =>
 
 const ADMIN_REVIEW_ROUTE = '/admin/jobs/review';
 const ADMIN_MAIL_ROUTE = '/admin/mail-manager';
+const JOB_ACTIVATION_WEBHOOK_URL =
+	process.env.N8N_MAIL_SHEET_MAKER_WEBHOOK_URL ||
+	process.env.N8N_JOB_APPLICATION_WEBHOOK_URL ||
+	'';
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -36,6 +40,180 @@ const toReadableText = (value) => {
 
 	return String(value);
 };
+
+const isPlaceholderText = (value) => {
+	if (typeof value !== 'string') return false;
+
+	const normalized = value.trim().toLowerCase();
+	return [
+		'',
+		'n/a',
+		'na',
+		'none',
+		'null',
+		'not mentioned',
+		'not available',
+		'not specified',
+		'unknown',
+		'unknown company',
+	].includes(normalized);
+};
+
+const firstNonEmptyString = (...values) => {
+	for (const value of values) {
+		if (typeof value === 'string' && value.trim()) {
+			return value.trim();
+		}
+	}
+	return '';
+};
+
+const firstMeaningfulString = (...values) => {
+	for (const value of values) {
+		if (typeof value === 'string' && value.trim() && !isPlaceholderText(value)) {
+			return value.trim();
+		}
+	}
+	return '';
+};
+
+const normalizeStringArray = (value) => {
+	if (Array.isArray(value)) {
+		return value.map((item) => String(item).trim()).filter(Boolean);
+	}
+
+	if (typeof value === 'string' && value.trim()) {
+		return value
+			.split(/[\n,;]+/)
+			.map((item) => item.trim())
+			.filter(Boolean);
+	}
+
+	return [];
+};
+
+const normalizeDisplayLocation = (job = {}) => {
+	const locationType = firstMeaningfulString(job.location);
+	const locationDetails = firstMeaningfulString(job.location_details);
+
+	if (!locationType && !locationDetails) {
+		return 'Location not specified';
+	}
+
+	if (!locationDetails || locationDetails.toLowerCase() === 'n/a') {
+		return locationType || 'Location not specified';
+	}
+
+	if (!locationType) {
+		return locationDetails;
+	}
+
+	return `${locationType} - ${locationDetails}`;
+};
+
+const normalizeDisplayJobType = (job = {}) => {
+	const rawJobType = firstMeaningfulString(job.jobType).toLowerCase().replace(/[\s_]+/g, '-');
+	const jobTypeMap = {
+		fulltime: 'full-time',
+		'full-time': 'full-time',
+		parttime: 'part-time',
+		'part-time': 'part-time',
+		internship: 'internship',
+		intern: 'internship',
+		remote: 'remote',
+	};
+
+	if (jobTypeMap[rawJobType]) {
+		return jobTypeMap[rawJobType];
+	}
+
+	const title = firstMeaningfulString(job.title, job.job_title).toLowerCase();
+	if (/\bintern(ship)?\b/.test(title)) {
+		return 'internship';
+	}
+
+	const rawLocationType = firstMeaningfulString(job.location).toLowerCase();
+	if (rawLocationType === 'remote') {
+		return 'remote';
+	}
+
+	return 'full-time';
+};
+
+const normalizeAdminJob = (job) => {
+	if (!job) return job;
+
+	const formatted = { ...job };
+	formatted.title = firstMeaningfulString(formatted.title, formatted.job_title) || 'Untitled Opportunity';
+	formatted.company =
+		firstMeaningfulString(formatted.company, formatted.company_name, formatted.recruiter_name) || 'Unknown Company';
+	formatted.location = normalizeDisplayLocation(formatted);
+	formatted.jobType = normalizeDisplayJobType(formatted);
+	formatted.experienceLevel = firstMeaningfulString(formatted.experienceLevel) || 'fresher';
+	formatted.salary = firstMeaningfulString(formatted.salary, formatted.compensation) || 'Not specified';
+	formatted.description = firstMeaningfulString(formatted.description, formatted.summary) || 'No description available.';
+	formatted.skills = normalizeStringArray(formatted.skills).length
+		? normalizeStringArray(formatted.skills)
+		: normalizeStringArray(formatted.key_skills_mentioned);
+	formatted.externalApplyLink = firstMeaningfulString(formatted.externalApplyLink, formatted.link) || null;
+	formatted.createdAt = formatted.createdAt || formatted.date || formatted.receivedAt || new Date();
+
+	return formatted;
+};
+
+const buildJobActivationUpdate = (job) => {
+	const normalizedJob = normalizeAdminJob(job);
+	return {
+		title: normalizedJob.title,
+		company: normalizedJob.company,
+		location: normalizedJob.location,
+		jobType: normalizedJob.jobType,
+		salary: normalizedJob.salary,
+		description: normalizedJob.description,
+		skills: normalizedJob.skills,
+		experienceLevel: normalizedJob.experienceLevel,
+		externalApplyLink: normalizedJob.externalApplyLink,
+		isActive: true,
+	};
+};
+
+const triggerJobActivationWebhook = async (jobId) => {
+	if (!JOB_ACTIVATION_WEBHOOK_URL) {
+		return { sent: false, reason: 'missing_webhook_url' };
+	}
+
+	const webhookUrl = new URL(JOB_ACTIVATION_WEBHOOK_URL);
+	webhookUrl.searchParams.set('job_id', String(jobId));
+	webhookUrl.searchParams.set('sync_source', 'admin_activation');
+
+	const headers = {};
+	if (process.env.N8N_WEBHOOK_SECRET) {
+		headers['x-webhook-secret'] = process.env.N8N_WEBHOOK_SECRET;
+	}
+
+	const response = await fetch(webhookUrl.toString(), {
+		method: 'POST',
+		headers,
+	});
+
+	if (!response.ok) {
+		const body = await response.text();
+		throw new Error(`Webhook failed (${response.status}): ${body.slice(0, 300)}`);
+	}
+
+	return { sent: true };
+};
+
+const isWorkflowJobOpportunity = (row = {}) =>
+	Boolean(
+		firstNonEmptyString(
+			row.job_title,
+			row.company_name,
+			row.summary,
+			row.compensation,
+			row.recruiter_email
+		)
+	);
 
 const parseSalaryToLakhs = (salary) => {
 	if (!salary) return null;
@@ -87,7 +265,8 @@ async function attachCompanyMeta(jobs) {
 	if (companyUserIds.length === 0) {
 		return jobs.map((job) => ({
 			...job,
-			companyDisplayName: job.company || job.postedBy?.name || 'Unknown Company',
+			companyDisplayName:
+				firstMeaningfulString(job.company, job.company_name, job.postedBy?.name, job.recruiter_name) || 'Unknown Company',
 			postedByEmail: job.postedBy?.email || null,
 		}));
 	}
@@ -108,7 +287,13 @@ async function attachCompanyMeta(jobs) {
 				: postedBy?.toString?.();
 
 		const companyDisplayName =
-			(postedById && profileMap.get(postedById)) || job.company || postedBy?.name || 'Unknown Company';
+			firstMeaningfulString(
+				(postedById && profileMap.get(postedById)) || '',
+				job.company,
+				job.company_name,
+				postedBy?.name,
+				job.recruiter_name
+			) || 'Unknown Company';
 
 		return {
 			...job,
@@ -318,22 +503,31 @@ exports.getDashboard = async (req, res) => {
 
 exports.getJobsForReview = async (req, res) => {
 	try {
-		const pendingFilter = { $or: [{ isActive: false }, { isActive: { $exists: false } }] };
+		const selectedStatus = (req.query.status || 'pending').toString().toLowerCase();
+		let filter = { $or: [{ isActive: false }, { isActive: { $exists: false } }] };
 
-		const jobs = await Job.find(pendingFilter)
+		if (selectedStatus === 'active') {
+			filter = { isActive: true };
+		} else if (selectedStatus === 'all') {
+			filter = {};
+		}
+
+		const jobs = await Job.find(filter)
 			.populate({ path: 'postedBy', select: 'name email role' })
 			.sort({ createdAt: -1 })
 			.lean();
 
-		const jobsWithMeta = await attachCompanyMeta(jobs);
+		const jobsWithMeta = await attachCompanyMeta(jobs.map(normalizeAdminJob));
 
 		res.render('pages/admin/review-jobs', {
 			title: 'Review Pending Jobs',
-			subtitle: 'Activate or delete job postings submitted via n8n.',
+			subtitle: 'Review automation jobs and control activation/deletion.',
 			user: req.session.user,
 			jobs: jobsWithMeta,
+			selectedStatus,
 			status: req.query.status || null,
 			error: req.query.error || null,
+			sync: req.query.sync || null,
 			isDemo: isDemo(req),
 			currentPath: req.path,
 			layout: 'layouts/admin', // Use the admin layout
@@ -366,7 +560,7 @@ exports.getJobsFromMongo = async (req, res) => {
 			.limit(200)
 			.lean();
 
-		const jobsWithMeta = await attachCompanyMeta(jobs);
+		const jobsWithMeta = await attachCompanyMeta(jobs.map(normalizeAdminJob));
 
 		return res.json({
 			success: true,
@@ -400,13 +594,35 @@ exports.activateJob = async (req, res) => {
 	}
 
 	try {
-		const job = await Job.findByIdAndUpdate(jobId, { isActive: true }, { new: true });
+		const job = await Job.findById(jobId).lean();
 
 		if (!job) {
 			return respond(404, { success: false, message: 'Job not found.' }, 'error=not-found');
 		}
 
-		return respond(200, { success: true, message: 'Job activated successfully.', jobId: job._id }, 'status=activated');
+		await Job.updateOne({ _id: jobId }, { $set: buildJobActivationUpdate(job) });
+
+		let webhookSync = { sent: false, reason: 'not_attempted' };
+		try {
+			webhookSync = await triggerJobActivationWebhook(job._id);
+		} catch (webhookError) {
+			console.error('Admin activation webhook sync failed:', webhookError.message);
+			webhookSync = { sent: false, reason: 'webhook_error' };
+		}
+
+		const syncState = webhookSync.sent ? 'ok' : webhookSync.reason || 'pending';
+		return respond(
+			200,
+			{
+				success: true,
+				message: webhookSync.sent
+					? 'Job activated successfully and sync webhook triggered.'
+					: 'Job activated successfully. Sync webhook is pending.',
+				jobId: job._id,
+				sync: webhookSync,
+			},
+			`status=activated&sync=${encodeURIComponent(syncState)}`
+		);
 	} catch (error) {
 		console.error('Admin activate job error:', error);
 		return respond(500, { success: false, message: 'Failed to activate job.' }, 'error=server');
@@ -591,15 +807,17 @@ exports.getMailManager = async (req, res) => {
 		}
 
 		const emailCollection = db.collection('emails');
-		const filter = {};
+		const jobsCollection = db.collection('jobs');
+		const emailFilter = {};
+		const includeJobOpportunities = selectedCategory === 'all' || selectedCategory === 'Job Opportunities';
 
-		if (selectedCategory && selectedCategory !== 'all') {
-			filter.category = selectedCategory;
+		if (selectedCategory && selectedCategory !== 'all' && selectedCategory !== 'Job Opportunities') {
+			emailFilter.category = selectedCategory;
 		}
 
 		if (searchQuery) {
 			const regex = new RegExp(escapeRegex(searchQuery), 'i');
-			filter.$or = [
+			emailFilter.$or = [
 				{ subject: regex },
 				{ from: regex },
 				{ to: regex },
@@ -608,20 +826,48 @@ exports.getMailManager = async (req, res) => {
 			];
 		}
 
-		const [mailRows, totalCount, availableCategoriesRaw, groupedCounts] = await Promise.all([
-			emailCollection.find(filter).sort({ date: -1, receivedAt: -1, _id: -1 }).limit(limit).toArray(),
-			emailCollection.countDocuments(filter),
+		const workflowJobBaseFilter = {
+			$or: [
+				{ job_title: { $exists: true, $ne: '' } },
+				{ company_name: { $exists: true, $ne: '' } },
+				{ summary: { $exists: true, $ne: '' } },
+				{ compensation: { $exists: true, $ne: '' } },
+			],
+		};
+
+		const workflowJobFilter = includeJobOpportunities ? { ...workflowJobBaseFilter } : { _id: null };
+		if (includeJobOpportunities && searchQuery) {
+			const regex = new RegExp(escapeRegex(searchQuery), 'i');
+			workflowJobFilter.$and = [
+				{
+					$or: [
+						{ job_title: regex },
+						{ company_name: regex },
+						{ recruiter_name: regex },
+						{ recruiter_email: regex },
+						{ summary: regex },
+						{ key_skills_mentioned: regex },
+					],
+				},
+			];
+		}
+
+		const [mailRows, emailCount, availableCategoriesRaw, groupedCounts, rawJobRows, rawJobCount] = await Promise.all([
+			emailCollection.find(emailFilter).sort({ date: -1, receivedAt: -1, _id: -1 }).limit(limit).toArray(),
+			emailCollection.countDocuments(emailFilter),
 			emailCollection.distinct('category'),
 			emailCollection
 				.aggregate([
-					{ $match: filter },
+					{ $match: emailFilter },
 					{ $group: { _id: '$category', count: { $sum: 1 } } },
 					{ $sort: { count: -1 } },
 				])
 				.toArray(),
+			jobsCollection.find(workflowJobFilter).sort({ date: -1, createdAt: -1, _id: -1 }).limit(limit).toArray(),
+			jobsCollection.countDocuments(workflowJobFilter),
 		]);
 
-		const mails = mailRows.map((row) => {
+		const emailMails = mailRows.map((row) => {
 			const subject = toReadableText(row.subject);
 			const body = toReadableText(row.body);
 			const collapsedBody = body.replace(/\s+/g, ' ').trim();
@@ -632,6 +878,7 @@ exports.getMailManager = async (req, res) => {
 
 			return {
 				_id: row._id?.toString?.() || String(row._id),
+				sourceType: 'email',
 				from: toReadableText(row.from),
 				to: toReadableText(row.to),
 				subject,
@@ -641,15 +888,51 @@ exports.getMailManager = async (req, res) => {
 			};
 		});
 
+		const workflowJobMails = rawJobRows.filter(isWorkflowJobOpportunity).map((row) => {
+			const companyName = firstNonEmptyString(row.company_name, row.company) || 'Unknown Company';
+			const jobTitle = firstNonEmptyString(row.job_title, row.title) || 'Untitled Opportunity';
+			const summary = firstNonEmptyString(row.summary, row.description) || 'No summary available.';
+			const candidateDate = row.date || row.createdAt || row.receivedAt;
+			const parsedDate = candidateDate ? new Date(candidateDate) : null;
+
+			return {
+				_id: row._id?.toString?.() || String(row._id),
+				sourceType: 'job-opportunity',
+				from: firstNonEmptyString(row.recruiter_email, companyName) || 'Unknown Sender',
+				to: firstNonEmptyString(row.next_step, row.link, 'Placement Portal'),
+				subject: `${jobTitle} at ${companyName}`,
+				category: 'Job Opportunities',
+				bodyPreview: summary.length > 180 ? `${summary.slice(0, 180)}...` : summary,
+				receivedAt: parsedDate instanceof Date && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
+			};
+		});
+
+		const mails = [...emailMails, ...workflowJobMails]
+			.sort((left, right) => {
+				const leftDate = left.receivedAt ? new Date(left.receivedAt).getTime() : 0;
+				const rightDate = right.receivedAt ? new Date(right.receivedAt).getTime() : 0;
+				return rightDate - leftDate;
+			})
+			.slice(0, limit);
+
 		const categorySummary = groupedCounts.reduce((acc, item) => {
 			const key = item?._id ? String(item._id) : 'Uncategorized';
 			acc[key] = item.count || 0;
 			return acc;
 		}, {});
 
+		if (rawJobCount > 0) {
+			categorySummary['Job Opportunities'] = rawJobCount;
+		}
+
 		const availableCategories = (availableCategoriesRaw || [])
 			.filter((category) => typeof category === 'string' && category.trim())
 			.sort((a, b) => a.localeCompare(b));
+
+		if (rawJobCount > 0 && !availableCategories.includes('Job Opportunities')) {
+			availableCategories.push('Job Opportunities');
+			availableCategories.sort((a, b) => a.localeCompare(b));
+		}
 
 		return res.render('pages/admin/mail-manager', {
 			title: 'Mail Manager',
@@ -659,7 +942,7 @@ exports.getMailManager = async (req, res) => {
 			selectedCategory,
 			searchQuery,
 			availableCategories,
-			totalCount,
+			totalCount: emailCount + rawJobCount,
 			categorySummary,
 			isDemo: false,
 			currentPath: ADMIN_MAIL_ROUTE,
