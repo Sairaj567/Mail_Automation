@@ -843,7 +843,7 @@
                                         <div class="job-actions">
                                             <button class="btn-apply" onclick="applyForJob()" <%= isDemo ? 'disabled' : '' %>>
                                                 <i class="fas fa-paper-plane"></i>
-                                                Apply Now
+                                                <%= quickApplyConfig?.canQuickApply ? 'Quick Apply' : 'Apply Now' %>
                                             </button>
 
                                             <button class="btn-save" onclick="toggleSaveJob()" <%= isDemo ? 'disabled' : '' %>>
@@ -925,11 +925,11 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="phone">Phone Number *</label>
-                                        <input type="tel" id="phone" name="phone" placeholder="+91 9876543210" required>
+                                        <input type="tel" id="phone" name="phone" value="<%= profile?.phone || '' %>" placeholder="+91 9876543210" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="linkedin">LinkedIn Profile (Optional)</label>
-                                        <input type="url" id="linkedin" name="linkedin" placeholder="https://linkedin.com/in/yourprofile">
+                                        <input type="url" id="linkedin" name="linkedin" value="<%= profile?.socialLinks?.linkedin || '' %>" placeholder="https://linkedin.com/in/yourprofile">
                                     </div>
                                 </div>
                             </div>
@@ -940,11 +940,11 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="college">College/University *</label>
-                                        <input type="text" id="college" name="college" placeholder="Enter your college name" required>
+                                        <input type="text" id="college" name="college" value="<%= profile?.college || '' %>" placeholder="Enter your college name" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="degree">Degree/Course *</label>
-                                        <input type="text" id="degree" name="degree" placeholder="e.g., B.Tech Computer Science" required>
+                                        <input type="text" id="degree" name="degree" value="<%= profile?.course || '' %>" placeholder="e.g., B.Tech Computer Science" required>
                                     </div>
                                 </div>
                                 <div class="form-row">
@@ -952,8 +952,8 @@
                                         <label for="educationStatus">Education Status *</label>
                                         <select id="educationStatus" name="educationStatus" required>
                                             <option value="">Select Status</option>
-                                            <option value="pursuing">Currently Pursuing</option>
-                                            <option value="completed">Completed</option>
+                                            <option value="pursuing" <%= Number(profile?.graduationYear) >= new Date().getFullYear() ? 'selected' : '' %>>Currently Pursuing</option>
+                                            <option value="completed" <%= Number(profile?.graduationYear) > 0 && Number(profile?.graduationYear) < new Date().getFullYear() ? 'selected' : '' %>>Completed</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -961,7 +961,7 @@
                                         <select id="graduationYear" name="graduationYear" required>
                                             <option value="">Select Year</option>
                                             <% for(let year = new Date().getFullYear(); year <= new Date().getFullYear() + 4; year++) { %>
-                                                <option value="<%= year %>"><%= year %></option>
+                                                <option value="<%= year %>" <%= Number(profile?.graduationYear) === year ? 'selected' : '' %>><%= year %></option>
                                             <% } %>
                                         </select>
                                     </div>
@@ -969,7 +969,7 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="cgpa">CGPA/Percentage *</label>
-                                        <input type="number" id="cgpa" name="cgpa" step="0.01" min="0" max="10" placeholder="e.g., 8.5" required>
+                                        <input type="number" id="cgpa" name="cgpa" step="0.01" min="0" max="10" value="<%= profile?.cgpa ?? '' %>" placeholder="e.g., 8.5" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="marksType">Marks Type</label>
@@ -986,7 +986,7 @@
                                 <h3>Skills & Expertise</h3>
                                 <div class="form-group">
                                     <label for="skills">Technical Skills *</label>
-                                    <textarea id="skills" name="skills" placeholder="List your technical skills separated by commas (e.g., JavaScript, React, Node.js, Python)" rows="3" required></textarea>
+                                    <textarea id="skills" name="skills" placeholder="List your technical skills separated by commas (e.g., JavaScript, React, Node.js, Python)" rows="3" required><%= Array.isArray(profile?.skills) ? profile.skills.join(', ') : '' %></textarea>
                                     <small>Separate skills with commas</small>
                                 </div>
                                 <div class="form-group">
@@ -1010,8 +1010,11 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="resume">Upload Resume *</label>
-                                        <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx" required>
+                                        <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx" <%= quickApplyConfig?.hasStoredResume ? '' : 'required' %>>
                                         <small>Accepted formats: PDF, DOC, DOCX (Max 5MB)</small>
+                                        <% if (quickApplyConfig?.hasStoredResume) { %>
+                                            <div class="file-info">Using your saved resume by default. Upload a new file only if you want to replace it.</div>
+                                        <% } %>
                                     </div>
                                     <div class="form-group">
                                         <label for="coverLetterFile">Cover Letter (Optional)</label>
@@ -1051,8 +1054,14 @@
     </div>
 
     <script>
+    const quickApplyConfig = <%- JSON.stringify(quickApplyConfig || { canQuickApply: false, hasStoredResume: false }) %>;
+
     // Apply for job function
             function applyForJob() {
+                if (quickApplyConfig.canQuickApply) {
+                    quickApplySubmit();
+                    return;
+                }
                 document.getElementById('applySection').style.display = 'block';
                 document.getElementById('applySection').scrollIntoView({ behavior: 'smooth' });
             }
@@ -1157,33 +1166,22 @@
                 return phoneRegex.test(phone.replace(/\s/g, ''));
             }
 
-            // Enhanced form submission with FormData
-            document.getElementById('applyForm')?.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                if (!validateForm()) {
-                    showNotification('Please fill all required fields correctly', 'error');
-                    return;
-                }
-
+            async function submitApplication(formData) {
                 const submitBtn = document.getElementById('submitBtn');
                 const originalText = submitBtn.innerHTML;
-                
-                // Show loading state
+
                 submitBtn.innerHTML = 'Submitting...';
                 submitBtn.classList.add('btn-loading');
                 submitBtn.disabled = true;
 
                 try {
-                    const formData = new FormData(this);
-                    
                     const response = await fetch('/student/apply-job', {
                         method: 'POST',
                         body: formData
                     });
 
                     const data = await response.json();
-                    
+
                     if (data.success) {
                         showNotification(data.message, 'success');
                         setTimeout(() => {
@@ -1202,6 +1200,36 @@
                     submitBtn.classList.remove('btn-loading');
                     submitBtn.disabled = false;
                 }
+            }
+
+            function quickApplySubmit() {
+                const applyForm = document.getElementById('applyForm');
+                if (!applyForm) {
+                    showNotification('Application form not found', 'error');
+                    return;
+                }
+
+                const formData = new FormData(applyForm);
+                const declaration = document.getElementById('declaration');
+                if (declaration) {
+                    declaration.checked = true;
+                }
+
+                showNotification('Using your saved profile details to submit application...', 'success');
+                submitApplication(formData);
+            }
+
+            // Enhanced form submission with FormData
+            document.getElementById('applyForm')?.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (!validateForm()) {
+                    showNotification('Please fill all required fields correctly', 'error');
+                    return;
+                }
+
+                const formData = new FormData(this);
+                submitApplication(formData);
             });
 
             // Real-time form validation
@@ -1370,16 +1398,16 @@
 
             // Auto-fill form with profile data if available
             document.addEventListener('DOMContentLoaded', function() {
-                // This would typically come from the server, but for now we'll use placeholders
-                const profileData = {
-                    fullName: '<%= user.name %>',
-                    email: '<%= user.email %>',
-                    // Add more fields as needed from student profile
-                };
+                const fullNameField = document.getElementById('fullName');
+                const emailField = document.getElementById('email');
 
-                // Auto-fill known fields
-                document.getElementById('fullName').value = profileData.fullName;
-                document.getElementById('email').value = profileData.email;
+                if (fullNameField && !fullNameField.value) {
+                    fullNameField.value = '<%= user.name %>';
+                }
+
+                if (emailField && !emailField.value) {
+                    emailField.value = '<%= user.email %>';
+                }
             });
     </script>
 </body>

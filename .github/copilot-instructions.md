@@ -16,7 +16,7 @@ These reminders keep AI agents productive in this repo. Focus on the running Exp
 ## Routing & controllers
 - Route files end with `*Routes.js` in `server/routers/`; they own session/role guards (`requireStudent`, `requireCompany`) and `multer` setups.
 - Controllers in `server/controllers/` render EJS or reply JSON. JSON handlers follow `{ success, message, redirectTo? }` (see `authController`).
-- The global error handler in `server/server.js` switches to JSON for `/api/`, `/student/`, `/company/`, `/auth/` paths—keep new endpoints under those prefixes if you expect JSON.
+- The global error + 404 handlers in `server/server.js` return JSON for API routes (`/api/**`) and requests that explicitly accept JSON (`Accept: application/json`, XHR). Page routes should render EJS error pages.
 - Prefer delegating heavy logic to controllers instead of anonymous route handlers; several routes still mix both, so align new work with the controller pattern.
 
 ## Data models & conventions
@@ -38,6 +38,7 @@ These reminders keep AI agents productive in this repo. Focus on the running Exp
 - `studentRoutes.js` configures `multer` `upload.fields([{name:'resume'},{name:'coverLetterFile'}])` writing to `public/uploads/resumes` and `public/uploads/cover-letters` (PDF/DOC/DOCX only, 5 MB cap).
 - `companyRoutes.js` sets up logo uploads to `public/uploads/company-logos`; reuse that storage pattern for new image fields.
 - Persisted filenames are later served from `/uploads/...`; ensure new uploads land in `public/uploads` so EJS templates can link them.
+- Job apply supports resume fallback: if `resume` is not uploaded in the application form, `studentController.applyForJob` reuses `StudentProfile.resume`. Only block when neither exists.
 
 ## Integrations & automation
 - n8n webhook endpoints live under `/api/n8n` (`server/routers/n8nRoutes.js`). `companyController.handleN8nCompanyUpdate` checks `x-webhook-secret` (or `x-n8n-secret`) against `process.env.N8N_WEBHOOK_SECRET`, then creates/updates a `User` + `CompanyProfile` and hashes a temp password.
@@ -47,8 +48,14 @@ These reminders keep AI agents productive in this repo. Focus on the running Exp
   - `resume_url` sent to sheet-maker is the Drive link when available, otherwise falls back to the local `/uploads/resumes/...` URL.
 - `server/config/{db,mailer,session}.js` are placeholders; real configuration is inline in `server/server.js`.
 
+## Student apply and resume analytics
+- Apply forms should prefill from session/profile data (`fullName`, `email`, `phone`, `college`, `course`, `graduationYear`, `cgpa`, `skills`) so users do not repeatedly enter the same fields.
+- Job details view uses a `quickApplyConfig` object. Treat `canQuickApply` as the source of truth for enabling one-click apply UX.
+- Resume analytics are mixed-source by design: `applicationCount` and `shortlistedCount` are live counts, while `profileMatchScore` is an estimate, and views are currently untracked.
+
 ## Local workflows
-- Required env vars: `MONGODB_URI` (defaults to `mongodb://localhost:27017/placement_portal`), `SESSION_SECRET`, optional `PORT`, optional `N8N_WEBHOOK_SECRET`.
+- Required env vars: `SESSION_SECRET` (server exits if missing). `MONGODB_URI` is optional and defaults to `mongodb://localhost:27017/placement_portal`.
+- Optional env vars: `PORT`, `N8N_WEBHOOK_SECRET`.
 - Optional integration env vars:
   - `N8N_JOB_APPLICATION_WEBHOOK_URL` for student application sheet sync.
   - `N8N_MAIL_SHEET_MAKER_WEBHOOK_URL` for admin activation sync (falls back to application webhook).

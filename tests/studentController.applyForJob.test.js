@@ -147,3 +147,64 @@ test('applyForJob returns 500 with diagnostic message when Mongo retrieval fails
   assert.equal(res.payload.success, false);
   assert.match(res.payload.message, /mongo read failure/i);
 });
+
+test('applyForJob autofills applicant identity from session when form omits it', async () => {
+  delete process.env.N8N_JOB_APPLICATION_WEBHOOK_URL;
+
+  const studentController = loadStudentControllerFresh();
+
+  const studentId = new mongoose.Types.ObjectId().toString();
+  const jobId = new mongoose.Types.ObjectId().toString();
+
+  StudentProfile.findOne = async () => ({
+    resume: 'existing-resume.pdf',
+    phone: '9876543210',
+    college: 'Test College',
+    course: 'B.Tech',
+    graduationYear: 2027,
+    cgpa: 8.1,
+    skills: ['Node.js', 'MongoDB'],
+    socialLinks: { linkedin: 'https://linkedin.com/in/saira' },
+  });
+  Application.findOne = async () => null;
+  Application.prototype.save = async function saveMock() {
+    this._id = new mongoose.Types.ObjectId();
+    return this;
+  };
+
+  const req = createMockReq({
+    session: { user: { id: studentId, name: 'Saira Session', email: 'session@test.dev' } },
+    body: { jobId },
+  });
+  const res = createMockRes();
+
+  await studentController.applyForJob(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.payload.success, true);
+  assert.equal(res.payload.sheetSync, false);
+});
+
+test('applyForJob returns clear validation error when applicant identity is unavailable', async () => {
+  delete process.env.N8N_JOB_APPLICATION_WEBHOOK_URL;
+
+  const studentController = loadStudentControllerFresh();
+
+  const studentId = new mongoose.Types.ObjectId().toString();
+  const jobId = new mongoose.Types.ObjectId().toString();
+
+  StudentProfile.findOne = async () => ({ resume: 'existing-resume.pdf' });
+  Application.findOne = async () => null;
+
+  const req = createMockReq({
+    session: { user: { id: studentId } },
+    body: { jobId },
+  });
+  const res = createMockRes();
+
+  await studentController.applyForJob(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.payload.success, false);
+  assert.match(res.payload.message, /full name, email/i);
+});

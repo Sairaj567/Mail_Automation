@@ -565,6 +565,8 @@ exports.getJobDetails = async (req, res) => {
         hasApplied: false,
         applicationStatus: null,
         application: null, // Add application as null for demo
+        profile: null,
+        quickApplyConfig: { canQuickApply: false, hasStoredResume: false },
         isSaved: false,
         isDemo: true
       });
@@ -580,6 +582,24 @@ exports.getJobDetails = async (req, res) => {
       student: studentId
     });
 
+    const hasStoredResume = Boolean(profile?.resume);
+    const hasCoreProfile = Boolean(
+      profile?.phone &&
+      profile?.college &&
+      profile?.course &&
+      profile?.graduationYear &&
+      profile?.cgpa !== null &&
+      profile?.cgpa !== undefined &&
+      Array.isArray(profile?.skills) &&
+      profile.skills.length > 0
+    );
+
+    const quickApplyConfig = {
+      canQuickApply: hasStoredResume && hasCoreProfile,
+      hasStoredResume,
+      hasCoreProfile
+    };
+
     // Check if the job is saved (assuming savedJobs is an array of ObjectIds in StudentProfile)
     const isSaved = profile.savedJobs.some(savedJobId => savedJobId.equals(jobId));
 
@@ -591,7 +611,9 @@ exports.getJobDetails = async (req, res) => {
       hasApplied: Boolean(application),
       // Mongoose returns the application object or null
       application: application ? formatApplication(application) : null,
-       applicationStatus: application ? application.status : null,
+      applicationStatus: application ? application.status : null,
+      profile,
+      quickApplyConfig,
       isSaved: isSaved,
       isDemo: false
     });
@@ -669,15 +691,49 @@ exports.applyForJob = async (req, res) => {
       });
     }
 
-    // Extract other form data
-     const {
-      fullName, email, phone, linkedin,
-      college, degree, educationStatus, graduationYear, cgpa, marksType,
-      skills, projects, extracurricular,
-      coverLetterText
-    } = req.body;
+    // Merge submitted values with profile/session values so students do not need
+    // to manually re-enter the same application details every time.
+    const fullName = pickFirstText(req.body.fullName, req.session?.user?.name);
+    const email = pickFirstText(req.body.email, req.session?.user?.email);
+    const phone = pickFirstText(req.body.phone, studentProfile?.phone);
+    const linkedin = pickFirstText(req.body.linkedin, studentProfile?.socialLinks?.linkedin);
+    const college = pickFirstText(req.body.college, studentProfile?.college);
+    const degree = pickFirstText(req.body.degree, studentProfile?.course);
 
-     const skillsArray = skills ? skills.split(',').map(skill => skill.trim()).filter(Boolean) : [];
+    const graduationYearRaw = pickFirstText(req.body.graduationYear, studentProfile?.graduationYear ? String(studentProfile.graduationYear) : '');
+    const graduationYearValue = graduationYearRaw ? Number(graduationYearRaw) : null;
+    const graduationYear = Number.isFinite(graduationYearValue) ? graduationYearValue : null;
+    const cgpaRaw = pickFirstText(req.body.cgpa, studentProfile?.cgpa !== undefined && studentProfile?.cgpa !== null ? String(studentProfile.cgpa) : '');
+    const cgpaValue = cgpaRaw ? Number(cgpaRaw) : null;
+    const cgpa = Number.isFinite(cgpaValue) ? cgpaValue : null;
+    const inferredEducationStatus = graduationYear
+      ? (graduationYear >= new Date().getFullYear() ? 'pursuing' : 'completed')
+      : '';
+    const educationStatus = pickFirstText(req.body.educationStatus, inferredEducationStatus);
+    const marksType = pickFirstText(req.body.marksType, 'cgpa');
+
+    const skillsInput = pickFirstText(
+      req.body.skills,
+      Array.isArray(studentProfile?.skills) ? studentProfile.skills.join(', ') : ''
+    );
+    const skillsArray = skillsInput
+      ? skillsInput.split(',').map((skill) => skill.trim()).filter(Boolean)
+      : [];
+
+    const projects = pickFirstText(req.body.projects);
+    const extracurricular = pickFirstText(req.body.extracurricular);
+    const coverLetterText = pickFirstText(req.body.coverLetterText);
+
+    const missingFields = [];
+    if (!fullName) missingFields.push('full name');
+    if (!email) missingFields.push('email');
+
+    if (missingFields.length > 0) {
+      return res.json({
+        success: false,
+        message: `Please complete your ${missingFields.join(', ')} in profile/application form before applying.`
+      });
+    }
 
     // Create a new Application using the Mongoose model
     const application = new Application({
@@ -685,7 +741,7 @@ exports.applyForJob = async (req, res) => {
       job: jobId,
       // Store personal/education details directly in the application
       personalInfo: { fullName, email, phone, linkedin },
-      education: { college, degree, status: educationStatus, graduationYear: Number(graduationYear), cgpa: Number(cgpa), marksType },
+      education: { college, degree, status: educationStatus || undefined, graduationYear, cgpa, marksType },
       skills: skillsArray,
       projects,
       extracurricular,
@@ -980,6 +1036,12 @@ exports.getResume = async (req, res) => {
         const applicationCount = profile ? await Application.countDocuments({ student: studentId }) : (profileData.applicationCount || 0);
         const shortlistedCount = profile ? await Application.countDocuments({ student: studentId, status: 'shortlisted' }) : 2;
         const profileMatchScore = profileData.profileCompletion || (profileData.resume ? 85 : 0);
+        const analyticsMeta = {
+          applicationsSource: 'live',
+          shortlistedSource: 'live',
+          profileMatchSource: 'estimate',
+          viewsSource: 'untracked'
+        };
 
         if (profile) {
           profile.$locals.applicationCount = applicationCount;
@@ -995,6 +1057,7 @@ exports.getResume = async (req, res) => {
        applicationCount: applicationCount, // Pass application count
        shortlistedCount,
        profileMatchScore,
+       analyticsMeta,
       isDemo: isDemo(req)
     });
   } catch (error) {

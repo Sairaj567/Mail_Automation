@@ -14,10 +14,18 @@ require('dotenv').config(); // Load environment variables from .env file
 
 const app = express();
 
+if (!process.env.SESSION_SECRET) {
+    console.error('SESSION_SECRET is required. Set it in your environment or .env file.');
+    process.exit(1);
+}
+
 // --- Middleware ---
 
 // Basic Security Headers
-// app.use(helmet()); // Consider re-enabling after testing if Content Security Policy causes issues
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+}));
 
 // Logging (use 'dev' for development, consider 'combined' for production)
 app.use(morgan('dev'));
@@ -45,7 +53,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads'))); 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/placement_portal'; // Define URI here for session store
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'a-very-strong-secret-key-change-it', // CHANGE THIS to a strong secret from .env
+    secret: process.env.SESSION_SECRET,
     resave: false, // Don't save session if unmodified
     saveUninitialized: false, // Don't create session until something stored
     store: MongoStore.create({ mongoUrl: MONGODB_URI }), // Store session in MongoDB
@@ -164,11 +172,10 @@ app.use((err, req, res, next) => {
     const statusCode = err.status || 500;
     const message = err.message || 'An unexpected error occurred. Please try again later.';
 
-    // Check if the request likely expects JSON (adjust prefixes as needed)
+    const acceptHeader = req.get('accept') || '';
     const expectsJson = req.originalUrl.startsWith('/api/') ||
-                        req.originalUrl.startsWith('/company/') || // Assuming company routes might have API parts
-                        req.originalUrl.startsWith('/student/') || // Assuming student routes might have API parts
-                        req.originalUrl.startsWith('/auth/');    // Assuming auth routes might have API parts
+        req.xhr ||
+        acceptHeader.includes('application/json');
 
     // Avoid sending error page if headers already sent
     if (res.headersSent) {
@@ -195,11 +202,10 @@ app.use((err, req, res, next) => {
 // 404 Not Found Handler (Must be the VERY LAST route handler)
 app.use((req, res) => {
     const statusCode = 404;
-    // Check if the request likely expects JSON
-     const expectsJson = req.originalUrl.startsWith('/api/') ||
-                        req.originalUrl.startsWith('/company/') ||
-                        req.originalUrl.startsWith('/student/') ||
-                        req.originalUrl.startsWith('/auth/');
+    const acceptHeader = req.get('accept') || '';
+    const expectsJson = req.originalUrl.startsWith('/api/') ||
+        req.xhr ||
+        acceptHeader.includes('application/json');
 
     console.warn(`404 Not Found: ${req.method} ${req.originalUrl}`); // Log 404 errors
 

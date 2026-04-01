@@ -22,8 +22,8 @@ Colleges receive many emails (Immediate Joining, Campus Drives, Internships, Hac
 - `docs/`: Architecture, data model, AI plan, roadmap, API spec, n8n integration
 
 ## Quick start
-- Ensure MongoDB is running and set `MONGODB_URI` (optional if using default localhost URI)
-- Set `SESSION_SECRET`
+- Ensure MongoDB is running and optionally set `MONGODB_URI` (defaults to `mongodb://localhost:27017/placement_portal`)
+- Set `SESSION_SECRET` (required; server exits on startup if missing)
 - Set `N8N_JOB_APPLICATION_WEBHOOK_URL` (example: `http://localhost:5678/webhook/job-application`) if you want student applications to trigger the sheet-maker workflow
 - Optional: set `N8N_MAIL_SHEET_MAKER_WEBHOOK_URL` if admin job activation should also trigger the sheet-maker workflow (falls back to `N8N_JOB_APPLICATION_WEBHOOK_URL`)
 - Optional: set `APP_BASE_URL` (example: `http://localhost:3345`) so resume links sent to n8n are fully qualified
@@ -32,6 +32,19 @@ Colleges receive many emails (Immediate Joining, Campus Drives, Internships, Hac
 - Start server with `npm run dev` (or `npm start`)
 
 > See docs for full plan and next steps.
+
+## Current student apply behavior
+
+- The apply flow auto-prefills key fields from session/profile data when available.
+- Resume upload during apply is optional if a resume already exists in the student profile.
+- If a new resume is uploaded during apply, it is used for that application and updates the profile resume.
+- Quick apply is available only when required core profile data and a stored resume are present.
+
+## Resume analytics behavior
+
+- Applications Sent and Shortlisted are live values derived from application records.
+- Profile Match Score is an estimate (profile completeness heuristic), not ATS truth.
+- Resume Views are currently untracked and should be treated as not available until tracking is implemented.
 
 ## n8n webhook endpoints
 
