@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Job = require('../models/Job');
 const CompanyProfile = require('../models/CompanyProfile');
 const Application = require('../models/Application');
+const StudentProfile = require('../models/StudentProfile');
 const User = require('../models/User');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -678,11 +679,35 @@ exports.getStudentsPage = async (req, res) => {
 			.sort({ createdAt: -1 })
 			.lean();
 
+		const status = (req.query.status || '').toString();
+		const error = (req.query.error || '').toString();
+		let message = null;
+		let messageType = null;
+
+		if (status === 'deleted') {
+			message = 'Student account deleted successfully.';
+			messageType = 'success';
+		} else if (error === 'invalid-id') {
+			message = 'Invalid student id.';
+			messageType = 'error';
+		} else if (error === 'not-found') {
+			message = 'Student not found.';
+			messageType = 'error';
+		} else if (error === 'demo') {
+			message = 'Demo admins cannot delete students.';
+			messageType = 'error';
+		} else if (error === 'server') {
+			message = 'Failed to delete student. Please try again.';
+			messageType = 'error';
+		}
+
 		res.render('pages/admin/students', {
 			title: 'Manage Students',
 			subtitle: 'View and manage all student users.',
 			user: req.session.user,
 			students,
+			message,
+			messageType,
 			isDemo: isDemo(req),
 			layout: 'layouts/admin', // Use the admin layout
 		});
@@ -690,6 +715,87 @@ exports.getStudentsPage = async (req, res) => {
 		console.error('Error fetching students for admin:', error);
 		req.flash('error', 'Failed to load student data.');
 		res.redirect('/admin/dashboard');
+	}
+};
+
+exports.getStudentDetailsPage = async (req, res) => {
+	const studentId = req.params.id;
+
+	if (!isValidObjectId(studentId)) {
+		return res.redirect('/admin/students?error=invalid-id');
+	}
+
+	try {
+		const student = await User.findOne({ _id: studentId, role: 'student' })
+			.populate('studentProfile')
+			.lean();
+
+		if (!student) {
+			return res.redirect('/admin/students?error=not-found');
+		}
+
+		const applications = await Application.find({ student: studentId })
+			.populate({ path: 'job', select: 'title company location jobType isActive createdAt' })
+			.sort({ appliedDate: -1 })
+			.lean();
+
+		return res.render('pages/admin/student-details', {
+			title: 'Student Details',
+			subtitle: 'Review profile and application activity.',
+			user: req.session.user,
+			student,
+			applications,
+			isDemo: isDemo(req),
+			layout: 'layouts/admin',
+		});
+	} catch (error) {
+		console.error('Error fetching student details for admin:', error);
+		return res.status(500).render('error', {
+			title: 'Server Error',
+			message: 'Failed to load student details.',
+			user: req.session.user,
+			layout: 'layouts/main',
+		});
+	}
+};
+
+exports.deleteStudent = async (req, res) => {
+	const studentId = req.params.id;
+
+	const respond = (statusCode, payload, redirectQuery) => {
+		if (wantsJson(req)) {
+			return res.status(statusCode).json(payload);
+		}
+
+		const suffix = redirectQuery ? `?${redirectQuery}` : '';
+		return res.redirect(`/admin/students${suffix}`);
+	};
+
+	if (!isValidObjectId(studentId)) {
+		return respond(400, { success: false, message: 'Invalid student id.' }, 'error=invalid-id');
+	}
+
+	if (isDemo(req)) {
+		return respond(403, { success: false, message: 'Demo admins cannot delete students.' }, 'error=demo');
+	}
+
+	try {
+		const student = await User.findOne({ _id: studentId, role: 'student' }).lean();
+
+		if (!student) {
+			return respond(404, { success: false, message: 'Student not found.' }, 'error=not-found');
+		}
+
+		await Promise.all([
+			Application.deleteMany({ student: studentId }),
+			StudentProfile.deleteOne({ user: studentId }),
+			User.deleteOne({ _id: studentId, role: 'student' }),
+		]);
+
+		return respond(200, { success: true, message: 'Student deleted successfully.' }, 'status=deleted');
+	} catch (error) {
+		console.error('Admin delete student error:', error);
+		return respond(500, { success: false, message: 'Failed to delete student.' }, 'error=server');
 	}
 };
 
@@ -717,10 +823,214 @@ exports.getCompaniesPage = async (req, res) => {
 
 exports.getReportsPage = async (req, res) => {
 	try {
+		const selectedMonths = Math.min(Math.max(Number.parseInt(req.query.months, 10) || 6, 1), 24);
+		const sinceDate = new Date();
+		sinceDate.setMonth(sinceDate.getMonth() - selectedMonths + 1);
+		sinceDate.setDate(1);
+		sinceDate.setHours(0, 0, 0, 0);
+
+		if (isDemo(req)) {
+			const now = new Date();
+			const monthlyTrend = Array.from({ length: selectedMonths }).map((_, index) => {
+				const monthDate = new Date(now.getFullYear(), now.getMonth() - (selectedMonths - 1 - index), 1);
+				return {
+					label: monthDate.toLocaleString('en-US', { month: 'short', year: 'numeric' }),
+					jobs: Math.floor(8 + Math.random() * 10),
+					applications: Math.floor(35 + Math.random() * 60),
+				};
+			});
+
+			return res.render('pages/admin/reports', {
+				title: 'Reports',
+				subtitle: 'Analytics and placement performance overview.',
+				user: req.session.user,
+				isDemo: true,
+				selectedMonths,
+				metrics: {
+					totalStudents: 1280,
+					totalCompanies: 86,
+					totalJobs: 142,
+					activeJobs: 118,
+					pendingJobs: 24,
+					totalApplications: 5430,
+					acceptedApplications: 286,
+					acceptanceRate: 5.27,
+				},
+				monthlyTrend,
+				applicationStatusBreakdown: [
+					{ _id: 'applied', count: 2400 },
+					{ _id: 'under_review', count: 1320 },
+					{ _id: 'shortlisted', count: 760 },
+					{ _id: 'interview', count: 430 },
+					{ _id: 'accepted', count: 286 },
+					{ _id: 'rejected', count: 234 },
+				],
+				jobTypeBreakdown: [
+					{ _id: 'full-time', count: 82 },
+					{ _id: 'internship', count: 41 },
+					{ _id: 'remote', count: 12 },
+					{ _id: 'part-time', count: 7 },
+				],
+				topCompaniesByJobs: [
+					{ _id: 'Demo Cloud Ltd.', count: 18 },
+					{ _id: 'Demo Analytics Co.', count: 14 },
+					{ _id: 'Demo Studios', count: 11 },
+					{ _id: 'Demo Tech Pvt Ltd', count: 10 },
+					{ _id: 'Demo Fintech', count: 8 },
+				],
+				topCompaniesByApplications: [
+					{ _id: 'Demo Cloud Ltd.', count: 620 },
+					{ _id: 'Demo Analytics Co.', count: 540 },
+					{ _id: 'Demo Studios', count: 492 },
+					{ _id: 'Demo Tech Pvt Ltd', count: 475 },
+					{ _id: 'Demo Fintech', count: 416 },
+				],
+				topSkillsDemand: [
+					{ _id: 'javascript', count: 54 },
+					{ _id: 'python', count: 43 },
+					{ _id: 'react', count: 37 },
+					{ _id: 'node.js', count: 34 },
+					{ _id: 'sql', count: 28 },
+				],
+				recentApplications: [
+					{
+						_id: 'demo-app-1',
+						status: 'under_review',
+						appliedDate: new Date(Date.now() - 1000 * 60 * 90),
+						student: { name: 'Priya Singh', email: 'priya@example.com' },
+						job: { title: 'Frontend Developer', company: 'Demo Cloud Ltd.' },
+					},
+				],
+				layout: 'layouts/admin',
+			});
+		}
+
+		const [
+			totalStudents,
+			totalCompanies,
+			totalJobs,
+			activeJobs,
+			pendingJobs,
+			totalApplications,
+			acceptedApplications,
+			monthlyJobsRaw,
+			monthlyApplicationsRaw,
+			applicationStatusBreakdown,
+			jobTypeBreakdown,
+			topCompaniesByJobs,
+			topCompaniesByApplications,
+			topSkillsDemand,
+			recentApplications,
+		] = await Promise.all([
+			User.countDocuments({ role: 'student' }),
+			User.countDocuments({ role: 'company' }),
+			Job.countDocuments({}),
+			Job.countDocuments({ isActive: true }),
+			Job.countDocuments({ $or: [{ isActive: false }, { isActive: { $exists: false } }] }),
+			Application.countDocuments({}),
+			Application.countDocuments({ status: 'accepted' }),
+			Job.aggregate([
+				{ $match: { createdAt: { $gte: sinceDate } } },
+				{
+					$group: {
+						_id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
+						count: { $sum: 1 },
+					},
+				},
+			]),
+			Application.aggregate([
+				{ $match: { appliedDate: { $gte: sinceDate } } },
+				{
+					$group: {
+						_id: { year: { $year: '$appliedDate' }, month: { $month: '$appliedDate' } },
+						count: { $sum: 1 },
+					},
+				},
+			]),
+			Application.aggregate([
+				{ $group: { _id: '$status', count: { $sum: 1 } } },
+				{ $sort: { count: -1 } },
+			]),
+			Job.aggregate([
+				{ $group: { _id: '$jobType', count: { $sum: 1 } } },
+				{ $sort: { count: -1 } },
+			]),
+			Job.aggregate([
+				{ $group: { _id: '$company', count: { $sum: 1 } } },
+				{ $sort: { count: -1 } },
+				{ $limit: 5 },
+			]),
+			Application.aggregate([
+				{ $lookup: { from: 'jobs', localField: 'job', foreignField: '_id', as: 'jobDoc' } },
+				{ $unwind: '$jobDoc' },
+				{ $group: { _id: '$jobDoc.company', count: { $sum: 1 } } },
+				{ $sort: { count: -1 } },
+				{ $limit: 5 },
+			]),
+			Job.aggregate([
+				{ $unwind: '$skills' },
+				{ $project: { normalizedSkill: { $trim: { input: { $toLower: '$skills' } } } } },
+				{ $match: { normalizedSkill: { $ne: '' } } },
+				{ $group: { _id: '$normalizedSkill', count: { $sum: 1 } } },
+				{ $sort: { count: -1 } },
+				{ $limit: 10 },
+			]),
+			Application.find({})
+				.populate({ path: 'student', select: 'name email' })
+				.populate({ path: 'job', select: 'title company' })
+				.sort({ appliedDate: -1 })
+				.limit(10)
+				.lean(),
+		]);
+
+		const monthlyJobsMap = new Map(
+			monthlyJobsRaw.map((item) => [`${item._id.year}-${item._id.month}`, item.count])
+		);
+		const monthlyApplicationsMap = new Map(
+			monthlyApplicationsRaw.map((item) => [`${item._id.year}-${item._id.month}`, item.count])
+		);
+
+		const monthlyTrend = Array.from({ length: selectedMonths }).map((_, index) => {
+			const monthDate = new Date();
+			monthDate.setDate(1);
+			monthDate.setHours(0, 0, 0, 0);
+			monthDate.setMonth(monthDate.getMonth() - (selectedMonths - 1 - index));
+
+			const key = `${monthDate.getFullYear()}-${monthDate.getMonth() + 1}`;
+
+			return {
+				label: monthDate.toLocaleString('en-US', { month: 'short', year: 'numeric' }),
+				jobs: monthlyJobsMap.get(key) || 0,
+				applications: monthlyApplicationsMap.get(key) || 0,
+			};
+		});
+
+		const acceptanceRate = totalApplications
+			? Number(((acceptedApplications / totalApplications) * 100).toFixed(2))
+			: 0;
+
 		res.render('pages/admin/reports', {
 			title: 'Reports',
-			subtitle: 'Analytics and insights are under construction.',
+			subtitle: 'Analytics and placement performance overview.',
 			user: req.session.user,
+			selectedMonths,
+			metrics: {
+				totalStudents,
+				totalCompanies,
+				totalJobs,
+				activeJobs,
+				pendingJobs,
+				totalApplications,
+				acceptedApplications,
+				acceptanceRate,
+			},
+			monthlyTrend,
+			applicationStatusBreakdown,
+			jobTypeBreakdown,
+			topCompaniesByJobs,
+			topCompaniesByApplications,
+			topSkillsDemand,
+			recentApplications,
 			isDemo: isDemo(req),
 			layout: 'layouts/admin', // Use the admin layout
 		});

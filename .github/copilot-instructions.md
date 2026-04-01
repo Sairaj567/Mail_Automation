@@ -41,13 +41,22 @@ These reminders keep AI agents productive in this repo. Focus on the running Exp
 
 ## Integrations & automation
 - n8n webhook endpoints live under `/api/n8n` (`server/routers/n8nRoutes.js`). `companyController.handleN8nCompanyUpdate` checks `x-webhook-secret` (or `x-n8n-secret`) against `process.env.N8N_WEBHOOK_SECRET`, then creates/updates a `User` + `CompanyProfile` and hashes a temp password.
+- Student application sync is triggered from `studentController.applyForJob`:
+  - `N8N_RESUME_DRIVE_WEBHOOK_URL` (optional) uploads resume to Drive and may return a link (`resume_drive_link`, `drive_link`, `drive_url`, or `url`).
+  - `N8N_JOB_APPLICATION_WEBHOOK_URL` receives final payload for sheet sync.
+  - `resume_url` sent to sheet-maker is the Drive link when available, otherwise falls back to the local `/uploads/resumes/...` URL.
 - `server/config/{db,mailer,session}.js` are placeholders; real configuration is inline in `server/server.js`.
 
 ## Local workflows
 - Required env vars: `MONGODB_URI` (defaults to `mongodb://localhost:27017/placement_portal`), `SESSION_SECRET`, optional `PORT`, optional `N8N_WEBHOOK_SECRET`.
+- Optional integration env vars:
+  - `N8N_JOB_APPLICATION_WEBHOOK_URL` for student application sheet sync.
+  - `N8N_MAIL_SHEET_MAKER_WEBHOOK_URL` for admin activation sync (falls back to application webhook).
+  - `N8N_RESUME_DRIVE_WEBHOOK_URL` for resume upload to Google Drive before sheet sync.
+  - `APP_BASE_URL` to generate fully-qualified resume URLs for webhook payloads.
 - Setup: `npm install`, then `npm run dev` (nodemon) or `npm start` (plain node).
 - Seed demo jobs (overwrites `Job` collection): `npm run seed`.
-- No automated tests yet (`npm test` exits 1); rely on manual verification or ad-hoc scripts.
+- Automated tests exist and run with `npm test` (`node --test`). Add or update tests for controller/webhook behavior when changing integrations.
 
 ## Fast file map (where to change what)
 - Auth/session behavior: `server/controllers/authController.js`, `server/routers/authRoutes.js`, `server/middleware/auth.js`.

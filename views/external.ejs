@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/global.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --exam-primary: #0f766e;
+            --exam-accent: #f59e0b;
+            --exam-surface: #f8fafc;
+            --exam-ink: #0f172a;
+            --exam-muted: #475569;
+            --exam-border: #dbe4ee;
+        }
+
+        body {
+            background: radial-gradient(circle at top right, #e0f2fe 0%, #f8fafc 45%, #fefce8 100%);
+            color: var(--exam-ink);
+        }
+
+        .external-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            backdrop-filter: blur(8px);
+            background: rgba(248, 250, 252, 0.8);
+            border-bottom: 1px solid var(--exam-border);
+        }
+
+        .external-header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 700;
+            color: var(--exam-primary);
+        }
+
+        .brand i {
+            font-size: 1.15rem;
+        }
+
+        .external-nav {
+            display: flex;
+            gap: 1rem;
+            color: var(--exam-muted);
+            font-weight: 500;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .external-nav a:hover {
+            color: var(--exam-primary);
+        }
+
+        .hero {
+            padding: 3.5rem 0 2rem;
+        }
+
+        .hero-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--exam-border);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .hero h1 {
+            font-size: clamp(1.9rem, 4vw, 3rem);
+            line-height: 1.2;
+            margin-bottom: 0.9rem;
+        }
+
+        .hero p {
+            color: var(--exam-muted);
+            max-width: 860px;
+        }
+
+        .pill-row {
+            margin-top: 1.3rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.88rem;
+            border: 1px solid var(--exam-border);
+            background: #ffffff;
+            color: #0f172a;
+        }
+
+        .pill strong {
+            color: var(--exam-primary);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1rem;
+            margin: 1.75rem 0 3rem;
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid var(--exam-border);
+            border-radius: 14px;
+            padding: 1.25rem;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .card h2 {
+            font-size: 1.05rem;
+            margin-bottom: 0.6rem;
+            color: var(--exam-primary);
+        }
+
+        .card p,
+        .card li {
+            color: var(--exam-muted);
+        }
+
+        .span-12 { grid-column: span 12; }
+        .span-7 { grid-column: span 7; }
+        .span-5 { grid-column: span 5; }
+        .span-6 { grid-column: span 6; }
+
+        .flow {
+            display: grid;
+            gap: 0.55rem;
+            margin-top: 0.7rem;
+        }
+
+        .flow-step {
+            border: 1px dashed #99c3e5;
+            border-radius: 10px;
+            padding: 0.75rem;
+            background: #f8fbff;
+            color: #1e3a5f;
+            font-weight: 500;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.7rem;
+        }
+
+        .metric {
+            border: 1px solid var(--exam-border);
+            border-radius: 10px;
+            padding: 0.75rem;
+            background: var(--exam-surface);
+        }
+
+        .metric .value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .metric .label {
+            font-size: 0.84rem;
+            color: var(--exam-muted);
+        }
+
+        .demo-script {
+            border-left: 5px solid var(--exam-accent);
+            background: #fffdf5;
+        }
+
+        .demo-script ol {
+            margin-left: 1rem;
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        .footer-note {
+            margin: 2rem 0 2.75rem;
+            color: var(--exam-muted);
+            text-align: center;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 900px) {
+            .span-7,
+            .span-6,
+            .span-5 {
+                grid-column: span 12;
+            }
+
+            .external-header .container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .external-nav {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="external-header">
+        <div class="container">
+            <a href="/" class="brand">
+                <i class="fas fa-gears"></i>
+                <span>Mail Automation Engineering Brief</span>
+            </a>
+            <nav class="external-nav">
+                <a href="/">Home</a>
+                <% if (user) { %>
+                    <a href="/<%= user.role %>/dashboard">Dashboard</a>
+                <% } else { %>
+                    <a href="/auth">Login</a>
+                <% } %>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero" id="overview">
+            <div class="hero-card">
+                <h1>End-to-End AI Mail Pipeline (Built by Our Team)</h1>
+                <p>
+                    This page explains the engineering we implemented ourselves: email ingestion, feature extraction,
+                    AI classification through OpenRouter, confidence scoring, human correction loop, and metrics tracking.
+                    The orchestration tool helps with transport, but decision logic, auditability, and learning loop are our own.
+                </p>
+
+                <div class="pill-row">
+                    <span class="pill"><i class="fas fa-robot"></i> Model Provider: <strong>OpenRouter</strong></span>
+                    <span class="pill"><i class="fas fa-brain"></i> Model: <strong>acree-ai</strong></span>
+                    <span class="pill"><i class="fas fa-shield-halved"></i> Guardrails: <strong>Rule + confidence checks</strong></span>
+                    <span class="pill"><i class="fas fa-chart-line"></i> Learning: <strong>Human feedback loop</strong></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid" id="pipeline">
+            <article class="card span-7">
+                <h2><i class="fas fa-diagram-project"></i> Processing Flow</h2>
+                <p>The classifier is intentionally explainable so each prediction can be audited during review.</p>
+                <div class="flow">
+                    <div class="flow-step">1) Ingest email from webhook and normalize sender, subject, body, attachments.</div>
+                    <div class="flow-step">2) Extract engineered signals (keywords, urgency, reply intent, job markers).</div>
+                    <div class="flow-step">3) Send structured prompt to OpenRouter <code>acree-ai</code> for category prediction.</div>
+                    <div class="flow-step">4) Compute confidence and attach top reasons behind classification.</div>
+                    <div class="flow-step">5) Route high-confidence emails automatically; queue low-confidence for admin review.</div>
+                    <div class="flow-step">6) Capture admin corrections and feed them back into weights/prompts.</div>
+                </div>
+            </article>
+
+            <article class="card span-5">
+                <h2><i class="fas fa-tags"></i> Category Output</h2>
+                <ul>
+                    <li>Job Opportunities</li>
+                    <li>Internships</li>
+                    <li>Reply from Company</li>
+                    <li>Competitions</li>
+                    <li>Urgent</li>
+                    <li>Uncategorized (fallback)</li>
+                </ul>
+            </article>
+
+            <article class="card span-6" id="engineering">
+                <h2><i class="fas fa-screwdriver-wrench"></i> Engineering Contributions</h2>
+                <ul>
+                    <li>Custom prompt contract and strict JSON response parsing for deterministic downstream usage.</li>
+                    <li>Confidence thresholding to separate auto-routing vs. manual review workload.</li>
+                    <li>Explainability payload with machine-readable reasons for each prediction.</li>
+                    <li>Fallback behavior if model/API fails: safe default category and review queue.</li>
+                    <li>Correction logging to improve future runs with updated patterns and prompt examples.</li>
+                </ul>
+            </article>
+
+            <article class="card span-6" id="metrics">
+                <h2><i class="fas fa-gauge-high"></i> MVP Success Metrics</h2>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <div class="value">Accuracy</div>
+                        <div class="label">Category-level prediction correctness</div>
+                    </div>
+                    <div class="metric">
+                        <div class="value">Precision/Recall</div>
+                        <div class="label">Per-category quality score</div>
+                    </div>
+                    <div class="metric">
+                        <div class="value">Review Load</div>
+                        <div class="label">Low-confidence queue size</div>
+                    </div>
+                    <div class="metric">
+                        <div class="value">Time Saved</div>
+                        <div class="label">Manual triage minutes reduced</div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card span-12 demo-script" id="demo">
+                <h2><i class="fas fa-chalkboard-user"></i> External Examiner Demo Script</h2>
+                <ol>
+                    <li>Show one raw email arriving in the system (subject/body/attachments).</li>
+                    <li>Open predicted category, confidence score, and top reasons returned by model.</li>
+                    <li>Manually correct one wrong category to prove reviewer-in-the-loop design.</li>
+                    <li>Show that the correction is stored for future prompt/weight improvements.</li>
+                    <li>Display dashboard metrics to quantify engineering impact over time.</li>
+                </ol>
+            </article>
+        </section>
+
+        <p class="footer-note">
+            Suggested env variables for this flow: <code>OPENROUTER_API_KEY</code>, <code>OPENROUTER_MODEL=acree-ai</code>,
+            <code>N8N_WEBHOOK_SECRET</code>. Keep secrets server-side and never expose them in client code.
+        </p>
+    </main>
+</body>
+</html>

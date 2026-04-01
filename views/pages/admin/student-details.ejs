@@ -1,0 +1,59 @@
+<div class="card mb-3">
+    <div class="card-body">
+        <a href="/admin/students" class="btn btn-sm btn-outline-secondary mb-3">
+            <i class="fas fa-arrow-left"></i> Back to Students
+        </a>
+
+        <h3 class="mb-2"><%= student.name %></h3>
+        <p class="mb-1"><strong>Email:</strong> <%= student.email %></p>
+        <p class="mb-1"><strong>Joined:</strong> <%= new Date(student.createdAt).toLocaleString() %></p>
+        <p class="mb-0">
+            <strong>Profile Completion:</strong>
+            <%= student.studentProfile?.profileCompletion || 0 %>%
+        </p>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="mb-2">Skills</h5>
+        <% if (student.studentProfile?.skills?.length) { %>
+            <% student.studentProfile.skills.forEach(skill => { %>
+                <span class="badge bg-secondary" style="margin-right: 4px;"><%= skill %></span>
+            <% }) %>
+        <% } else { %>
+            <span class="badge bg-warning">No skills listed</span>
+        <% } %>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap mb-0">
+            <thead>
+                <tr>
+                    <th>Job</th>
+                    <th>Company</th>
+                    <th>Status</th>
+                    <th>Applied On</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (applications && applications.length > 0) { %>
+                    <% applications.forEach(application => { %>
+                        <tr>
+                            <td><%= application.job?.title || 'Unknown Job' %></td>
+                            <td><%= application.job?.company || 'Unknown Company' %></td>
+                            <td><span class="badge bg-light"><%= application.status || 'applied' %></span></td>
+                            <td><%= application.appliedDate ? new Date(application.appliedDate).toLocaleString() : 'N/A' %></td>
+                        </tr>
+                    <% }) %>
+                <% } else { %>
+                    <tr>
+                        <td colspan="4" class="text-center">No applications found for this student.</td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>

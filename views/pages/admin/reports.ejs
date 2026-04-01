@@ -1,7 +1,224 @@
-<div class="card">
-    <div class="card-body text-center">
-        <h5 class="card-title">Under Construction</h5>
-        <p class="card-text">The reporting feature is currently being developed. Check back later for detailed analytics and insights.</p>
-        <i class="fas fa-cogs fa-4x text-info"></i>
+<section class="dashboard-content reports-content">
+    <div class="section-card mb-3">
+        <form method="GET" action="/admin/reports" class="report-filter-form" style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
+            <div>
+                <label for="months" style="display:block; margin-bottom:4px; font-weight:600;">Trend Window</label>
+                <select id="months" name="months" class="form-control">
+                    <% [3, 6, 9, 12, 18, 24].forEach(option => { %>
+                        <option value="<%= option %>" <%= selectedMonths === option ? 'selected' : '' %>><%= option %> months</option>
+                    <% }) %>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Apply</button>
+        </form>
     </div>
-</div>
+
+    <div class="stats-grid">
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fas fa-user-graduate"></i></div>
+            <div class="stat-info"><h3><%= metrics.totalStudents %></h3><p>Total Students</p></div>
+        </article>
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fas fa-building"></i></div>
+            <div class="stat-info"><h3><%= metrics.totalCompanies %></h3><p>Total Companies</p></div>
+        </article>
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fas fa-briefcase"></i></div>
+            <div class="stat-info"><h3><%= metrics.totalJobs %></h3><p>Total Jobs</p></div>
+        </article>
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-info"><h3><%= metrics.activeJobs %></h3><p>Active Jobs</p></div>
+        </article>
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+            <div class="stat-info"><h3><%= metrics.pendingJobs %></h3><p>Pending Jobs</p></div>
+        </article>
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fas fa-file-signature"></i></div>
+            <div class="stat-info"><h3><%= metrics.totalApplications %></h3><p>Total Applications</p></div>
+        </article>
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+            <div class="stat-info"><h3><%= metrics.acceptedApplications %></h3><p>Accepted Applications</p></div>
+        </article>
+        <article class="stat-card">
+            <div class="stat-icon"><i class="fas fa-percent"></i></div>
+            <div class="stat-info"><h3><%= metrics.acceptanceRate %>%</h3><p>Acceptance Rate</p></div>
+        </article>
+    </div>
+
+    <div class="section-card">
+        <div class="section-header">
+            <h2>Monthly Trend</h2>
+            <p>Jobs posted vs applications received</p>
+        </div>
+        <div class="table-responsive">
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Jobs</th>
+                        <th>Applications</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% monthlyTrend.forEach(row => { %>
+                        <tr>
+                            <td><%= row.label %></td>
+                            <td><span class="badge bg-primary"><%= row.jobs %></span></td>
+                            <td><span class="badge bg-success"><%= row.applications %></span></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="tables-grid">
+        <section class="section-card">
+            <div class="section-header">
+                <h2>Application Status Breakdown</h2>
+            </div>
+            <table class="summary-table">
+                <thead>
+                    <tr><th>Status</th><th>Count</th></tr>
+                </thead>
+                <tbody>
+                    <% if (applicationStatusBreakdown && applicationStatusBreakdown.length) { %>
+                        <% applicationStatusBreakdown.forEach(item => { %>
+                            <tr>
+                                <td><span class="status-badge"><%= item._id || 'unknown' %></span></td>
+                                <td><%= item.count %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr><td colspan="2">No data available.</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section-card">
+            <div class="section-header">
+                <h2>Job Type Breakdown</h2>
+            </div>
+            <table class="summary-table">
+                <thead>
+                    <tr><th>Job Type</th><th>Count</th></tr>
+                </thead>
+                <tbody>
+                    <% if (jobTypeBreakdown && jobTypeBreakdown.length) { %>
+                        <% jobTypeBreakdown.forEach(item => { %>
+                            <tr>
+                                <td><span class="status-badge"><%= item._id || 'unknown' %></span></td>
+                                <td><%= item.count %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr><td colspan="2">No data available.</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section-card">
+            <div class="section-header">
+                <h2>Top Companies By Jobs</h2>
+            </div>
+            <table class="summary-table">
+                <thead>
+                    <tr><th>Company</th><th>Jobs</th></tr>
+                </thead>
+                <tbody>
+                    <% if (topCompaniesByJobs && topCompaniesByJobs.length) { %>
+                        <% topCompaniesByJobs.forEach(item => { %>
+                            <tr>
+                                <td><%= item._id || 'Unknown Company' %></td>
+                                <td><%= item.count %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr><td colspan="2">No data available.</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section-card">
+            <div class="section-header">
+                <h2>Top Companies By Applications</h2>
+            </div>
+            <table class="summary-table">
+                <thead>
+                    <tr><th>Company</th><th>Applications</th></tr>
+                </thead>
+                <tbody>
+                    <% if (topCompaniesByApplications && topCompaniesByApplications.length) { %>
+                        <% topCompaniesByApplications.forEach(item => { %>
+                            <tr>
+                                <td><%= item._id || 'Unknown Company' %></td>
+                                <td><%= item.count %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr><td colspan="2">No data available.</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section-card">
+            <div class="section-header">
+                <h2>Top Skills In Demand</h2>
+            </div>
+            <table class="summary-table">
+                <thead>
+                    <tr><th>Skill</th><th>Mentions</th></tr>
+                </thead>
+                <tbody>
+                    <% if (topSkillsDemand && topSkillsDemand.length) { %>
+                        <% topSkillsDemand.forEach(item => { %>
+                            <tr>
+                                <td><%= item._id || 'Unknown' %></td>
+                                <td><%= item.count %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr><td colspan="2">No data available.</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section-card">
+            <div class="section-header">
+                <h2>Recent Applications</h2>
+            </div>
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Job</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (recentApplications && recentApplications.length) { %>
+                        <% recentApplications.forEach(item => { %>
+                            <tr>
+                                <td><%= item.student?.name || 'Unknown Student' %></td>
+                                <td><%= item.job?.title || 'Unknown Job' %> (<%= item.job?.company || 'Unknown Company' %>)</td>
+                                <td><span class="status-badge"><%= item.status || 'applied' %></span></td>
+                                <td><%= item.appliedDate ? new Date(item.appliedDate).toLocaleDateString() : 'N/A' %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr><td colspan="4">No recent applications found.</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+    </div>
+</section>

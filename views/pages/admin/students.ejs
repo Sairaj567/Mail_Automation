@@ -1,3 +1,7 @@
+<% if (message) { %>
+    <div class="alert <%= messageType === 'success' ? 'alert-success' : 'alert-danger' %>"><%= message %></div>
+<% } %>
+
 <div class="card">
     <div class="card-body table-responsive p-0">
         <table class="table table-hover text-nowrap">
@@ -37,12 +41,19 @@
                             </td>
                             <td><%= new Date(student.createdAt).toLocaleDateString() %></td>
                             <td>
-                                <a href="#" class="btn btn-sm btn-info disabled" title="View Profile">
+                                <a href="/admin/students/<%= student._id %>" class="btn btn-sm btn-info" title="View Profile">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="#" class="btn btn-sm btn-danger disabled" title="Delete User">
-                                    <i class="fas fa-trash"></i>
-                                </a>
+                                <form action="/admin/students/<%= student._id %>/delete" method="POST" style="display:inline;">
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm btn-danger"
+                                        title="Delete User"
+                                        onclick="return confirm('Delete <%= student.name %> and all their applications? This cannot be undone.');"
+                                    >
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     <% }) %>

@@ -139,6 +139,14 @@ app.get('/', (req, res) => {
     });
 });
 
+// External examiner engineering walkthrough page
+app.get('/external', (req, res) => {
+    res.render('external', {
+        title: 'External Examiner | Engineering Walkthrough',
+        user: req.session.user || null,
+    });
+});
+
 // Remove simple dashboard routes if they are fully handled by specific routers
 // app.get('/student/dashboard', ...); // Should be handled by studentRoutes
 // app.get('/company/dashboard', ...); // Should be handled by companyRoutes

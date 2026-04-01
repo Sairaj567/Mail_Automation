@@ -20,6 +20,9 @@ router.post('/jobs/:id/delete', requireAdmin, adminController.deleteJob);
 
 // Placeholder routes for other admin pages
 router.get('/students', requireAdmin, adminController.getStudentsPage);
+router.get('/students/:id', requireAdmin, adminController.getStudentDetailsPage);
+router.post('/students/:id/delete', requireAdmin, adminController.deleteStudent);
+router.delete('/students/:id', requireAdmin, adminController.deleteStudent);
 router.get('/companies', requireAdmin, adminController.getCompaniesPage);
 router.get('/reports', requireAdmin, adminController.getReportsPage);
 router.get('/mail-manager', requireAdmin, adminController.getMailManager);

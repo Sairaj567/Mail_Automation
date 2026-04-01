@@ -7,6 +7,7 @@
     "start": "node server/server.js",
     "dev": "nodemon server/server.js",
     "seed": "node server/seedDemoData.js",
+    "bulk:add-students": "node scripts/bulkAddStudents.js",
     "test": "node --test --test-reporter=spec",
     "test:watch": "node --test --watch"
   },

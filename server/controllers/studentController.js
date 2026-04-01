@@ -36,6 +36,7 @@ const STATUS_DISPLAY = Object.values(STATUS_VIEW);
 // --- End of constants ---
 
 const APPLICATION_WEBHOOK_URL = process.env.N8N_JOB_APPLICATION_WEBHOOK_URL || '';
+const RESUME_DRIVE_WEBHOOK_URL = process.env.N8N_RESUME_DRIVE_WEBHOOK_URL || '';
 
 
 const isDemo = (req) => Boolean(req.session?.user?.isDemo);
@@ -159,6 +160,71 @@ const triggerApplicationSheetWebhook = async (req, payload) => {
   }
 
   return { sent: true };
+};
+
+const extractDriveLink = (body) => {
+  if (!body || typeof body !== 'object') return '';
+
+  const candidates = [
+    body.resume_drive_link,
+    body.resumeDriveLink,
+    body.drive_link,
+    body.driveLink,
+    body.drive_url,
+    body.driveUrl,
+    body.url,
+    body.link,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return '';
+};
+
+const triggerResumeDriveUploadWebhook = async (req, payload) => {
+  if (!RESUME_DRIVE_WEBHOOK_URL) {
+    return { uploaded: false, reason: 'missing_webhook_url', driveLink: '' };
+  }
+
+  const webhookUrl = new URL(RESUME_DRIVE_WEBHOOK_URL);
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim()) {
+      webhookUrl.searchParams.set(key, String(value));
+    }
+  });
+
+  const headers = {};
+  if (process.env.N8N_WEBHOOK_SECRET) {
+    headers['x-webhook-secret'] = process.env.N8N_WEBHOOK_SECRET;
+  }
+
+  const response = await fetch(webhookUrl.toString(), {
+    method: 'POST',
+    headers,
+  });
+
+  if (!response.ok) {
+    const bodyText = await response.text();
+    throw new Error(`Drive webhook failed (${response.status}): ${bodyText.slice(0, 300)}`);
+  }
+
+  let responseBody = null;
+  try {
+    responseBody = await response.json();
+  } catch (_) {
+    responseBody = null;
+  }
+
+  const driveLink = extractDriveLink(responseBody);
+  return {
+    uploaded: true,
+    reason: driveLink ? 'ok' : 'missing_drive_link_in_response',
+    driveLink,
+  };
 };
 
 const ensureStudentProfile = async (userId) => {
@@ -635,11 +701,27 @@ exports.applyForJob = async (req, res) => {
     await application.save();
 
     const resumeUrl = buildResumeUrl(req, resumeFilename);
+    let resumeDriveSync = { uploaded: false, reason: 'not_attempted', driveLink: '' };
+
+    try {
+      resumeDriveSync = await triggerResumeDriveUploadWebhook(req, {
+        job_id: jobId,
+        stu_name: pickFirstText(fullName, req.session?.user?.name) || 'Student',
+        stu_mail: pickFirstText(email, req.session?.user?.email) || '',
+        resume_url: resumeUrl,
+      });
+    } catch (driveWebhookError) {
+      console.error('Resume Drive upload webhook failed:', driveWebhookError.message);
+      resumeDriveSync = { uploaded: false, reason: 'webhook_error', driveLink: '' };
+    }
+
+    const resumeLinkForSheet = resumeDriveSync.driveLink || resumeUrl;
     const sheetPayload = {
       job_id: jobId,
       stu_name: pickFirstText(fullName, req.session?.user?.name) || 'Student',
       stu_mail: pickFirstText(email, req.session?.user?.email) || '',
-      resume_url: resumeUrl,
+      resume_url: resumeLinkForSheet,
+      resume_drive_link: resumeDriveSync.driveLink,
       portfolio: pickFirstText(req.body.portfolio, linkedin),
     };
 
@@ -654,10 +736,13 @@ exports.applyForJob = async (req, res) => {
     res.json({
       success: true,
       message: sheetSync.sent
-        ? 'Application submitted and pushed to sheet workflow.'
+        ? (resumeDriveSync.driveLink
+            ? 'Application submitted, resume uploaded to Drive, and pushed to sheet workflow.'
+            : 'Application submitted and pushed to sheet workflow.')
         : 'Application submitted successfully. Sheet sync is pending.',
       applicationId: application._id, // Use _id for Mongoose
       sheetSync: sheetSync.sent,
+      resumeDriveLink: resumeDriveSync.driveLink || null,
     });
   } catch (error) {
     console.error('Apply job error:', error);
