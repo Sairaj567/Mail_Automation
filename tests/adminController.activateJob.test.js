@@ -3,10 +3,13 @@ const assert = require('node:assert/strict');
 const mongoose = require('mongoose');
 
 const Job = require('../server/models/Job');
+const CompanyProfile = require('../server/models/CompanyProfile');
 
 const original = {
   findById: Job.findById,
   updateOne: Job.updateOne,
+  deleteOne: Job.deleteOne,
+  companyUpdateOne: CompanyProfile.updateOne,
   fetch: global.fetch,
   sheetWebhookUrl: process.env.N8N_MAIL_SHEET_MAKER_WEBHOOK_URL,
   appWebhookUrl: process.env.N8N_JOB_APPLICATION_WEBHOOK_URL,
@@ -42,6 +45,8 @@ function createMockRes() {
 function restoreStubs() {
   Job.findById = original.findById;
   Job.updateOne = original.updateOne;
+  Job.deleteOne = original.deleteOne;
+  CompanyProfile.updateOne = original.companyUpdateOne;
   global.fetch = original.fetch;
 
   if (original.sheetWebhookUrl === undefined) {
@@ -163,4 +168,81 @@ test('activateJob succeeds when webhook URL is not configured', async () => {
   assert.equal(res.payload.sync.sent, false);
   assert.equal(res.payload.sync.reason, 'missing_webhook_url');
   assert.equal(fetchCalled, false);
+});
+
+test('removeApprovedJob deletes an active job and updates company profile mapping', async () => {
+  const adminController = loadAdminControllerFresh();
+
+  const jobId = new mongoose.Types.ObjectId();
+  const postedBy = new mongoose.Types.ObjectId();
+  Job.findById = () => ({
+    lean: async () => ({
+      _id: jobId,
+      postedBy,
+      isActive: true,
+    }),
+  });
+
+  let deleteCalledWith;
+  Job.deleteOne = async (query) => {
+    deleteCalledWith = query;
+    return { acknowledged: true, deletedCount: 1 };
+  };
+
+  let companyUpdateCalledWith;
+  CompanyProfile.updateOne = async (filter, update) => {
+    companyUpdateCalledWith = { filter, update };
+    return { acknowledged: true, modifiedCount: 1 };
+  };
+
+  const req = {
+    params: { id: jobId.toString() },
+    xhr: true,
+    headers: { accept: 'application/json' },
+    session: { user: { id: 'admin', role: 'admin' } },
+  };
+  const res = createMockRes();
+
+  await adminController.removeApprovedJob(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.payload.success, true);
+  assert.deepEqual(deleteCalledWith, { _id: jobId.toString() });
+  assert.deepEqual(companyUpdateCalledWith, {
+    filter: { user: postedBy },
+    update: { $pull: { jobsPosted: jobId } },
+  });
+});
+
+test('removeApprovedJob rejects non-active jobs', async () => {
+  const adminController = loadAdminControllerFresh();
+
+  const jobId = new mongoose.Types.ObjectId();
+  Job.findById = () => ({
+    lean: async () => ({
+      _id: jobId,
+      isActive: false,
+    }),
+  });
+
+  let deleteAttempted = false;
+  Job.deleteOne = async () => {
+    deleteAttempted = true;
+    return { acknowledged: true, deletedCount: 1 };
+  };
+
+  const req = {
+    params: { id: jobId.toString() },
+    xhr: true,
+    headers: { accept: 'application/json' },
+    session: { user: { id: 'admin', role: 'admin' } },
+  };
+  const res = createMockRes();
+
+  await adminController.removeApprovedJob(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.payload.success, false);
+  assert.match(res.payload.message, /only approved jobs/i);
+  assert.equal(deleteAttempted, false);
 });

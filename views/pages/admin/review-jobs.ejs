@@ -17,6 +17,9 @@
     <% if (error === 'not-found') { %>
         <div class="alert alert-danger">Job not found.</div>
     <% } %>
+    <% if (error === 'not-approved') { %>
+        <div class="alert alert-danger">Only approved jobs can be removed with this action.</div>
+    <% } %>
     <% if (error === 'demo') { %>
         <div class="alert alert-danger">Demo admins cannot modify jobs.</div>
     <% } %>
@@ -71,16 +74,24 @@
                             <td><%= job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—' %></td>
                             <td>
                                 <div class="review-actions">
-                                    <form action="/admin/jobs/<%= job._id %>/activate" method="POST">
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="fas fa-check"></i> Activate
-                                        </button>
-                                    </form>
-                                    <form action="/admin/jobs/<%= job._id %>/delete" method="POST">
-                                        <button type="submit" class="btn btn-danger">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
-                                    </form>
+                                    <% if (job.isActive) { %>
+                                        <form action="/admin/jobs/<%= job._id %>/remove-approved" method="POST">
+                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Remove this approved job listing?');">
+                                                <i class="fas fa-trash"></i> Remove Approved
+                                            </button>
+                                        </form>
+                                    <% } else { %>
+                                        <form action="/admin/jobs/<%= job._id %>/activate" method="POST">
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="fas fa-check"></i> Activate
+                                            </button>
+                                        </form>
+                                        <form action="/admin/jobs/<%= job._id %>/delete" method="POST">
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    <% } %>
                                 </div>
                             </td>
                         </tr>

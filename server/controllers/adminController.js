@@ -672,6 +672,60 @@ exports.deleteJob = async (req, res) => {
 	}
 };
 
+exports.removeApprovedJob = async (req, res) => {
+	const jobId = req.params.id;
+
+	const respond = (statusCode, payload, redirectQuery) => {
+		if (wantsJson(req)) {
+			return res.status(statusCode).json(payload);
+		}
+		const suffix = redirectQuery ? `?${redirectQuery}` : '';
+		return res.redirect(`${ADMIN_REVIEW_ROUTE}${suffix}`);
+	};
+
+	if (!isValidObjectId(jobId)) {
+		return respond(400, { success: false, message: 'Invalid job id.' }, 'error=invalid-id');
+	}
+
+	if (isDemo(req)) {
+		return respond(403, { success: false, message: 'Demo admins cannot remove approved jobs.' }, 'error=demo');
+	}
+
+	try {
+		const job = await Job.findById(jobId).lean();
+
+		if (!job) {
+			return respond(404, { success: false, message: 'Job not found.' }, 'error=not-found');
+		}
+
+		if (!job.isActive) {
+			return respond(
+				400,
+				{ success: false, message: 'Only approved jobs can be removed with this action.' },
+				'error=not-approved'
+			);
+		}
+
+		await Job.deleteOne({ _id: jobId });
+
+		if (job.postedBy) {
+			await CompanyProfile.updateOne(
+				{ user: job.postedBy },
+				{ $pull: { jobsPosted: job._id } }
+			);
+		}
+
+		return respond(
+			200,
+			{ success: true, message: 'Approved job removed successfully.', jobId: job._id },
+			'status=deleted'
+		);
+	} catch (error) {
+		console.error('Admin remove approved job error:', error);
+		return respond(500, { success: false, message: 'Failed to remove approved job.' }, 'error=server');
+	}
+};
+
 exports.getStudentsPage = async (req, res) => {
 	try {
 		const students = await User.find({ role: 'student' })

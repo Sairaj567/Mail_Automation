@@ -17,6 +17,8 @@ router.post('/jobs/:id/activate', requireAdmin, adminController.activateJob);
 // Optional delete endpoints (supports both DELETE requests and POST fallbacks)
 router.delete('/jobs/:id', requireAdmin, adminController.deleteJob);
 router.post('/jobs/:id/delete', requireAdmin, adminController.deleteJob);
+router.delete('/jobs/:id/remove-approved', requireAdmin, adminController.removeApprovedJob);
+router.post('/jobs/:id/remove-approved', requireAdmin, adminController.removeApprovedJob);
 
 // Placeholder routes for other admin pages
 router.get('/students', requireAdmin, adminController.getStudentsPage);
