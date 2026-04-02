@@ -26,7 +26,7 @@ Colleges receive many emails (Immediate Joining, Campus Drives, Internships, Hac
 - Set `SESSION_SECRET` (required; server exits on startup if missing)
 - Set `N8N_JOB_APPLICATION_WEBHOOK_URL` (example: `http://localhost:5678/webhook/job-application`) if you want student applications to trigger the sheet-maker workflow
 - Optional: set `N8N_MAIL_SHEET_MAKER_WEBHOOK_URL` if admin job activation should also trigger the sheet-maker workflow (falls back to `N8N_JOB_APPLICATION_WEBHOOK_URL`)
-- Optional: set `APP_BASE_URL` (example: `http://localhost:3345`) so resume links sent to n8n are fully qualified
+- Optional: set `APP_BASE_URL=http://140.245.23.142:3345` so resume links sent to n8n are fully qualified and use the public server address
 - Optional: set `N8N_RESUME_DRIVE_WEBHOOK_URL` (example: `http://localhost:5678/webhook/resume-drive-upload`) to upload resumes to Google Drive before sheet sync; this webhook should return a Drive URL in one of: `resume_drive_link`, `drive_link`, `drive_url`, or `url`
 - Install dependencies with `npm install`
 - Start server with `npm run dev` (or `npm start`)

@@ -37,6 +37,7 @@ const STATUS_DISPLAY = Object.values(STATUS_VIEW);
 
 const APPLICATION_WEBHOOK_URL = process.env.N8N_JOB_APPLICATION_WEBHOOK_URL || '';
 const RESUME_DRIVE_WEBHOOK_URL = process.env.N8N_RESUME_DRIVE_WEBHOOK_URL || '';
+const DEFAULT_PUBLIC_BASE_URL = 'http://140.245.23.142:3345';
 
 
 const isDemo = (req) => Boolean(req.session?.user?.isDemo);
@@ -123,7 +124,22 @@ const getPublicBaseUrl = (req) => {
     return configured.replace(/\/+$/, '');
   }
 
-  return `${req.protocol}://${req.get('host')}`;
+  const requestHost = typeof req?.get === 'function' ? req.get('host') : '';
+  const normalizedHost = typeof requestHost === 'string' ? requestHost.trim().toLowerCase() : '';
+
+  if (
+    !normalizedHost ||
+    normalizedHost === 'localhost' ||
+    normalizedHost.startsWith('localhost:') ||
+    normalizedHost === '127.0.0.1' ||
+    normalizedHost.startsWith('127.0.0.1:') ||
+    normalizedHost === '[::1]' ||
+    normalizedHost.startsWith('[::1]:')
+  ) {
+    return DEFAULT_PUBLIC_BASE_URL;
+  }
+
+  return `${req.protocol}://${requestHost}`;
 };
 
 const buildResumeUrl = (req, resumeFilename) => {
