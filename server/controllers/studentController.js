@@ -124,22 +124,7 @@ const getPublicBaseUrl = (req) => {
     return configured.replace(/\/+$/, '');
   }
 
-  const requestHost = typeof req?.get === 'function' ? req.get('host') : '';
-  const normalizedHost = typeof requestHost === 'string' ? requestHost.trim().toLowerCase() : '';
-
-  if (
-    !normalizedHost ||
-    normalizedHost === 'localhost' ||
-    normalizedHost.startsWith('localhost:') ||
-    normalizedHost === '127.0.0.1' ||
-    normalizedHost.startsWith('127.0.0.1:') ||
-    normalizedHost === '[::1]' ||
-    normalizedHost.startsWith('[::1]:')
-  ) {
-    return DEFAULT_PUBLIC_BASE_URL;
-  }
-
-  return `${req.protocol}://${requestHost}`;
+  return DEFAULT_PUBLIC_BASE_URL;
 };
 
 const buildResumeUrl = (req, resumeFilename) => {
