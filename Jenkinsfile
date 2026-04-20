@@ -9,6 +9,7 @@ pipeline {
 
     parameters {
         booleanParam(name: 'SKIP_TESTS', defaultValue: true, description: 'Skip npm test during deployment')
+        booleanParam(name: 'USE_JENKINS_CREDENTIALS', defaultValue: true, description: 'Build .env from Jenkins credentials. Disable only if .env is already provisioned on the Jenkins workspace/agent.')
         string(name: 'APP_NAME', defaultValue: 'mail-automation', description: 'Process name used by PM2')
         string(name: 'APP_PORT', defaultValue: '3345', description: 'Port used by health check endpoint')
         string(name: 'APP_BASE_URL', defaultValue: 'http://localhost:3345', description: 'Public base URL used in webhook payloads')
@@ -41,15 +42,18 @@ pipeline {
 
         stage('Prepare Runtime Environment') {
             steps {
-                withCredentials([
-                    string(credentialsId: 'placement-session-secret', variable: 'SESSION_SECRET'),
-                    string(credentialsId: 'placement-mongodb-uri', variable: 'MONGODB_URI'),
-                    string(credentialsId: 'placement-n8n-webhook-secret', variable: 'N8N_WEBHOOK_SECRET'),
-                    string(credentialsId: 'placement-n8n-job-application-url', variable: 'N8N_JOB_APPLICATION_WEBHOOK_URL')
-                ]) {
-                    sh '''
-                        set -e
-                        cat > .env <<EOF
+                script {
+                    if (params.USE_JENKINS_CREDENTIALS) {
+                        try {
+                            withCredentials([
+                                string(credentialsId: 'placement-session-secret', variable: 'SESSION_SECRET'),
+                                string(credentialsId: 'placement-mongodb-uri', variable: 'MONGODB_URI'),
+                                string(credentialsId: 'placement-n8n-webhook-secret', variable: 'N8N_WEBHOOK_SECRET'),
+                                string(credentialsId: 'placement-n8n-job-application-url', variable: 'N8N_JOB_APPLICATION_WEBHOOK_URL')
+                            ]) {
+                                sh '''
+                                    set -e
+                                    cat > .env <<EOF
 PORT=${APP_PORT}
 NODE_ENV=production
 SESSION_SECRET=${SESSION_SECRET}
@@ -59,7 +63,22 @@ N8N_JOB_APPLICATION_WEBHOOK_URL=${N8N_JOB_APPLICATION_WEBHOOK_URL}
 N8N_RESUME_DRIVE_WEBHOOK_URL=${N8N_RESUME_DRIVE_WEBHOOK_URL}
 APP_BASE_URL=${APP_BASE_URL}
 EOF
-                    '''
+                                '''
+                            }
+                        } catch (err) {
+                            echo 'Failed to read Jenkins credentials. Check credential IDs: placement-session-secret, placement-mongodb-uri, placement-n8n-webhook-secret, placement-n8n-job-application-url.'
+                            echo 'Falling back to existing .env in workspace/agent...'
+                            sh '''
+                                set -e
+                                test -f .env || (echo '.env not found and credentials lookup failed.' && exit 1)
+                            '''
+                        }
+                    } else {
+                        sh '''
+                            set -e
+                            test -f .env || (echo 'USE_JENKINS_CREDENTIALS=false but .env is missing.' && exit 1)
+                        '''
+                    }
                 }
             }
         }
