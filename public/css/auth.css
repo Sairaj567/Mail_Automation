@@ -278,6 +278,51 @@ body {
     font-size: 1rem;
 }
 
+.password-guidance {
+    background: #f8faff;
+    border: 1px solid #d9e2ff;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    margin-top: -0.5rem;
+}
+
+.password-guidance-title {
+    font-size: 0.9rem;
+    color: var(--text-dark);
+    font-weight: 600;
+    margin-bottom: 0.45rem;
+}
+
+.password-rules {
+    list-style: none;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.password-rules li {
+    font-size: 0.85rem;
+    color: var(--dark-gray);
+    position: relative;
+    padding-left: 1.2rem;
+}
+
+.password-rules li::before {
+    content: 'x';
+    position: absolute;
+    left: 0;
+    color: var(--error);
+    font-weight: 700;
+}
+
+.password-rules li.is-valid {
+    color: #0f766e;
+}
+
+.password-rules li.is-valid::before {
+    content: '✓';
+    color: var(--success);
+}
+
 .form-options {
     display: flex;
     justify-content: space-between;

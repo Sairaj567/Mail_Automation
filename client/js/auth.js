@@ -22,81 +22,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Login Form handling
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
-        loginForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            
-            // Basic validation
-            if (!validateEmail(email)) {
-                showAlert('Please enter a valid email address', 'error');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showAlert('Password must be at least 6 characters long', 'error');
-                return;
-            }
-            
-            // Submit login form
-            submitLogin(email, password);
-        });
+        // Login form submit is handled by the unified FormData handler below.
     }
     
     // Signup Form handling
     const signupForm = document.getElementById('signupForm');
     if (signupForm) {
-        signupForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const fullName = document.getElementById('fullName').value;
-            const email = document.getElementById('email').value;
-            const college = document.getElementById('college').value;
-            const course = document.getElementById('course').value;
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const agreeTerms = document.getElementById('agreeTerms').checked;
-            
-            // Validation
-            if (fullName.trim().length < 2) {
-                showAlert('Please enter your full name', 'error');
-                return;
-            }
-            
-            if (!validateEmail(email)) {
-                showAlert('Please enter a valid email address', 'error');
-                return;
-            }
-            
-            if (college.trim().length < 2) {
-                showAlert('Please enter your college/university', 'error');
-                return;
-            }
-            
-            if (course.trim().length < 2) {
-                showAlert('Please enter your course/degree', 'error');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showAlert('Password must be at least 6 characters long', 'error');
-                return;
-            }
-            
-            if (password !== confirmPassword) {
-                showAlert('Passwords do not match', 'error');
-                return;
-            }
-            
-            if (!agreeTerms) {
-                showAlert('Please agree to the Terms & Conditions', 'error');
-                return;
-            }
-            
-            // Submit signup form
-            submitSignup(fullName, email, college, course, password);
-        });
+        // Signup form submit is handled by the unified FormData handler below.
     }
     
     // Social login buttons
@@ -129,6 +61,37 @@ document.addEventListener('DOMContentLoaded', function() {
 function validateEmail(email) {
     const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());
+}
+
+function evaluatePasswordRequirements(password) {
+    const value = password || '';
+    return {
+        length: value.length >= 12,
+        uppercase: /[A-Z]/.test(value),
+        lowercase: /[a-z]/.test(value),
+        number: /[0-9]/.test(value),
+        special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(value),
+    };
+}
+
+function setupPasswordGuidance(form) {
+    const passwordInput = form.querySelector('input[name="password"]');
+    const guidance = form.querySelector('#passwordGuidance');
+
+    if (!passwordInput || !guidance) {
+        return;
+    }
+
+    const updateRules = () => {
+        const requirements = evaluatePasswordRequirements(passwordInput.value);
+        guidance.querySelectorAll('[data-rule]').forEach((item) => {
+            const isValid = Boolean(requirements[item.dataset.rule]);
+            item.classList.toggle('is-valid', isValid);
+        });
+    };
+
+    passwordInput.addEventListener('input', updateRules);
+    updateRules();
 }
 
 function showAlert(message, type) {
@@ -279,6 +242,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Signup form
     const signupForm = document.getElementById('signupForm');
     if (signupForm) {
+        setupPasswordGuidance(signupForm);
+
         signupForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const formData = new FormData(this);
@@ -295,8 +260,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (data.password.length < 6) {
-                showAlert('Password must be at least 6 characters long', 'error');
+            const requirements = evaluatePasswordRequirements(data.password);
+            const unmetRules = [];
+            if (!requirements.length) unmetRules.push('at least 12 characters');
+            if (!requirements.uppercase) unmetRules.push('an uppercase letter');
+            if (!requirements.lowercase) unmetRules.push('a lowercase letter');
+            if (!requirements.number) unmetRules.push('a number');
+            if (!requirements.special) unmetRules.push('a special character');
+
+            if (unmetRules.length > 0) {
+                showAlert(`Password must include ${unmetRules.join(', ')}`, 'error');
                 return;
             }
             
