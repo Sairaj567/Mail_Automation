@@ -9,6 +9,9 @@ const helmet = require('helmet'); // For security headers
 const morgan = require('morgan'); // For request logging
 const cookieParser = require('cookie-parser'); // If needed, though session handles cookies
 const expressLayouts = require('express-ejs-layouts'); // Import express-ejs-layouts
+const rateLimit = require('express-rate-limit'); // Rate limiting
+const csrf = require('csurf'); // CSRF protection
+const xss = require('xss'); // XSS protection
 const User = require('./models/User');
 require('dotenv').config(); // Load environment variables from .env file
 
@@ -34,15 +37,13 @@ app.use(morgan('dev'));
 app.use(express.json()); // For parsing application/json
 app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
 
-// Cookie Parser (if needed separately from session)
+// Cookie Parser (needed for CSRF token)
 app.use(cookieParser());
 
 // Static Files Setup
 // Serve files from 'public' directory at the root URL
 app.use(express.static(path.join(__dirname, '../public')));
-// Serve specific client-side assets from 'client' directory under specific paths
-// Ensure these point to the correct directories if you reorganized
-app.use('/css', express.static(path.join(__dirname, '../client/css')));
+// Serve client-side JavaScript assets from 'client' directory
 app.use('/js', express.static(path.join(__dirname, '../client/js')));
 // If you have images in client/images:
 // app.use('/images', express.static(path.join(__dirname, '../client/images')));
@@ -64,6 +65,35 @@ app.use(session({
     }
 }));
 
+// --- Security Middleware ---
+
+// CSRF protection middleware (use session-based CSRF tokens)
+const csrfProtection = csrf({ cookie: false }); // Use session instead of cookies
+
+// Input sanitization middleware
+const sanitizeInputs = (req, res, next) => {
+    if (req.body && typeof req.body === 'object') {
+        // Recursively sanitize all string values in request body
+        const sanitize = (obj) => {
+            for (const key in obj) {
+                if (typeof obj[key] === 'string') {
+                    // XSS sanitization
+                    obj[key] = xss(obj[key], {
+                        whiteList: {},
+                        stripIgnoreTag: true,
+                    });
+                } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    sanitize(obj[key]);
+                }
+            }
+        };
+        sanitize(req.body);
+    }
+    next();
+};
+
+// Apply input sanitization to all requests
+app.use(sanitizeInputs);
 
 // --- View Engine Setup ---
 app.use(expressLayouts); // Use express-ejs-layouts
@@ -71,10 +101,11 @@ app.set('layout', false); // Views are full-page templates; avoid wrapping with 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 
-// Middleware to pass user session data to all views
+// Middleware to pass user session data and CSRF token to all views
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null; // Make user available in EJS templates
     res.locals.currentPath = req.path;
+    res.locals.csrfToken = req.csrfToken; // Make CSRF token available in templates
   next();
 });
 

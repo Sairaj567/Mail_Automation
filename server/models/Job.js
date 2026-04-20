@@ -54,4 +54,10 @@ const jobSchema = new mongoose.Schema({
     }
 });
 
+// Indexes for performance optimization
+jobSchema.index({ postedBy: 1 });
+jobSchema.index({ isActive: 1 });
+jobSchema.index({ postedBy: 1, isActive: 1 });
+jobSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Job', jobSchema);

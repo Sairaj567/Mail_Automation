@@ -1,88 +1,93 @@
 # Copilot Instructions for Mail_Automation
 
-These reminders keep AI agents productive in this repo. Focus on the running Express + EJS + Mongoose stack; Prisma + Postgres files under `docs/` and `prisma/` describe a future path only.
+These reminders keep agents productive in this repository. The active stack is Express + EJS + Mongoose.
 
 ## Agent operating mode
 - Prefer small, targeted edits over broad rewrites.
-- Preserve existing route/controller patterns, response formats, and guards.
-- Validate assumptions in existing code before adding new fields, enums, or relationships.
+- Validate assumptions in code before introducing new fields, enums, or relationships.
+- Preserve existing route/controller patterns, response formats, and role guards.
 - When uncertain, follow behavior already implemented in sibling routes/controllers.
 
-## Current architecture
-- Entrypoint: `server/server.js` wires Express 5, Mongo-backed sessions, static mounts, and global EJS config. Ignore `server/app.js`; it’s legacy scaffolding.
-- Static assets live in `public/` (served at `/`), `client/css|js` (served at `/css` and `/js`), and user uploads under `public/uploads/{resumes,cover-letters,company-logos}`.
-- Layouts and pages: `views/layouts/main.ejs` wraps `views/pages/{auth|student|company|admin}/**`. Rendered views should receive the session user (already exposed via `res.locals.user`).
+## Current architecture (verified)
+- Entrypoint is `server/server.js`. Treat `server/app.js` as legacy scaffolding.
+- Static mounts in `server/server.js` are:
+  - `public/` at `/`
+  - `client/js` at `/js`
+  - `public/uploads` at `/uploads`
+- Do not assume a `/css` mount from `client/css`; CSS is served via `public/`.
+- `express-ejs-layouts` is imported, but `app.set('layout', false)` is active, so views currently render as full-page templates.
+- `res.locals.user` and `res.locals.currentPath` are set globally.
 
-## Routing & controllers
-- Route files end with `*Routes.js` in `server/routers/`; they own session/role guards (`requireStudent`, `requireCompany`) and `multer` setups.
-- Controllers in `server/controllers/` render EJS or reply JSON. JSON handlers follow `{ success, message, redirectTo? }` (see `authController`).
-- The global error + 404 handlers in `server/server.js` return JSON for API routes (`/api/**`) and requests that explicitly accept JSON (`Accept: application/json`, XHR). Page routes should render EJS error pages.
-- Prefer delegating heavy logic to controllers instead of anonymous route handlers; several routes still mix both, so align new work with the controller pattern.
+## Security and middleware status (verified)
+- `helmet`, `morgan`, body parsers, cookie parser, and recursive XSS sanitization are active in `server/server.js`.
+- Auth rate limiting is active in `server/routers/authRoutes.js` (5 requests per 15 minutes for POST auth endpoints).
+- `csurf` is installed/imported but not globally enforced in routing. Verify actual middleware wiring before adding CSRF-dependent assumptions.
 
-## Data models & conventions
-- Mongoose models live in `server/models/`. Key shapes:
-  - `Job`: `company` stores the display name, `postedBy` references the owning `User`, `jobType` enum is `['internship','full-time','part-time','remote']`, `experienceLevel` is `['fresher','0-2','2-5','5+']`.
-  - `Application`: embeds `personalInfo`, `education`, document filenames (`resume`, `coverLetterFile`), and status enum `['applied','under_review','shortlisted','interview','rejected','accepted']`.
-  - `StudentProfile`: tracks `resume`, `skills`, `savedJobs` (Job ObjectIds), and `profileCompletion`.
-  - `CompanyProfile`: stores company metadata plus optional `jobsPosted` list.
-  - `User`: passwords hash in a `pre('save')`; call `user.comparePassword()` during auth.
-- Normalize multiline/comma-delimited text fields into arrays (see `companyController.postJob`).
-- Stick to `Job.postedBy` for joins; avoid adding alternative relationship fields.
+## Routing and controller conventions
+- Route files are under `server/routers/` and include role/session guards.
+- Controllers in `server/controllers/` handle both EJS renders and JSON responses.
+- Global error and 404 handlers in `server/server.js` return JSON for `/api/**`, XHR, or `Accept: application/json`; otherwise they render EJS error pages.
+- Keep heavy business logic in controllers when possible, but note that some company routes still use inline route handlers.
+
+## Data model conventions
+- Mongoose models live in `server/models/`.
+- Use `Job.postedBy` for ownership joins.
+- Preserve existing enums and field names in `Job`, `Application`, `StudentProfile`, `CompanyProfile`, and `User`.
+- `User` password hashing is model-driven (`pre('save')`); use `user.comparePassword()` for auth checks.
+
+## File uploads (latest behavior)
+- Student apply route (`/student/apply-job`) in `server/routers/studentRoutes.js` uses memory upload + magic-byte validation via `file-type`.
+- Student upload middleware writes files using an atomic temp-file then rename flow to reduce race-condition risk.
+- Current apply-job middleware writes uploaded files to `public/uploads/resumes`.
+- Company logo uploads use disk storage in `server/routers/companyRoutes.js` at `public/uploads/company-logos` and accept `image/*` up to 5MB.
+- Preserve filename-only persistence in MongoDB; served files should remain under `public/uploads/**`.
+
+## Logging (latest behavior)
+- Structured logger lives in `server/config/logger.js` (Winston, file + console transports).
+- Student upload and application flows use this logger.
+- Other modules still use `console.*` in places; align to logger incrementally rather than rewriting everything at once.
+
+## Integrations and automation
+- n8n routes are mounted at `/api/n8n` in `server/routers/n8nRoutes.js`.
+- Company profile/job ingestion handlers are in `companyController`.
+- Student application sync in `studentController.applyForJob` can call:
+  - `N8N_RESUME_DRIVE_WEBHOOK_URL`
+  - `N8N_JOB_APPLICATION_WEBHOOK_URL`
+- Resume URL payloads can be built from `APP_BASE_URL` when set.
 
 ## Sessions, roles, and demo mode
-- Sessions use `express-session` + `connect-mongo`; `req.session.user` looks like `{ id, email, name, role, isDemo? }`.
-- Demo users are detected via `req.session.user.isDemo` or `!mongoose.Types.ObjectId.isValid(id)`. Controllers often short-circuit to canned data or block writes for demos—preserve that behavior for new flows.
-- Role checks live beside each router; failed access should redirect to `/auth/login?role=…`.
-
-## File uploads & assets
-- `studentRoutes.js` configures `multer` `upload.fields([{name:'resume'},{name:'coverLetterFile'}])` writing to `public/uploads/resumes` and `public/uploads/cover-letters` (PDF/DOC/DOCX only, 5 MB cap).
-- `companyRoutes.js` sets up logo uploads to `public/uploads/company-logos`; reuse that storage pattern for new image fields.
-- Persisted filenames are later served from `/uploads/...`; ensure new uploads land in `public/uploads` so EJS templates can link them.
-- Job apply supports resume fallback: if `resume` is not uploaded in the application form, `studentController.applyForJob` reuses `StudentProfile.resume`. Only block when neither exists.
-
-## Integrations & automation
-- n8n webhook endpoints live under `/api/n8n` (`server/routers/n8nRoutes.js`). `companyController.handleN8nCompanyUpdate` checks `x-webhook-secret` (or `x-n8n-secret`) against `process.env.N8N_WEBHOOK_SECRET`, then creates/updates a `User` + `CompanyProfile` and hashes a temp password.
-- Student application sync is triggered from `studentController.applyForJob`:
-  - `N8N_RESUME_DRIVE_WEBHOOK_URL` (optional) uploads resume to Drive and may return a link (`resume_drive_link`, `drive_link`, `drive_url`, or `url`).
-  - `N8N_JOB_APPLICATION_WEBHOOK_URL` receives final payload for sheet sync.
-  - `resume_url` sent to sheet-maker is the Drive link when available, otherwise falls back to the local `/uploads/resumes/...` URL.
-- `server/config/{db,mailer,session}.js` are placeholders; real configuration is inline in `server/server.js`.
-
-## Student apply and resume analytics
-- Apply forms should prefill from session/profile data (`fullName`, `email`, `phone`, `college`, `course`, `graduationYear`, `cgpa`, `skills`) so users do not repeatedly enter the same fields.
-- Job details view uses a `quickApplyConfig` object. Treat `canQuickApply` as the source of truth for enabling one-click apply UX.
-- Resume analytics are mixed-source by design: `applicationCount` and `shortlistedCount` are live counts, while `profileMatchScore` is an estimate, and views are currently untracked.
+- Session storage uses `express-session` + `connect-mongo`.
+- Typical session shape: `{ id, email, name, role, isDemo? }`.
+- Preserve demo-mode restrictions for write actions.
+- Role failures should redirect to `/auth/login?role=<role>`.
 
 ## Local workflows
-- Required env vars: `SESSION_SECRET` (server exits if missing). `MONGODB_URI` is optional and defaults to `mongodb://localhost:27017/placement_portal`.
-- Optional env vars: `PORT`, `N8N_WEBHOOK_SECRET`.
-- Optional integration env vars:
-  - `N8N_JOB_APPLICATION_WEBHOOK_URL` for student application sheet sync.
-  - `N8N_MAIL_SHEET_MAKER_WEBHOOK_URL` for admin activation sync (falls back to application webhook).
-  - `N8N_RESUME_DRIVE_WEBHOOK_URL` for resume upload to Google Drive before sheet sync.
-  - `APP_BASE_URL` to generate fully-qualified resume URLs for webhook payloads.
-- Setup: `npm install`, then `npm run dev` (nodemon) or `npm start` (plain node).
-- Seed demo jobs (overwrites `Job` collection): `npm run seed`.
-- Automated tests exist and run with `npm test` (`node --test`). Add or update tests for controller/webhook behavior when changing integrations.
+- Required env var: `SESSION_SECRET` (server exits if missing).
+- Optional env vars: `MONGODB_URI`, `PORT`, `N8N_WEBHOOK_SECRET`, `N8N_JOB_APPLICATION_WEBHOOK_URL`, `N8N_MAIL_SHEET_MAKER_WEBHOOK_URL`, `N8N_RESUME_DRIVE_WEBHOOK_URL`, `APP_BASE_URL`, `LOG_LEVEL`.
+- Common commands:
+  - `npm install`
+  - `npm run dev`
+  - `npm start`
+  - `npm run seed`
+  - `npm test`
 
-## Fast file map (where to change what)
-- Auth/session behavior: `server/controllers/authController.js`, `server/routers/authRoutes.js`, `server/middleware/auth.js`.
-- Student features: `server/controllers/studentController.js`, `server/routers/studentRoutes.js`, `views/pages/student/**`.
-- Company features: `server/controllers/companyController.js`, `server/routers/companyRoutes.js`, `views/pages/company/**`.
-- Admin features: `server/controllers/adminController.js`, `server/routers/adminRoutes.js`, `views/pages/admin/**`.
-- Shared UI shell: `views/layouts/main.ejs`, shared partials under `views/partials/**`.
-- Styling/scripts: prefer existing split between `public/css` and `client/css|js` mounts used by `server/server.js`.
+## Fast file map
+- Auth/session: `server/controllers/authController.js`, `server/routers/authRoutes.js`, `server/middleware/auth.js`
+- Student: `server/controllers/studentController.js`, `server/routers/studentRoutes.js`, `views/pages/student/**`
+- Company: `server/controllers/companyController.js`, `server/routers/companyRoutes.js`, `views/pages/company/**`
+- Admin: `server/controllers/adminController.js`, `server/routers/adminRoutes.js`, `views/pages/admin/**`
+- Shared layout/partials: `views/layouts/**`, `views/partials/**`
 
-## Implementation checklist for new features
+## Implementation checklist
 1. Add/adjust route in `server/routers/*Routes.js` with correct auth/role middleware.
-2. Keep business logic in the matching controller.
-3. Reuse existing JSON contract: `{ success, message, redirectTo? }`.
+2. Keep business logic in the matching controller unless existing route patterns require inline handling.
+3. Reuse established JSON response style (`{ success, message, ... }`) used in that feature area.
 4. Respect demo-mode restrictions for write actions.
-5. If adding uploads, store under `public/uploads/...` and persist filename only.
-6. Render EJS from `views/pages/...` and rely on `res.locals.user` for session context.
+5. Keep uploads inside `public/uploads/...` and persist only filenames.
+6. Render from `views/pages/...` and rely on `res.locals.user` for session context.
 
 ## Do / Don’t
-- Do render pages from `views/pages/...` and rely on `res.locals.user` inside templates.
-- Do mirror the existing JSON response contract and error handling prefixes when adding APIs.
-- Don’t resurrect the Prisma/Postgres runtime or edit `server/app.js` unless explicitly working on the Docker/Prisma deployment track in `docs/`.
-- Don’t bypass demo-mode guardrails or role checks—use the established helpers for new routes.
+- Do verify runtime behavior directly in current code before changing middleware assumptions.
+- Do preserve role checks and response formats in each router/controller area.
+- Don’t reintroduce stale assumptions about placeholder config modules under `server/config`.
+- Don’t edit legacy `server/app.js` unless explicitly requested.

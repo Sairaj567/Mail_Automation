@@ -34,4 +34,7 @@ studentProfileSchema.virtual('applicationCount').get(function() {
     return this.$locals?.applicationCount ?? 0;
 });
 
+// Indexes for performance optimization
+studentProfileSchema.index({ user: 1 });
+
 module.exports = mongoose.model('StudentProfile', studentProfileSchema);

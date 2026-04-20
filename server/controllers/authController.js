@@ -3,6 +3,27 @@ const User = require('../models/User');
 const StudentProfile = require('../models/StudentProfile');
 const CompanyProfile = require('../models/CompanyProfile');
 
+// Security: Password validation
+const validatePassword = (password) => {
+  const errors = [];
+  if (!password || password.length < 12) {
+    errors.push('Password must be at least 12 characters long');
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('Password must contain at least one special character (!@#$%^&* etc)');
+  }
+  return errors;
+};
+
 const buildSessionUser = (user) => ({
   id: user._id,
   email: user.email,
@@ -151,6 +172,16 @@ const studentSignup = async (req, res) => {
   try {
     const { name, email, password, college, course } = req.body;
 
+    // Validate password strength
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password does not meet security requirements',
+        errors: passwordErrors
+      });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -187,6 +218,16 @@ const studentSignup = async (req, res) => {
 const companySignup = async (req, res) => {
   try {
     const { name, email, password, companyName, industry } = req.body;
+
+    // Validate password strength
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password does not meet security requirements',
+        errors: passwordErrors
+      });
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {

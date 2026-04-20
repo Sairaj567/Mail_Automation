@@ -1,6 +1,20 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
+
+// Rate limiting for authentication endpoints (prevent brute force attacks)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 requests per IP per window
+    message: 'Too many authentication attempts. Please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => {
+        // Skip rate limiting for GET requests (non-authentication)
+        return req.method === 'GET';
+    }
+});
 
 // Role selection page
 router.get('/', (req, res) => {
@@ -27,8 +41,8 @@ router.get('/signup', (req, res) => {
     });
 });
 
-// Handle login based on role
-router.post('/login', (req, res) => {
+// Handle login based on role (with rate limiting)
+router.post('/login', authLimiter, (req, res) => {
     const { role } = req.body;
     
     if (role === 'company') {
@@ -40,8 +54,8 @@ router.post('/login', (req, res) => {
     }
 });
 
-// Handle signup based on role
-router.post('/signup', (req, res) => {
+// Handle signup based on role (with rate limiting)
+router.post('/signup', authLimiter, (req, res) => {
     const { role } = req.body;
     
     if (role === 'company') {
@@ -56,8 +70,8 @@ router.post('/signup', (req, res) => {
     }
 });
 
-// Handle demo login
-router.post('/demo-login', authController.demoLogin);
+// Handle demo login (with rate limiting)
+router.post('/demo-login', authLimiter, authController.demoLogin);
 
 // Logout
 router.post('/logout', authController.logout);

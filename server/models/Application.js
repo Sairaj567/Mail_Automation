@@ -103,4 +103,11 @@ const applicationSchema = new mongoose.Schema({
     }]
 });
 
+// Indexes for performance optimization
+applicationSchema.index({ student: 1 });
+applicationSchema.index({ job: 1 });
+applicationSchema.index({ job: 1, status: 1 });
+applicationSchema.index({ student: 1, appliedDate: -1 });
+applicationSchema.index({ status: 1 });
+
 module.exports = mongoose.model('Application', applicationSchema);

@@ -1,7 +1,7 @@
 {
   "name": "placement_portal",
   "version": "1.0.0",
-  "description": "Placement portal monolith (Express + EJS + Mongoose). Prisma included for Docker/Prisma deployment path only.",
+  "description": "Placement portal monolith (Express + EJS + Mongoose) with secure webhook integration and role-based access control.",
   "private": true,
   "scripts": {
     "start": "node server/server.js",
@@ -15,31 +15,30 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^6.17.1",
     "bcryptjs": "^3.0.2",
     "connect-mongo": "^5.1.0",
     "cookie-parser": "^1.4.7",
+    "csurf": "^1.11.0",
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "express-ejs-layouts": "^2.5.1",
+    "express-rate-limit": "^7.5.1",
     "express-session": "^1.18.2",
     "express-validator": "^7.2.1",
+    "file-type": "^18.7.0",
     "helmet": "^8.1.0",
     "mongoose": "^8.19.0",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.6",
-    "pdfkit": "^0.17.2"
+    "pdfkit": "^0.17.2",
+    "winston": "^3.19.0",
+    "xss": "^1.0.15"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/node": "^24.5.2",
     "nodemon": "^3.1.7",
-    "prisma": "^6.17.1",
-    "supertest": "^7.2.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "supertest": "^7.2.2"
   }
 }

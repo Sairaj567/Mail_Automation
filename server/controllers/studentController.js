@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose'); // Make sure mongoose is required if not already global
+const logger = require('../config/logger');
 
 // Import Mongoose models
 const Job = require('../models/Job');
@@ -632,17 +633,21 @@ exports.getJobDetails = async (req, res) => {
 // --- Update applyForJob to use Mongoose ---
 exports.applyForJob = async (req, res) => {
   try {
+    const studentId = req.session.user?.id;
+    
     if (isDemo(req)) {
+      logger.warn('Demo user attempted to apply for job', { studentId });
       return res.json({
         success: false,
         message: 'Please create a real account to apply for jobs.'
       });
     }
 
-    const studentId = req.session.user.id;
     const jobId = req.body.jobId;
+    logger.info('Student job application initiated', { studentId, jobId });
 
     if (!isValidObjectId(jobId)) {
+        logger.warn('Invalid job ID format', { studentId, jobId });
         return res.json({ success: false, message: 'Invalid job selected' });
     }
 
@@ -656,6 +661,7 @@ exports.applyForJob = async (req, res) => {
      if (req.files) {
          if (req.files.resume && req.files.resume[0]) {
              resumeFilename = req.files.resume[0].filename;
+             logger.info('Resume file uploaded', { studentId, resumeFilename });
              // Optionally update the profile with the new resume
              if (studentProfile) {
                  studentProfile.resume = resumeFilename;
@@ -663,6 +669,7 @@ exports.applyForJob = async (req, res) => {
              }
          } else if (!resumeFilename) {
              // If no resume was uploaded AND profile has no resume, return error
+             logger.warn('Application rejected: no resume available', { studentId });
              return res.json({
                  success: false,
                  message: 'Please upload your resume before applying or ensure it exists in your profile.'
@@ -670,9 +677,11 @@ exports.applyForJob = async (req, res) => {
          }
          if (req.files.coverLetterFile && req.files.coverLetterFile[0]) {
              coverLetterFilename = req.files.coverLetterFile[0].filename;
+             logger.info('Cover letter file uploaded', { studentId, coverLetterFilename });
          }
      } else if (!resumeFilename) {
           // If req.files is undefined AND profile has no resume, return error
+          logger.warn('Application rejected: no resume file or profile resume', { studentId });
           return res.json({
                  success: false,
                  message: 'Please upload your resume before applying or ensure it exists in your profile.'
@@ -686,6 +695,7 @@ exports.applyForJob = async (req, res) => {
     });
 
     if (existingApplication) {
+      logger.warn('Duplicate application attempt blocked', { studentId, jobId });
       return res.json({
         success: false,
         message: 'You have already applied for this job'
@@ -730,6 +740,7 @@ exports.applyForJob = async (req, res) => {
     if (!email) missingFields.push('email');
 
     if (missingFields.length > 0) {
+      logger.warn('Application rejected: missing required fields', { studentId, jobId, missingFields });
       return res.json({
         success: false,
         message: `Please complete your ${missingFields.join(', ')} in profile/application form before applying.`
@@ -756,6 +767,7 @@ exports.applyForJob = async (req, res) => {
     });
 
     await application.save();
+    logger.info('Application saved successfully', { studentId, jobId, applicationId: application._id });
 
     const resumeUrl = buildResumeUrl(req, resumeFilename);
     let resumeDriveSync = { uploaded: false, reason: 'not_attempted', driveLink: '' };
@@ -767,8 +779,14 @@ exports.applyForJob = async (req, res) => {
         stu_mail: pickFirstText(email, req.session?.user?.email) || '',
         resume_url: resumeUrl,
       });
+      logger.info('Resume drive webhook triggered', { studentId, jobId, result: resumeDriveSync });
     } catch (driveWebhookError) {
-      console.error('Resume Drive upload webhook failed:', driveWebhookError.message);
+      logger.error('Resume drive webhook failed', { 
+        error: driveWebhookError.message, 
+        studentId, 
+        jobId,
+        stack: driveWebhookError.stack 
+      });
       resumeDriveSync = { uploaded: false, reason: 'webhook_error', driveLink: '' };
     }
 
@@ -785,10 +803,18 @@ exports.applyForJob = async (req, res) => {
     let sheetSync = { sent: false, reason: 'not_attempted' };
     try {
       sheetSync = await triggerApplicationSheetWebhook(req, sheetPayload);
+      logger.info('Application sheet webhook triggered', { studentId, jobId, result: sheetSync });
     } catch (webhookError) {
-      console.error('Application webhook sync failed:', webhookError.message);
+      logger.error('Application sheet webhook failed', { 
+        error: webhookError.message, 
+        studentId, 
+        jobId,
+        stack: webhookError.stack 
+      });
       sheetSync = { sent: false, reason: 'webhook_error' };
     }
+
+    logger.info('Job application completed successfully', { studentId, jobId, applicationId: application._id });
 
     res.json({
       success: true,
@@ -802,7 +828,13 @@ exports.applyForJob = async (req, res) => {
       resumeDriveLink: resumeDriveSync.driveLink || null,
     });
   } catch (error) {
-    console.error('Apply job error:', error);
+    const studentId = req.session?.user?.id;
+    logger.error('Apply job error', { 
+      error: error.message, 
+      studentId,
+      stack: error.stack,
+      jobId: req.body?.jobId
+    });
     res.status(500).json({
       success: false,
       // Provide more specific error message if possible

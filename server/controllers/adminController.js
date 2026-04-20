@@ -11,6 +11,37 @@ const isDemo = (req) => Boolean(req.session?.user?.isDemo);
 const wantsJson = (req) =>
 	req.xhr || req.headers.accept?.includes('application/json') || req.headers['content-type'] === 'application/json';
 
+// Security: Input validation and sanitization
+const ALLOWED_JOB_STATUSES = ['pending', 'active', 'all'];
+const ALLOWED_MAIL_CATEGORIES = ['all', 'reply from company', 'urgent', 'competitions', 'internships', 'job opportunities'];
+const ALLOWED_MONTHS_RANGE = [1, 24]; // 1 to 24 months for reports
+
+const validateJobStatus = (status) => {
+	const normalized = (status || 'pending').toLowerCase().trim();
+	return ALLOWED_JOB_STATUSES.includes(normalized) ? normalized : 'pending';
+};
+
+const validateMailCategory = (category) => {
+	const normalized = (category || 'all').toLowerCase().trim();
+	return ALLOWED_MAIL_CATEGORIES.includes(normalized) ? normalized : 'all';
+};
+
+const sanitizeSearchQuery = (query) => {
+	if (typeof query !== 'string') return '';
+	// Remove special regex characters and limit length
+	return query.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+const validatePagination = (limit, defaultLimit = 150) => {
+	const parsed = parseInt(limit, 10);
+	return Math.min(Math.max(isNaN(parsed) ? defaultLimit : parsed, 1), 500);
+};
+
+const validateMonthsRange = (months) => {
+	const parsed = parseInt(months, 10);
+	return Math.min(Math.max(isNaN(parsed) ? 6 : parsed, ALLOWED_MONTHS_RANGE[0]), ALLOWED_MONTHS_RANGE[1]);
+};
+
 const ADMIN_REVIEW_ROUTE = '/admin/jobs/review';
 const ADMIN_MAIL_ROUTE = '/admin/mail-manager';
 const JOB_ACTIVATION_WEBHOOK_URL =
@@ -504,7 +535,7 @@ exports.getDashboard = async (req, res) => {
 
 exports.getJobsForReview = async (req, res) => {
 	try {
-		const selectedStatus = (req.query.status || 'pending').toString().toLowerCase();
+		const selectedStatus = validateJobStatus(req.query.status);
 		let filter = { $or: [{ isActive: false }, { isActive: { $exists: false } }] };
 
 		if (selectedStatus === 'active') {
@@ -546,7 +577,7 @@ exports.getJobsForReview = async (req, res) => {
 
 exports.getJobsFromMongo = async (req, res) => {
 	try {
-		const status = (req.query.status || 'all').toString().toLowerCase();
+		const status = validateJobStatus(req.query.status);
 		let filter = {};
 
 		if (status === 'pending') {
@@ -877,7 +908,7 @@ exports.getCompaniesPage = async (req, res) => {
 
 exports.getReportsPage = async (req, res) => {
 	try {
-		const selectedMonths = Math.min(Math.max(Number.parseInt(req.query.months, 10) || 6, 1), 24);
+		const selectedMonths = validateMonthsRange(req.query.months);
 		const sinceDate = new Date();
 		sinceDate.setMonth(sinceDate.getMonth() - selectedMonths + 1);
 		sinceDate.setDate(1);
@@ -1096,9 +1127,9 @@ exports.getReportsPage = async (req, res) => {
 };
 
 exports.getMailManager = async (req, res) => {
-	const selectedCategory = (req.query.category || 'all').toString().trim();
-	const searchQuery = (req.query.q || '').toString().trim();
-	const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 150, 1), 500);
+	const selectedCategory = validateMailCategory(req.query.category);
+	const searchQuery = sanitizeSearchQuery(req.query.q);
+	const limit = validatePagination(req.query.limit);
 
 	if (isDemo(req)) {
 		const demoMails = [
