@@ -97,17 +97,18 @@ EOF
                 sh '''
                     set -e
 
-                    if command -v pm2 >/dev/null 2>&1; then
-                      echo "PM2 found. Restarting managed process..."
-                      if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
-                        pm2 restart "${APP_NAME}" --update-env
-                      else
-                        pm2 start npm --name "${APP_NAME}" -- start
-                      fi
-                      pm2 save
+                                        if command -v pm2 >/dev/null 2>&1 && pm2 ping >/dev/null 2>&1; then
+                                            echo "PM2 is available. Restarting managed process..."
+                                            if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
+                                                pm2 restart "${APP_NAME}" --update-env
+                                            else
+                                                pm2 start npm --name "${APP_NAME}" -- start
+                                            fi
+                                            pm2 save || true
                     else
-                      echo "PM2 not found. Using fallback background start."
+                                            echo "PM2 is not usable in this environment. Using fallback background start."
                       pkill -f "node server/server.js" || true
+                                            pkill -f "npm -- start" || true
                       nohup npm start > app.log 2>&1 &
                     fi
                 '''
