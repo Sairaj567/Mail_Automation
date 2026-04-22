@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fileType = require('file-type');
+const { fileTypeFromBuffer } = require('file-type');
 const fs = require('fs').promises;
 const crypto = require('crypto');
 const studentController = require('../controllers/studentController');
@@ -20,22 +20,13 @@ const storage = multer.memoryStorage();
 
 const upload = multer({ 
     storage: storage,
-    fileFilter: async function (req, file, cb) {
+    fileFilter: function (req, file, cb) {
         try {
-            // Check MIME type (basic check, will be verified by magic bytes)
+            // Basic MIME gate; magic-byte verification happens in moveUploadedFiles.
             if (!ALLOWED_MIMES.includes(file.mimetype)) {
                 logger.warn(`Invalid MIME type for file upload: ${file.mimetype}`, { userId: req.session.user?.id });
                 return cb(new Error('Invalid file type. Only PDF and Word documents are allowed'), false);
             }
-            
-            // Verify actual file content using magic bytes
-            const type = await fileType.fromBuffer(file.buffer);
-            
-            if (!type || !ALLOWED_MIMES.includes(type.mime)) {
-                logger.warn(`File content does not match allowed types. Detected: ${type?.mime}`, { userId: req.session.user?.id });
-                return cb(new Error('File content does not match allowed types (PDF or Word)'), false);
-            }
-            
             cb(null, true);
         } catch (err) {
             logger.error('Error validating file type', { error: err.message, userId: req.session.user?.id });
@@ -85,6 +76,18 @@ const moveUploadedFiles = (uploadDir) => {
                 
                 for (const file of files) {
                     try {
+                        if (uploadDir === 'resumes') {
+                            const detectedType = await fileTypeFromBuffer(file.buffer);
+                            if (!detectedType || !ALLOWED_MIMES.includes(detectedType.mime)) {
+                                logger.warn('File content does not match allowed types', {
+                                    userId: req.session.user?.id,
+                                    declaredMime: file.mimetype,
+                                    detectedMime: detectedType?.mime || 'unknown'
+                                });
+                                throw new Error('File content does not match allowed types (PDF or Word)');
+                            }
+                        }
+
                         // Generate unique filename using UUID + timestamp to prevent collisions
                         const uniqueId = crypto.randomBytes(8).toString('hex');
                         const ext = path.extname(file.originalname);

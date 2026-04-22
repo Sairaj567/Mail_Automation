@@ -843,7 +843,7 @@
                                         <div class="job-actions">
                                             <button class="btn-apply" onclick="applyForJob()" <%= isDemo ? 'disabled' : '' %>>
                                                 <i class="fas fa-paper-plane"></i>
-                                                <%= quickApplyConfig?.canQuickApply ? 'Quick Apply' : 'Apply Now' %>
+                                                Apply Now
                                             </button>
 
                                             <button class="btn-save" onclick="toggleSaveJob()" <%= isDemo ? 'disabled' : '' %>>
@@ -1080,10 +1080,6 @@
 
     // Apply for job function
             function applyForJob() {
-                if (quickApplyConfig.canQuickApply) {
-                    quickApplySubmit();
-                    return;
-                }
                 document.getElementById('applySection').style.display = 'block';
                 document.getElementById('applySection').scrollIntoView({ behavior: 'smooth' });
             }
