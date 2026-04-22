@@ -296,6 +296,34 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Resume library: set primary resume
+    const primaryButtons = document.querySelectorAll('.set-primary-btn');
+    primaryButtons.forEach((btn) => {
+        btn.addEventListener('click', async function() {
+            const resumeId = this.dataset.resumeId;
+            if (!resumeId) return;
+            try {
+                const response = await fetch('/student/set-primary-resume', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ resumeId }),
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    showAlert(data.message || 'Failed to set primary resume.', 'error');
+                    return;
+                }
+                showAlert(data.message || 'Primary resume updated.', 'success');
+                setTimeout(() => window.location.reload(), 700);
+            } catch (error) {
+                console.error('Set primary resume error:', error);
+                showAlert('Failed to set primary resume.', 'error');
+            }
+        });
+    });
     
     // Resume Builder Actions
     const aiBuilderBtn = document.getElementById('aiBuilderBtn');
@@ -304,7 +332,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (aiBuilderBtn) {
         aiBuilderBtn.addEventListener('click', function() {
-            showAlert('AI Resume Builder coming soon!', 'info');
+            const buildSection = document.getElementById('buildTargetRole');
+            if (buildSection) {
+                buildSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         });
     }
     
@@ -317,6 +348,83 @@ document.addEventListener('DOMContentLoaded', function() {
     if (uploadExistingBtn) {
         uploadExistingBtn.addEventListener('click', function() {
             resumeFile.click();
+        });
+    }
+
+    // AI reviewer and builder actions
+    const runAiReviewBtn = document.getElementById('runAiReviewBtn');
+    const runAiBuildBtn = document.getElementById('runAiBuildBtn');
+    const aiReviewOutput = document.getElementById('aiReviewOutput');
+    const aiBuildOutput = document.getElementById('aiBuildOutput');
+
+    if (runAiReviewBtn) {
+        runAiReviewBtn.addEventListener('click', async () => {
+            const resumeText = document.getElementById('resumeReviewText')?.value || '';
+            const targetRole = document.getElementById('reviewTargetRole')?.value || '';
+
+            if (!resumeText.trim()) {
+                showAlert('Please paste resume text for review.', 'error');
+                return;
+            }
+
+            runAiReviewBtn.disabled = true;
+            runAiReviewBtn.textContent = 'Reviewing...';
+
+            try {
+                const response = await fetch('/student/ai/resume-review', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ resumeText, targetRole }),
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    showAlert(data.message || 'AI review failed.', 'error');
+                    return;
+                }
+                aiReviewOutput.style.display = 'block';
+                aiReviewOutput.textContent = data.review;
+            } catch (error) {
+                console.error('AI review error:', error);
+                showAlert('AI review failed.', 'error');
+            } finally {
+                runAiReviewBtn.disabled = false;
+                runAiReviewBtn.textContent = 'Run AI Review';
+            }
+        });
+    }
+
+    if (runAiBuildBtn) {
+        runAiBuildBtn.addEventListener('click', async () => {
+            const targetRole = document.getElementById('buildTargetRole')?.value || '';
+            const additionalNotes = document.getElementById('buildNotes')?.value || '';
+
+            runAiBuildBtn.disabled = true;
+            runAiBuildBtn.textContent = 'Generating...';
+
+            try {
+                const response = await fetch('/student/ai/resume-build', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ targetRole, additionalNotes }),
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    showAlert(data.message || 'AI builder failed.', 'error');
+                    return;
+                }
+                aiBuildOutput.style.display = 'block';
+                aiBuildOutput.textContent = data.generatedResume;
+            } catch (error) {
+                console.error('AI builder error:', error);
+                showAlert('AI builder failed.', 'error');
+            } finally {
+                runAiBuildBtn.disabled = false;
+                runAiBuildBtn.textContent = 'Generate Resume Draft';
+            }
         });
     }
     

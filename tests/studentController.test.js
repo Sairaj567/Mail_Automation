@@ -78,7 +78,7 @@ describe('Student Controller - Application Submission', () => {
 
         // Check if resume is present
         const hasResume = req.files && req.files.resume && req.files.resume[0];
-        assert.strictEqual(hasResume, undefined, 'Should detect missing resume');
+        assert.ok(hasResume == null, 'Should detect missing resume');
     });
 
     it('should validate required fields', () => {

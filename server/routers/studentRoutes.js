@@ -47,13 +47,26 @@ const upload = multer({
     }
 });
 
+const imageUpload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 2 * 1024 * 1024,
+    },
+    fileFilter: function (req, file, cb) {
+        if (file.mimetype && file.mimetype.startsWith('image/')) {
+            return cb(null, true);
+        }
+        return cb(new Error('Only image files are allowed'), false);
+    }
+});
+
 /**
  * Middleware to safely move uploaded files to disk with race condition protection
  * Uses atomic rename to prevent concurrent write conflicts
  */
 const moveUploadedFiles = (uploadDir) => {
     return async (req, res, next) => {
-        if (!req.files) return next();
+        if (!req.files && !req.file) return next();
         
         const baseUploadDir = path.join(__dirname, '../../public/uploads');
         const uploadPath = path.join(baseUploadDir, uploadDir);
@@ -62,9 +75,13 @@ const moveUploadedFiles = (uploadDir) => {
             // Create upload directory if it doesn't exist
             await fs.mkdir(uploadPath, { recursive: true });
             
+            const normalizedFiles = req.files
+                ? req.files
+                : (req.file ? { [req.file.fieldname || 'file']: [req.file] } : {});
+
             // Process each uploaded field
-            for (const field in req.files) {
-                const files = req.files[field];
+            for (const field in normalizedFiles) {
+                const files = normalizedFiles[field];
                 
                 for (const file of files) {
                     try {
@@ -102,6 +119,10 @@ const moveUploadedFiles = (uploadDir) => {
                         throw fileErr;
                     }
                 }
+            }
+
+            if (req.file && normalizedFiles[req.file.fieldname]?.[0]) {
+                req.file = normalizedFiles[req.file.fieldname][0];
             }
             
             next();
@@ -163,6 +184,18 @@ router.post('/upload-resume',
     moveUploadedFiles('resumes'),
     studentController.uploadResume
 );
+
+router.post('/upload-profile-image',
+    requireStudent,
+    imageUpload.single('profileImage'),
+    moveUploadedFiles('profile-images'),
+    studentController.uploadProfileImage
+);
+
+router.post('/set-primary-resume', requireStudent, studentController.setPrimaryResume);
+router.get('/resume/recommendation/:jobId', requireStudent, studentController.getRecommendedResumeForJob);
+router.post('/ai/resume-review', requireStudent, studentController.aiResumeReview);
+router.post('/ai/resume-build', requireStudent, studentController.aiResumeBuild);
 
 router.delete('/delete-resume', requireStudent, studentController.deleteResume);
 router.delete('/delete-application', requireStudent, studentController.deleteApplication);

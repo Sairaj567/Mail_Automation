@@ -7,6 +7,7 @@ const logger = require('../config/logger');
 const Job = require('../models/Job');
 const Application = require('../models/Application');
 const StudentProfile = require('../models/StudentProfile');
+const StudentResume = require('../models/StudentResume');
 const User = require('../models/User'); // Import User model if needed for population
 
 // --- Keep the existing constants like JOB_TYPE_VIEW, EXPERIENCE_VIEW, etc. ---
@@ -38,6 +39,8 @@ const STATUS_DISPLAY = Object.values(STATUS_VIEW);
 
 const APPLICATION_WEBHOOK_URL = process.env.N8N_JOB_APPLICATION_WEBHOOK_URL || '';
 const RESUME_DRIVE_WEBHOOK_URL = process.env.N8N_RESUME_DRIVE_WEBHOOK_URL || '';
+const AI_RESUME_KEY = process.env.ai_resume_key || process.env.AI_RESUME_KEY || '';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
 const DEFAULT_PUBLIC_BASE_URL = 'http://140.245.23.142:3345';
 
 
@@ -53,6 +56,98 @@ const pickFirstText = (...values) => {
     }
   }
   return '';
+};
+
+const normalizeSkillToken = (skill) => String(skill || '').toLowerCase().trim();
+
+const parseSkillsFromText = (text) => {
+  const extracted = String(text || '')
+    .split(/[\n,;/|]+/)
+    .map((token) => normalizeSkillToken(token))
+    .filter(Boolean);
+  return [...new Set(extracted)];
+};
+
+const rankResumesForJob = (resumes = [], job = {}, fallbackSkills = []) => {
+  const jobSkills = new Set([
+    ...normalizeStringArray(job.skills).map(normalizeSkillToken),
+    ...parseSkillsFromText(job.key_skills_mentioned),
+    ...parseSkillsFromText(job.title),
+    ...parseSkillsFromText(job.description),
+    ...fallbackSkills.map(normalizeSkillToken),
+  ].filter(Boolean));
+
+  return resumes
+    .map((resume) => {
+      const resumeSkills = new Set((resume.skills || []).map(normalizeSkillToken));
+      let score = 0;
+      jobSkills.forEach((skill) => {
+        if (resumeSkills.has(skill)) score += 1;
+      });
+      if (resume.isPrimary) score += 0.35;
+      return { resume, score };
+    })
+    .sort((a, b) => b.score - a.score);
+};
+
+const suggestRolesFromProfile = async (skills = []) => {
+  const normalizedSkills = (skills || []).map(normalizeSkillToken).filter(Boolean);
+  if (normalizedSkills.length === 0) return [];
+
+  const jobs = await Job.find({ isActive: { $ne: false } }).select('title skills').limit(250).lean();
+  const scored = jobs
+    .map((job) => {
+      const jobSkills = normalizeStringArray(job.skills).map(normalizeSkillToken);
+      const overlap = jobSkills.filter((skill) => normalizedSkills.includes(skill)).length;
+      return {
+        title: pickFirstText(job.title, job.job_title),
+        overlap,
+      };
+    })
+    .filter((job) => job.title && job.overlap > 0)
+    .sort((a, b) => b.overlap - a.overlap);
+
+  return [...new Set(scored.map((item) => item.title))].slice(0, 5);
+};
+
+const callOpenRouter = async (messages, responseFormat = null) => {
+  if (!AI_RESUME_KEY) {
+    throw new Error('AI resume key is not configured.');
+  }
+
+  const payload = {
+    model: OPENROUTER_MODEL,
+    messages,
+    temperature: 0.3,
+  };
+
+  if (responseFormat) {
+    payload.response_format = responseFormat;
+  }
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${AI_RESUME_KEY}`,
+      'HTTP-Referer': process.env.APP_BASE_URL || 'http://localhost:3345',
+      'X-Title': 'Placement Portal Resume Assistant',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const bodyText = await response.text();
+    throw new Error(`OpenRouter error (${response.status}): ${bodyText.slice(0, 300)}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('OpenRouter returned an empty response.');
+  }
+
+  return content;
 };
 
 const normalizeDisplayLocation = (job) => {
@@ -272,6 +367,9 @@ const formatApplication = (application) => {
     const formatted = application.toObject ? application.toObject() : { ...application };
     formatted._id = toIdString(formatted._id) || null;
     formatted.status = formatted.status || 'applied';
+    if (formatted.status === 'shortlisted') {
+      formatted.status = 'under_review';
+    }
     formatted.appliedDate = formatted.appliedDate || new Date();
     // Ensure nested job is also formatted
     const hasPopulatedJobObject =
@@ -345,8 +443,7 @@ const renderDemoDashboard = async (req, res) => {
     stats: {
       totalJobs: 5, // Static demo number
       applications: 8,
-      pendingApplications: 5,
-      interviews: 2
+      pendingApplications: 5
     },
     recentApplications: demoApplications.map(formatApplication), // Ensure formatting
     // Simulate profile completion for demo
@@ -413,11 +510,10 @@ exports.getDashboard = async (req, res) => {
     const studentId = req.session.user.id;
 
     // Use Mongoose methods
-    const [totalJobs, applicationsCount, pendingApplicationsCount, interviewsCount, recentApps, profile] = await Promise.all([
+    const [totalJobs, applicationsCount, pendingApplicationsCount, recentApps, profile] = await Promise.all([
       Job.countDocuments({ isActive: { $ne: false } }),
       Application.countDocuments({ student: studentId }),
-      Application.countDocuments({ student: studentId, status: { $in: ['applied', 'under_review', 'shortlisted'] } }),
-      Application.countDocuments({ student: studentId, status: 'interview' }),
+      Application.countDocuments({ student: studentId, status: { $in: ['applied', 'under_review', 'interview'] } }),
       Application.find({ student: studentId })
         .populate('job') // Populate job details
         .sort({ appliedDate: -1 })
@@ -434,6 +530,8 @@ exports.getDashboard = async (req, res) => {
      // If the profile was just created, it might not have the completion score yet
      studentProfile.profileCompletion = profileCompletion;
 
+    const suggestedRoles = await suggestRolesFromProfile(studentProfile?.skills || []);
+
 
     res.render('pages/student/dashboard', {
       title: 'Student Dashboard - Placement Portal',
@@ -441,11 +539,11 @@ exports.getDashboard = async (req, res) => {
       stats: {
         totalJobs,
         applications: applicationsCount,
-        pendingApplications: pendingApplicationsCount,
-        interviews: interviewsCount
+        pendingApplications: pendingApplicationsCount
       },
       recentApplications: recentApps.map(formatApplication), // Use formatter
       profile: studentProfile, // Pass the fetched or created profile
+      suggestedRoles,
       isDemo: false
     });
   } catch (error) {
@@ -569,6 +667,8 @@ exports.getJobDetails = async (req, res) => {
         application: null, // Add application as null for demo
         profile: null,
         quickApplyConfig: { canQuickApply: false, hasStoredResume: false },
+        resumes: [],
+        recommendedResumeId: null,
         isSaved: false,
         isDemo: true
       });
@@ -577,6 +677,7 @@ exports.getJobDetails = async (req, res) => {
     // For real users, check application and saved status
     const studentId = req.session.user.id;
     const profile = await ensureStudentProfile(studentId); // Ensure profile exists
+    const resumes = await StudentResume.find({ user: studentId }).sort({ isPrimary: -1, createdAt: -1 }).lean();
 
     // Use Mongoose findOne for application and saved status
     const application = await Application.findOne({
@@ -584,7 +685,7 @@ exports.getJobDetails = async (req, res) => {
       student: studentId
     });
 
-    const hasStoredResume = Boolean(profile?.resume);
+    const hasStoredResume = Boolean(profile?.resume || resumes.length > 0);
     const hasCoreProfile = Boolean(
       profile?.phone &&
       profile?.college &&
@@ -602,6 +703,9 @@ exports.getJobDetails = async (req, res) => {
       hasCoreProfile
     };
 
+    const rankedResumes = rankResumesForJob(resumes, job, profile?.skills || []);
+    const recommendedResumeId = rankedResumes.length ? String(rankedResumes[0].resume._id) : null;
+
     // Check if the job is saved (assuming savedJobs is an array of ObjectIds in StudentProfile)
     const isSaved = profile.savedJobs.some(savedJobId => savedJobId.equals(jobId));
 
@@ -616,6 +720,8 @@ exports.getJobDetails = async (req, res) => {
       applicationStatus: application ? application.status : null,
       profile,
       quickApplyConfig,
+      resumes,
+      recommendedResumeId,
       isSaved: isSaved,
       isDemo: false
     });
@@ -653,16 +759,52 @@ exports.applyForJob = async (req, res) => {
 
      // Check if student profile exists and has a resume
     const studentProfile = await StudentProfile.findOne({ user: studentId });
-    // Use the resume filename from the uploaded file if available, otherwise fallback to profile
-    let resumeFilename = studentProfile?.resume || ''; // Default to profile resume
+    const selectedResumeId = pickFirstText(req.body.selectedResumeId);
+    let allResumes = [];
+    try {
+      if (mongoose.connection?.readyState === 1) {
+        allResumes = await StudentResume.find({ user: studentId }).sort({ isPrimary: -1, createdAt: -1 }).lean();
+      }
+    } catch (resumeLoadError) {
+      logger.warn('Unable to load student resume library, falling back to profile resume.', {
+        studentId,
+        error: resumeLoadError.message,
+      });
+      allResumes = [];
+    }
+    let selectedResumeDoc = null;
+
+    if (selectedResumeId && isValidObjectId(selectedResumeId)) {
+      selectedResumeDoc = allResumes.find((item) => String(item._id) === selectedResumeId) || null;
+    }
+
+    if (!selectedResumeDoc && allResumes.length > 0) {
+      const matched = rankResumesForJob(allResumes, await Job.findById(jobId).lean(), studentProfile?.skills || []);
+      selectedResumeDoc = matched.length ? matched[0].resume : allResumes[0];
+    }
+
+    // Use uploaded resume first, then selected/primary profile resume fallback.
+    let resumeFilename = selectedResumeDoc?.filename || studentProfile?.resume || '';
     let coverLetterFilename = '';
+    let resumeRef = selectedResumeDoc?._id || null;
 
     // Check uploaded files
      if (req.files) {
          if (req.files.resume && req.files.resume[0]) {
              resumeFilename = req.files.resume[0].filename;
              logger.info('Resume file uploaded', { studentId, resumeFilename });
-             // Optionally update the profile with the new resume
+             if (mongoose.connection?.readyState === 1) {
+               const createdResume = await StudentResume.create({
+                 user: studentId,
+                 title: `Resume ${new Date().toLocaleDateString()}`,
+                 filename: resumeFilename,
+                 skills: studentProfile?.skills || [],
+                 isPrimary: allResumes.length === 0,
+               });
+               resumeRef = createdResume._id;
+             }
+
+           // Keep latest uploaded resume as quick-apply default
              if (studentProfile) {
                  studentProfile.resume = resumeFilename;
                  await studentProfile.save();
@@ -758,6 +900,7 @@ exports.applyForJob = async (req, res) => {
       projects,
       extracurricular,
       resume: resumeFilename, // Filename from upload or profile
+      resumeRef,
       coverLetterFile: coverLetterFilename || null, // Optional filename
       coverLetterText: coverLetterText || null, // Optional text
       appliedDate: new Date(),
@@ -1058,20 +1201,22 @@ exports.getResume = async (req, res) => {
      const studentId = req.session.user.id;
      // Use Mongoose findOne
      const profile = isDemo(req) ? null : await StudentProfile.findOne({ user: studentId });
+     const resumes = isDemo(req)
+       ? [{ _id: 'demo-resume-1', title: 'Demo Resume', filename: 'demo_resume.pdf', isPrimary: true, skills: ['javascript', 'react'] }]
+       : await StudentResume.find({ user: studentId }).sort({ isPrimary: -1, createdAt: -1 }).lean();
 
     // Provide demo data if needed
       const profileData = profile || (isDemo(req) ? {
-            resume: 'demo_resume.pdf',
-            applicationCount: 5 // Static count for demo
+        resume: 'demo_resume.pdf',
+        applicationCount: 5
         } : {});
 
        // Get application count for real users
         const applicationCount = profile ? await Application.countDocuments({ student: studentId }) : (profileData.applicationCount || 0);
-        const shortlistedCount = profile ? await Application.countDocuments({ student: studentId, status: 'shortlisted' }) : 2;
+        const suggestedRoles = await suggestRolesFromProfile(profileData?.skills || []);
         const profileMatchScore = profileData.profileCompletion || (profileData.resume ? 85 : 0);
         const analyticsMeta = {
           applicationsSource: 'live',
-          shortlistedSource: 'live',
           profileMatchSource: 'estimate',
           viewsSource: 'untracked'
         };
@@ -1087,8 +1232,9 @@ exports.getResume = async (req, res) => {
       title: 'My Resume - Placement Portal',
       user: req.session.user,
        profile: profileData, // Pass profile data
+      resumes,
        applicationCount: applicationCount, // Pass application count
-       shortlistedCount,
+      suggestedRoles,
        profileMatchScore,
        analyticsMeta,
       isDemo: isDemo(req)
@@ -1130,10 +1276,16 @@ exports.uploadResume = async (req, res) => {
     }
 
   const studentId = req.session.user.id;
-  const existingProfile = await StudentProfile.findOne({ user: studentId });
-  const previousResume = existingProfile?.resume;
+  const existingResumes = await StudentResume.find({ user: studentId }).lean();
 
-  // Use Mongoose findOneAndUpdate with upsert
+  const createdResume = await StudentResume.create({
+    user: studentId,
+    title: req.body.resumeTitle || `Resume ${new Date().toLocaleDateString()}`,
+    filename: req.file.filename,
+    skills: parseSkillsFromText(req.body.skills),
+    isPrimary: existingResumes.length === 0,
+  });
+
   const options = { new: true, upsert: true, setDefaultsOnInsert: true };
   let updatedProfile = await StudentProfile.findOneAndUpdate(
     { user: studentId },
@@ -1141,26 +1293,14 @@ exports.uploadResume = async (req, res) => {
     options
   );
 
-  // Recalculate and save profile completion
   updatedProfile.profileCompletion = calculateProfileCompletion(updatedProfile);
   await updatedProfile.save();
-
-  // Clean up previous resume file if replaced
-  if (previousResume && previousResume !== req.file.filename) {
-    const previousResumePath = path.join(__dirname, '../../public/uploads/resumes', previousResume);
-    if (fs.existsSync(previousResumePath)) {
-      try {
-        fs.unlinkSync(previousResumePath);
-      } catch (cleanupError) {
-        console.error('Error removing previous resume:', cleanupError);
-      }
-    }
-  }
 
     res.json({
       success: true,
       message: 'Resume uploaded successfully!',
-      filename: req.file.filename
+      filename: req.file.filename,
+      resumeId: createdResume._id,
     });
   } catch (error) {
     console.error('Resume upload error:', error);
@@ -1248,16 +1388,43 @@ exports.deleteResume = async (req, res) => {
     }
 
     const studentId = req.session.user.id;
-     const profile = await StudentProfile.findOne({ user: studentId });
-     if (!profile || !profile.resume) {
-         return res.json({ success: false, message: 'No resume found to delete' });
-     }
+    const requestedResumeId = pickFirstText(req.body?.resumeId, req.query?.resumeId);
 
-     const resumePathToDelete = profile.resume;
+    let resumeDoc = null;
+    if (requestedResumeId && isValidObjectId(requestedResumeId)) {
+      resumeDoc = await StudentResume.findOne({ _id: requestedResumeId, user: studentId });
+    }
 
-     profile.resume = undefined;
-     profile.profileCompletion = calculateProfileCompletion(profile);
-     await profile.save();
+    if (!resumeDoc) {
+      resumeDoc = await StudentResume.findOne({ user: studentId, isPrimary: true }).sort({ updatedAt: -1 });
+    }
+
+    if (!resumeDoc) {
+      const fallbackProfile = await StudentProfile.findOne({ user: studentId });
+      if (!fallbackProfile || !fallbackProfile.resume) {
+        return res.json({ success: false, message: 'No resume found to delete' });
+      }
+      resumeDoc = { filename: fallbackProfile.resume, _id: null, isPrimary: true };
+    }
+
+    const resumePathToDelete = resumeDoc.filename;
+
+    if (resumeDoc._id) {
+      await StudentResume.deleteOne({ _id: resumeDoc._id, user: studentId });
+    }
+
+    const remainingResumes = await StudentResume.find({ user: studentId }).sort({ createdAt: -1 });
+    if (resumeDoc.isPrimary && remainingResumes.length > 0) {
+      remainingResumes[0].isPrimary = true;
+      await remainingResumes[0].save();
+    }
+
+    const profile = await StudentProfile.findOne({ user: studentId });
+    if (profile) {
+      profile.resume = remainingResumes[0]?.filename || undefined;
+      profile.profileCompletion = calculateProfileCompletion(profile);
+      await profile.save();
+    }
 
     // Attempt to delete the file from the filesystem
     const resumePathOnDisk = path.join(__dirname, '../../public/uploads/resumes', resumePathToDelete);
@@ -1287,3 +1454,182 @@ exports.deleteResume = async (req, res) => {
   }
 };
 // --- End of deleteResume ---
+
+exports.uploadProfileImage = async (req, res) => {
+  try {
+    if (isDemo(req)) {
+      return res.json({ success: false, message: 'Demo users cannot upload profile images.' });
+    }
+
+    if (!req.file || !req.file.filename) {
+      return res.status(400).json({ success: false, message: 'Please choose an image to upload.' });
+    }
+
+    const studentId = req.session.user.id;
+    const profile = await ensureStudentProfile(studentId);
+    const previousImage = profile.profileImage;
+    profile.profileImage = req.file.filename;
+    profile.profileCompletion = calculateProfileCompletion(profile);
+    await profile.save();
+
+    if (previousImage && previousImage !== req.file.filename) {
+      const previousPath = path.join(__dirname, '../../public/uploads/profile-images', previousImage);
+      if (fs.existsSync(previousPath)) {
+        try {
+          fs.unlinkSync(previousPath);
+        } catch (cleanupError) {
+          logger.warn('Failed to cleanup previous profile image', { studentId, error: cleanupError.message });
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: 'Profile image uploaded successfully.',
+      imageUrl: `/uploads/profile-images/${encodeURIComponent(req.file.filename)}`,
+    });
+  } catch (error) {
+    logger.error('Profile image upload failed', { error: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to upload profile image.' });
+  }
+};
+
+exports.setPrimaryResume = async (req, res) => {
+  try {
+    if (isDemo(req)) {
+      return res.status(403).json({ success: false, message: 'Demo users cannot modify resume settings.' });
+    }
+
+    const studentId = req.session.user.id;
+    const resumeId = pickFirstText(req.body.resumeId);
+
+    if (!isValidObjectId(resumeId)) {
+      return res.status(400).json({ success: false, message: 'Invalid resume selected.' });
+    }
+
+    const resume = await StudentResume.findOne({ _id: resumeId, user: studentId });
+    if (!resume) {
+      return res.status(404).json({ success: false, message: 'Resume not found.' });
+    }
+
+    await StudentResume.updateMany({ user: studentId }, { $set: { isPrimary: false } });
+    resume.isPrimary = true;
+    await resume.save();
+
+    const profile = await ensureStudentProfile(studentId);
+    profile.resume = resume.filename;
+    profile.profileCompletion = calculateProfileCompletion(profile);
+    await profile.save();
+
+    return res.json({ success: true, message: 'Primary resume updated.' });
+  } catch (error) {
+    logger.error('Failed setting primary resume', { error: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to set primary resume.' });
+  }
+};
+
+exports.getRecommendedResumeForJob = async (req, res) => {
+  try {
+    const studentId = req.session.user.id;
+    const jobId = req.params.jobId;
+
+    if (!isValidObjectId(jobId)) {
+      return res.status(400).json({ success: false, message: 'Invalid job id.' });
+    }
+
+    const [job, profile, resumes] = await Promise.all([
+      Job.findById(jobId).lean(),
+      StudentProfile.findOne({ user: studentId }).lean(),
+      StudentResume.find({ user: studentId }).sort({ isPrimary: -1, createdAt: -1 }).lean(),
+    ]);
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: 'Job not found.' });
+    }
+
+    if (!resumes.length) {
+      return res.json({ success: true, recommendedResumeId: null, message: 'No saved resumes yet.' });
+    }
+
+    const ranked = rankResumesForJob(resumes, job, profile?.skills || []);
+    const top = ranked[0];
+    return res.json({
+      success: true,
+      recommendedResumeId: String(top.resume._id),
+      score: top.score,
+      title: top.resume.title,
+    });
+  } catch (error) {
+    logger.error('Resume recommendation failed', { error: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to compute recommended resume.' });
+  }
+};
+
+exports.aiResumeReview = async (req, res) => {
+  try {
+    const resumeText = pickFirstText(req.body.resumeText);
+    const targetRole = pickFirstText(req.body.targetRole) || 'Software Engineer';
+
+    if (!resumeText) {
+      return res.status(400).json({ success: false, message: 'Resume text is required.' });
+    }
+
+    const content = await callOpenRouter([
+      {
+        role: 'system',
+        content: 'You are a strict resume reviewer. Return concise, practical feedback in markdown with sections: Strengths, Gaps, Priority Fixes, ATS Improvements, and a score out of 100.',
+      },
+      {
+        role: 'user',
+        content: `Target Role: ${targetRole}\n\nResume:\n${resumeText}`,
+      },
+    ]);
+
+    return res.json({ success: true, review: content });
+  } catch (error) {
+    logger.error('AI resume review failed', { error: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: error.message || 'AI review failed.' });
+  }
+};
+
+exports.aiResumeBuild = async (req, res) => {
+  try {
+    const studentId = req.session.user.id;
+    const targetRole = pickFirstText(req.body.targetRole) || 'Software Engineer';
+    const additionalNotes = pickFirstText(req.body.additionalNotes);
+
+    const profile = await StudentProfile.findOne({ user: studentId }).lean();
+    const user = await User.findById(studentId).select('name email').lean();
+
+    const profileSummary = {
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: profile?.phone || '',
+      college: profile?.college || '',
+      course: profile?.course || '',
+      graduationYear: profile?.graduationYear || '',
+      cgpa: profile?.cgpa || '',
+      skills: profile?.skills || [],
+      linkedin: profile?.socialLinks?.linkedin || '',
+      github: profile?.socialLinks?.github || '',
+      portfolio: profile?.socialLinks?.portfolio || '',
+      notes: additionalNotes,
+    };
+
+    const content = await callOpenRouter([
+      {
+        role: 'system',
+        content: 'You are a resume builder assistant. Produce a clean, ATS-friendly markdown resume with sections: Header, Summary, Skills, Education, Projects (with placeholders if missing), and Certifications/Activities.',
+      },
+      {
+        role: 'user',
+        content: `Target Role: ${targetRole}\n\nProfile JSON:\n${JSON.stringify(profileSummary, null, 2)}`,
+      },
+    ]);
+
+    return res.json({ success: true, generatedResume: content });
+  } catch (error) {
+    logger.error('AI resume builder failed', { error: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: error.message || 'AI resume generation failed.' });
+  }
+};

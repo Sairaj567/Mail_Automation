@@ -139,6 +139,35 @@
                     </div>
                 </div>
 
+                <div class="preview-section">
+                    <div class="section-header">
+                        <h2>Resume Library</h2>
+                        <p>Maintain multiple resumes for different roles</p>
+                    </div>
+                    <% if (resumes && resumes.length > 0) { %>
+                        <div style="display:grid; gap:0.75rem;">
+                            <% resumes.forEach(item => { %>
+                                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--light-gray); border-radius:10px; padding:0.9rem 1rem;">
+                                    <div>
+                                        <strong><%= item.title %></strong>
+                                        <div style="font-size:0.82rem; color:#64748b;"><%= item.filename %></div>
+                                    </div>
+                                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                                        <% if (item.isPrimary) { %>
+                                            <span class="status-item success" style="padding:0.35rem 0.55rem;">Primary</span>
+                                        <% } else { %>
+                                            <button type="button" class="btn-secondary set-primary-btn" data-resume-id="<%= item._id %>">Set Primary</button>
+                                        <% } %>
+                                        <a class="btn-secondary" href="/uploads/resumes/<%= encodeURIComponent(item.filename) %>" target="_blank" rel="noopener noreferrer">View</a>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } else { %>
+                        <p style="color:#64748b;">No resumes uploaded yet.</p>
+                    <% } %>
+                </div>
+
                 <!-- Resume Preview Section -->
                 <% if (profile && profile.resume) { %>
                 <div class="preview-section">
@@ -230,6 +259,41 @@
                     </div>
                 </div>
 
+                <div class="builder-section">
+                    <div class="section-header">
+                        <h2>AI Resume Assistant</h2>
+                        <p>Review and generate role-focused resume content</p>
+                    </div>
+                    <div class="builder-options">
+                        <div class="builder-card" style="text-align:left;">
+                            <h4>AI Resume Reviewer</h4>
+                            <div class="input-group full-width" style="margin-bottom:0.8rem;">
+                                <label for="reviewTargetRole">Target Role</label>
+                                <input id="reviewTargetRole" type="text" placeholder="e.g., Frontend Developer">
+                            </div>
+                            <div class="input-group full-width" style="margin-bottom:0.8rem;">
+                                <label for="resumeReviewText">Paste Resume Text</label>
+                                <textarea id="resumeReviewText" rows="7" placeholder="Paste resume text for detailed review..."></textarea>
+                            </div>
+                            <button class="btn-primary" id="runAiReviewBtn">Run AI Review</button>
+                            <pre id="aiReviewOutput" style="white-space:pre-wrap; margin-top:0.8rem; background:#f8fafc; padding:0.75rem; border-radius:8px; display:none;"></pre>
+                        </div>
+                        <div class="builder-card" style="text-align:left;">
+                            <h4>AI Resume Builder</h4>
+                            <div class="input-group full-width" style="margin-bottom:0.8rem;">
+                                <label for="buildTargetRole">Target Role</label>
+                                <input id="buildTargetRole" type="text" placeholder="e.g., Backend Engineer">
+                            </div>
+                            <div class="input-group full-width" style="margin-bottom:0.8rem;">
+                                <label for="buildNotes">Extra Notes</label>
+                                <textarea id="buildNotes" rows="7" placeholder="Add achievements, projects, certifications you want emphasized..."></textarea>
+                            </div>
+                            <button class="btn-primary" id="runAiBuildBtn">Generate Resume Draft</button>
+                            <pre id="aiBuildOutput" style="white-space:pre-wrap; margin-top:0.8rem; background:#f8fafc; padding:0.75rem; border-radius:8px; display:none;"></pre>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Resume Analytics -->
                 <div class="analytics-section">
                     <div class="section-header">
@@ -263,8 +327,8 @@
                                 <i class="fas fa-check-circle"></i>
                             </div>
                             <div class="analytic-info">
-                                <h3><%= typeof shortlistedCount !== 'undefined' ? shortlistedCount : 0 %></h3>
-                                <p>Shortlisted</p>
+                                <h3>--</h3>
+                                <p>Offer Rate (Tracking Pending)</p>
                             </div>
                         </div>
 
@@ -278,6 +342,16 @@
                             </div>
                         </div>
                     </div>
+                    <% if (suggestedRoles && suggestedRoles.length > 0) { %>
+                        <div style="margin-top:1rem;">
+                            <strong>Suggested roles based on your profile:</strong>
+                            <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.6rem;">
+                                <% suggestedRoles.forEach(role => { %>
+                                    <span class="skill-tag"><%= role %></span>
+                                <% }) %>
+                            </div>
+                        </div>
+                    <% } %>
                 </div>
             </div>
         </main>
@@ -287,7 +361,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script type="application/json" id="resume-data"><%- JSON.stringify({
         hasResume: Boolean(profile && profile.resume),
-        resumeFilename: profile && profile.resume ? profile.resume : null
+        resumeFilename: profile && profile.resume ? profile.resume : null,
+        resumes: resumes || []
     }) %></script>
     <script src="/js/resume.js"></script>
 </body>

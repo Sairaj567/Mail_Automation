@@ -6,7 +6,7 @@
     <title><%= title %></title>
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/dashboard.css">
-    <link rel="stylesheet" href="/css/applications.css">
+    <link rel="stylesheet" href="/css/application.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -72,12 +72,12 @@
                         <div class="stat-label">Total Applications</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number"><%= applications ? applications.filter(app => ['applied', 'under_review', 'shortlisted'].includes(app.status)).length : 0 %></div>
+                        <div class="stat-number"><%= applications ? applications.filter(app => ['applied', 'under_review', 'interview'].includes(app.status)).length : 0 %></div>
                         <div class="stat-label">Pending</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number"><%= applications ? applications.filter(app => app.status === 'interview').length : 0 %></div>
-                        <div class="stat-label">Interviews</div>
+                        <div class="stat-number"><%= applications ? applications.filter(app => app.status === 'rejected').length : 0 %></div>
+                        <div class="stat-label">Rejected</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number"><%= applications ? applications.filter(app => app.status === 'accepted').length : 0 %></div>
@@ -122,16 +122,10 @@
                                     </a>
                                     
                                     <!-- DELETE BUTTON - Only show for certain statuses -->
-                                    <% if (['applied', 'under_review', 'shortlisted'].includes(application.status)) { %>
+                                    <% if (['applied', 'under_review'].includes(application.status)) { %>
                                         <button class="btn-danger delete-application-btn" 
                                                 data-application-id="<%= application._id %>">
                                             <i class="fas fa-trash"></i> Delete Application
-                                        </button>
-                                    <% } %>
-                                    
-                                    <% if (application.status === 'interview') { %>
-                                        <button class="btn-primary schedule-btn">
-                                            <i class="fas fa-calendar-alt"></i> View Interview Details
                                         </button>
                                     <% } %>
                                 </div>

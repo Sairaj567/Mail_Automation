@@ -106,15 +106,6 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3><%= stats.interviews %></h3>
-                            <p>Interviews</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
                             <i class="fas fa-clock"></i>
                         </div>
                         <div class="stat-info">
@@ -236,6 +227,28 @@
                             <li>Upload your resume</li>
                         </ul>
                         <a href="/student/profile" class="btn-secondary">Complete Profile</a>
+                    </div>
+                </div>
+                <% } %>
+
+                <% if (suggestedRoles && suggestedRoles.length > 0) { %>
+                <div class="applications-section">
+                    <div class="section-header">
+                        <h2>Best Matching Roles</h2>
+                        <p>Based on your profile skills</p>
+                    </div>
+                    <div class="applications-list">
+                        <% suggestedRoles.forEach(role => { %>
+                            <div class="application-item">
+                                <div class="company-logo">
+                                    <i class="fas fa-bullseye"></i>
+                                </div>
+                                <div class="application-details">
+                                    <h4><%= role %></h4>
+                                    <p>Recommended role to target next</p>
+                                </div>
+                            </div>
+                        <% }) %>
                     </div>
                 </div>
                 <% } %>

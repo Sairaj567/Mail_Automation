@@ -41,6 +41,10 @@ const applicationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    resumeRef: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'StudentResume',
+    },
     coverLetterFile: String,
     coverLetterText: String,
     

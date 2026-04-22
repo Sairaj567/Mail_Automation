@@ -1009,6 +1009,28 @@
                                 <h3>Documents</h3>
                                 <div class="form-row">
                                     <div class="form-group">
+                                        <label for="selectedResumeId">Choose Saved Resume</label>
+                                        <select id="selectedResumeId" name="selectedResumeId">
+                                            <option value="">Auto select best resume</option>
+                                            <% if (resumes && resumes.length > 0) { %>
+                                                <% resumes.forEach((resume) => { %>
+                                                    <option value="<%= resume._id %>" <%= String(resume._id) === String(recommendedResumeId || '') ? 'selected' : '' %>>
+                                                        <%= resume.title %><%= resume.isPrimary ? ' (Primary)' : '' %>
+                                                    </option>
+                                                <% }) %>
+                                            <% } %>
+                                        </select>
+                                        <small>
+                                            <% if (recommendedResumeId) { %>
+                                                Best-matching resume is preselected for this job.
+                                            <% } else { %>
+                                                Save multiple resumes in My Resume to target different roles.
+                                            <% } %>
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
                                         <label for="resume">Upload Resume *</label>
                                         <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx" <%= quickApplyConfig?.hasStoredResume ? '' : 'required' %>>
                                         <small>Accepted formats: PDF, DOC, DOCX (Max 5MB)</small>

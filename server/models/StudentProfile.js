@@ -19,6 +19,7 @@ const studentProfileSchema = new mongoose.Schema({
         github: String,
         portfolio: String
     },
+    profileImage: String,
     resume: String,
     profileCompletion: {
         type: Number,

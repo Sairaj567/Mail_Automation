@@ -9,18 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateStatusColor(status);
     });
 
-    // Interview details modal functionality
-    const scheduleButtons = document.querySelectorAll('.schedule-btn');
-    scheduleButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const applicationCard = this.closest('.application-card');
-            const jobTitle = applicationCard.querySelector('h3').textContent;
-            const companyName = applicationCard.querySelector('.company-name').textContent;
-            
-            showInterviewDetails(jobTitle, companyName);
-        });
-    });
-
     // Filter applications functionality
     const filterButtons = document.createElement('div');
     filterButtons.className = 'application-filters';
@@ -28,7 +16,6 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="filter-buttons">
             <button class="filter-btn active" data-filter="all">All</button>
             <button class="filter-btn" data-filter="pending">Pending</button>
-            <button class="filter-btn" data-filter="interview">Interviews</button>
             <button class="filter-btn" data-filter="accepted">Accepted</button>
             <button class="filter-btn" data-filter="rejected">Rejected</button>
         </div>
@@ -105,9 +92,6 @@ function updateStatusColor(statusElement) {
         case 'under-review':
             statusElement.classList.add('status-under-review');
             break;
-        case 'shortlisted':
-            statusElement.classList.add('status-shortlisted');
-            break;
         case 'interview':
             statusElement.classList.add('status-interview');
             break;
@@ -137,16 +121,12 @@ function filterApplications(filter) {
                 visibleCount++;
                 break;
             case 'pending':
-                if (['applied', 'under-review', 'shortlisted'].includes(status)) {
+                if (['applied', 'under-review', 'interview'].includes(status)) {
                     card.style.display = 'block';
                     visibleCount++;
                 } else {
                     card.style.display = 'none';
                 }
-                break;
-            case 'interview':
-                card.style.display = status === 'interview' ? 'block' : 'none';
-                if (status === 'interview') visibleCount++;
                 break;
             case 'accepted':
                 card.style.display = status === 'accepted' ? 'block' : 'none';
@@ -207,91 +187,6 @@ function showNoResultsMessage(show = false) {
     }
 }
 
-// Show interview details modal
-function showInterviewDetails(jobTitle, companyName) {
-    // Create modal
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Interview Details</h3>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="interview-info">
-                    <div class="info-item">
-                        <strong>Position:</strong>
-                        <span>${jobTitle}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Company:</strong>
-                        <span>${companyName}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Interview Date:</strong>
-                        <span>To be scheduled</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Interview Type:</strong>
-                        <span>Virtual (Video Call)</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Duration:</strong>
-                        <span>45 minutes</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Interviewers:</strong>
-                        <span>Hiring Manager & Team Lead</span>
-                    </div>
-                </div>
-                <div class="interview-preparation">
-                    <h4>Preparation Tips</h4>
-                    <ul>
-                        <li>Review the job description and company values</li>
-                        <li>Prepare examples of your relevant experience</li>
-                        <li>Test your video and audio equipment beforehand</li>
-                        <li>Have questions ready for the interviewers</li>
-                        <li>Find a quiet, well-lit space for the interview</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary close-modal">Close</button>
-                <button class="btn-primary" id="addToCalendar">
-                    <i class="fas fa-calendar-plus"></i> Add to Calendar
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Add modal styles
-    addModalStyles();
-    
-    // Close modal functionality
-    const closeButtons = modal.querySelectorAll('.close-modal');
-    closeButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            modal.remove();
-        });
-    });
-    
-    // Add to calendar functionality
-    const addToCalendarBtn = modal.querySelector('#addToCalendar');
-    addToCalendarBtn.addEventListener('click', () => {
-        alert('Calendar integration would be implemented here!');
-    });
-    
-    // Close modal on outside click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
-}
-
 // Export applications to CSV
 function exportApplications() {
     const applicationCards = document.querySelectorAll('.application-card');
@@ -338,8 +233,7 @@ function getStatusDescription(status) {
     const descriptions = {
         'APPLIED': 'Your application has been submitted and is under review',
         'UNDER REVIEW': 'The company is currently reviewing your application',
-        'SHORTLISTED': 'Your application has been shortlisted for further consideration',
-        'INTERVIEW': 'You have been invited for an interview',
+        'INTERVIEW': 'Interview stage in progress',
         'REJECTED': 'Unfortunately, your application was not successful',
         'ACCEPTED': 'Congratulations! Your application has been accepted'
     };

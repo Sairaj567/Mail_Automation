@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
 	const profileForm = document.getElementById('profileForm');
 	const resetButton = document.getElementById('resetProfileBtn');
+	const avatarButton = document.getElementById('changeAvatarBtn');
+	const avatarInput = document.getElementById('profileImageInput');
 
 	if (!profileForm) return;
 
@@ -15,6 +17,33 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 			}
 			showToast('Profile form reset.', 'info');
+		});
+	}
+
+	if (avatarButton && avatarInput) {
+		avatarButton.addEventListener('click', () => avatarInput.click());
+		avatarInput.addEventListener('change', async () => {
+			if (!avatarInput.files || !avatarInput.files[0]) return;
+			const formData = new FormData();
+			formData.append('profileImage', avatarInput.files[0]);
+
+			try {
+				const response = await fetch('/student/upload-profile-image', {
+					method: 'POST',
+					body: formData,
+				});
+				const data = await response.json();
+				if (!response.ok || !data.success) {
+					showToast(data.message || 'Failed to upload profile image.', 'error');
+					return;
+				}
+
+				showToast(data.message || 'Profile image updated.', 'success');
+				setTimeout(() => window.location.reload(), 700);
+			} catch (error) {
+				console.error('Profile image upload error:', error);
+				showToast('Something went wrong while uploading image.', 'error');
+			}
 		});
 	}
 
