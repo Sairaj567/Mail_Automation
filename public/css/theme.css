@@ -1,0 +1,309 @@
+/* Shared Dark Theme */
+:root {
+    color-scheme: light;
+}
+
+html[data-theme='dark'] {
+    color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) {
+        color-scheme: dark;
+    }
+}
+
+body {
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.theme-toggle-btn {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 2000;
+    border: none;
+    border-radius: 999px;
+    padding: 0.8rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font: inherit;
+    cursor: pointer;
+    background: #ffffff;
+    color: #334155;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+    transform: translateY(-2px);
+}
+
+.theme-toggle-btn i {
+    font-size: 0.95rem;
+}
+
+html[data-theme='dark'] body {
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) body {
+        background: #0f172a !important;
+        color: #e2e8f0 !important;
+    }
+}
+
+html[data-theme='dark'] .main-content,
+html[data-theme='dark'] .dashboard-content,
+html[data-theme='dark'] .auth-main,
+html[data-theme='dark'] .student-layout,
+html[data-theme='dark'] .admin-layout,
+html[data-theme='dark'] .page-content,
+html[data-theme='dark'] .company-dashboard {
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) .main-content,
+    html:not([data-theme='light']) .dashboard-content,
+    html:not([data-theme='light']) .auth-main,
+    html:not([data-theme='light']) .student-layout,
+    html:not([data-theme='light']) .admin-layout,
+    html:not([data-theme='light']) .page-content,
+    html:not([data-theme='light']) .company-dashboard {
+        background: #0f172a !important;
+        color: #e2e8f0 !important;
+    }
+}
+
+html[data-theme='dark'] .sidebar,
+html[data-theme='dark'] .auth-header,
+html[data-theme='dark'] .content-header {
+    background: #0b1220 !important;
+    border-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) .sidebar,
+    html:not([data-theme='light']) .auth-header,
+    html:not([data-theme='light']) .content-header {
+        background: #0b1220 !important;
+        border-color: rgba(148, 163, 184, 0.16) !important;
+    }
+}
+
+html[data-theme='dark'] .sidebar,
+html[data-theme='dark'] .content-header,
+html[data-theme='dark'] .stat-card,
+html[data-theme='dark'] .action-card,
+html[data-theme='dark'] .section-card,
+html[data-theme='dark'] .job-card,
+html[data-theme='dark'] .job-info-card,
+html[data-theme='dark'] .builder-card,
+html[data-theme='dark'] .analytic-card,
+html[data-theme='dark'] .application-card,
+html[data-theme='dark'] .applications-list-container,
+html[data-theme='dark'] .resume-status-card,
+html[data-theme='dark'] .upload-section,
+html[data-theme='dark'] .preview-section,
+html[data-theme='dark'] .builder-section,
+html[data-theme='dark'] .auth-container,
+html[data-theme='dark'] .auth-welcome,
+html[data-theme='dark'] .auth-form-container,
+html[data-theme='dark'] .job-form-container,
+html[data-theme='dark'] .applicants-table,
+html[data-theme='dark'] .table-card {
+    background: #111827 !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(148, 163, 184, 0.22) !important;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) .sidebar,
+    html:not([data-theme='light']) .content-header,
+    html:not([data-theme='light']) .stat-card,
+    html:not([data-theme='light']) .action-card,
+    html:not([data-theme='light']) .section-card,
+    html:not([data-theme='light']) .job-card,
+    html:not([data-theme='light']) .job-info-card,
+    html:not([data-theme='light']) .builder-card,
+    html:not([data-theme='light']) .analytic-card,
+    html:not([data-theme='light']) .application-card,
+    html:not([data-theme='light']) .applications-list-container,
+    html:not([data-theme='light']) .resume-status-card,
+    html:not([data-theme='light']) .upload-section,
+    html:not([data-theme='light']) .preview-section,
+    html:not([data-theme='light']) .builder-section,
+    html:not([data-theme='light']) .auth-container,
+    html:not([data-theme='light']) .auth-welcome,
+    html:not([data-theme='light']) .auth-form-container,
+    html:not([data-theme='light']) .job-form-container,
+    html:not([data-theme='light']) .applicants-table,
+    html:not([data-theme='light']) .table-card {
+        background: #111827 !important;
+        color: #e2e8f0 !important;
+        border-color: rgba(148, 163, 184, 0.22) !important;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28) !important;
+    }
+}
+
+html[data-theme='dark'] .sidebar-header,
+html[data-theme='dark'] .sidebar-nav,
+html[data-theme='dark'] .form-section,
+html[data-theme='dark'] .upload-requirements,
+html[data-theme='dark'] .resume-preview,
+html[data-theme='dark'] .job-actions,
+html[data-theme='dark'] .application-success,
+html[data-theme='dark'] .auth-header,
+html[data-theme='dark'] .auth-welcome,
+html[data-theme='dark'] .bg-animation {
+    background: rgba(15, 23, 42, 0.7) !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) .sidebar-header,
+    html:not([data-theme='light']) .sidebar-nav,
+    html:not([data-theme='light']) .form-section,
+    html:not([data-theme='light']) .upload-requirements,
+    html:not([data-theme='light']) .resume-preview,
+    html:not([data-theme='light']) .job-actions,
+    html:not([data-theme='light']) .application-success,
+    html:not([data-theme='light']) .auth-header,
+    html:not([data-theme='light']) .auth-welcome,
+    html:not([data-theme='light']) .bg-animation {
+        background: rgba(15, 23, 42, 0.7) !important;
+        border-color: rgba(148, 163, 184, 0.18) !important;
+    }
+}
+
+html[data-theme='dark'] input,
+html[data-theme='dark'] select,
+html[data-theme='dark'] textarea,
+html[data-theme='dark'] .form-control,
+html[data-theme='dark'] .auth-form input,
+html[data-theme='dark'] .input-group input {
+    background: #0b1220 !important;
+    color: #e2e8f0 !important;
+    border-color: rgba(148, 163, 184, 0.28) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) input,
+    html:not([data-theme='light']) select,
+    html:not([data-theme='light']) textarea,
+    html:not([data-theme='light']) .form-control,
+    html:not([data-theme='light']) .auth-form input,
+    html:not([data-theme='light']) .input-group input {
+        background: #0b1220 !important;
+        color: #e2e8f0 !important;
+        border-color: rgba(148, 163, 184, 0.28) !important;
+    }
+}
+
+html[data-theme='dark'] input::placeholder,
+html[data-theme='dark'] textarea::placeholder,
+html[data-theme='dark'] .form-control::placeholder {
+    color: #94a3b8 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) input::placeholder,
+    html:not([data-theme='light']) textarea::placeholder,
+    html:not([data-theme='light']) .form-control::placeholder {
+        color: #94a3b8 !important;
+    }
+}
+
+html[data-theme='dark'] .nav-item,
+html[data-theme='dark'] .header-left p,
+html[data-theme='dark'] .header-left small,
+html[data-theme='dark'] .section-header p,
+html[data-theme='dark'] .status-info p,
+html[data-theme='dark'] .stat-label,
+html[data-theme='dark'] .application-date,
+html[data-theme='dark'] .job-meta span,
+html[data-theme='dark'] .upload-area p,
+html[data-theme='dark'] .preview-placeholder p,
+html[data-theme='dark'] .form-header p,
+html[data-theme='dark'] .auth-welcome p,
+html[data-theme='dark'] .content-header p,
+html[data-theme='dark'] .builder-card p,
+html[data-theme='dark'] .analytic-info p {
+    color: #cbd5e1 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) .nav-item,
+    html:not([data-theme='light']) .header-left p,
+    html:not([data-theme='light']) .header-left small,
+    html:not([data-theme='light']) .section-header p,
+    html:not([data-theme='light']) .status-info p,
+    html:not([data-theme='light']) .stat-label,
+    html:not([data-theme='light']) .application-date,
+    html:not([data-theme='light']) .job-meta span,
+    html:not([data-theme='light']) .upload-area p,
+    html:not([data-theme='light']) .preview-placeholder p,
+    html:not([data-theme='light']) .form-header p,
+    html:not([data-theme='light']) .auth-welcome p,
+    html:not([data-theme='light']) .content-header p,
+    html:not([data-theme='light']) .builder-card p,
+    html:not([data-theme='light']) .analytic-info p {
+        color: #cbd5e1 !important;
+    }
+}
+
+html[data-theme='dark'] .skill-tag,
+html[data-theme='dark'] .status-applied,
+html[data-theme='dark'] .status-under-review,
+html[data-theme='dark'] .status-shortlisted,
+html[data-theme='dark'] .status-interview,
+html[data-theme='dark'] .status-rejected,
+html[data-theme='dark'] .status-accepted {
+    filter: saturate(0.9) brightness(0.92);
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) .skill-tag,
+    html:not([data-theme='light']) .status-applied,
+    html:not([data-theme='light']) .status-under-review,
+    html:not([data-theme='light']) .status-shortlisted,
+    html:not([data-theme='light']) .status-interview,
+    html:not([data-theme='light']) .status-rejected,
+    html:not([data-theme='light']) .status-accepted {
+        filter: saturate(0.9) brightness(0.92);
+    }
+}
+
+html[data-theme='dark'] .theme-toggle-btn {
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    color: #fff;
+    border: none;
+    box-shadow: 0 14px 30px rgba(2, 6, 23, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) .theme-toggle-btn {
+        background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+        color: #fff;
+        border: none;
+        box-shadow: 0 14px 30px rgba(2, 6, 23, 0.35);
+    }
+}
+
+html[data-theme='dark'] .custom-alert,
+html[data-theme='dark'] .notification {
+    box-shadow: 0 14px 30px rgba(2, 6, 23, 0.35) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme='light']) .custom-alert,
+    html:not([data-theme='light']) .notification {
+        box-shadow: 0 14px 30px rgba(2, 6, 23, 0.35) !important;
+    }
+}

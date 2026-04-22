@@ -1,5 +1,7 @@
 // Resume JavaScript with Dynamic Functionality
 document.addEventListener('DOMContentLoaded', function() {
+    setupThemeToggle();
+
     const resumeDataElement = document.getElementById('resume-data');
     let resumeConfig = { hasResume: false, resumeFilename: null };
     if (resumeDataElement) {
@@ -391,6 +393,88 @@ document.addEventListener('DOMContentLoaded', function() {
     const aiBuildOutput = document.getElementById('aiBuildOutput');
     const resumeReviewFile = document.getElementById('resumeReviewFile');
 
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatInlineMarkdown(value) {
+        return escapeHtml(value)
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/`(.+?)`/g, '<code>$1</code>');
+    }
+
+    function renderMarkdown(content) {
+        const lines = String(content || '').replace(/\r\n/g, '\n').split('\n');
+        const parts = [];
+        let listType = null;
+        let listItems = [];
+
+        const flushList = () => {
+            if (!listType || listItems.length === 0) return;
+            const tag = listType === 'ol' ? 'ol' : 'ul';
+            parts.push(`<${tag} class="ai-output-list">${listItems.map((item) => `<li>${item}</li>`).join('')}</${tag}>`);
+            listType = null;
+            listItems = [];
+        };
+
+        const pushParagraph = (text) => {
+            const trimmed = text.trim();
+            if (!trimmed) return;
+            parts.push(`<p>${formatInlineMarkdown(trimmed)}</p>`);
+        };
+
+        for (const rawLine of lines) {
+            const line = rawLine.trim();
+
+            if (!line) {
+                flushList();
+                continue;
+            }
+
+            const headingMatch = line.match(/^\*\*(.+?)\*\*:?$/) || line.match(/^#{1,3}\s+(.+)$/);
+            if (headingMatch && !/^[-*]\s+/.test(line) && !/^\d+\.\s+/.test(line)) {
+                flushList();
+                parts.push(`<h4 class="ai-output-heading">${formatInlineMarkdown(headingMatch[1])}</h4>`);
+                continue;
+            }
+
+            const bulletMatch = line.match(/^[-*]\s+(.+)$/);
+            if (bulletMatch) {
+                if (listType && listType !== 'ul') flushList();
+                listType = 'ul';
+                listItems.push(formatInlineMarkdown(bulletMatch[1]));
+                continue;
+            }
+
+            const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+            if (numberedMatch) {
+                if (listType && listType !== 'ol') flushList();
+                listType = 'ol';
+                listItems.push(formatInlineMarkdown(numberedMatch[1]));
+                continue;
+            }
+
+            flushList();
+            pushParagraph(line);
+        }
+
+        flushList();
+
+        return parts.join('');
+    }
+
+    function displayAiOutput(element, content) {
+        if (!element) return;
+        element.innerHTML = renderMarkdown(content);
+        element.style.display = 'block';
+    }
+
     async function extractTextFromPdfData(pdfData) {
         if (!window.pdfjsLib) {
             throw new Error('PDF reader is not available.');
@@ -452,8 +536,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     showAlert(data.message || 'AI review failed.', 'error');
                     return;
                 }
-                aiReviewOutput.style.display = 'block';
-                aiReviewOutput.textContent = data.review;
+                displayAiOutput(aiReviewOutput, data.review);
             } catch (error) {
                 console.error('AI review error:', error);
                 showAlert('AI review failed.', 'error');
@@ -485,8 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     showAlert(data.message || 'AI builder failed.', 'error');
                     return;
                 }
-                aiBuildOutput.style.display = 'block';
-                aiBuildOutput.textContent = data.generatedResume;
+                displayAiOutput(aiBuildOutput, data.generatedResume);
             } catch (error) {
                 console.error('AI builder error:', error);
                 showAlert('AI builder failed.', 'error');
@@ -565,3 +647,30 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     document.head.appendChild(style);
 });
+
+function setupThemeToggle() {
+    if (document.querySelector('.theme-toggle-btn')) return;
+
+    const systemTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const storedTheme = localStorage.getItem('theme');
+    const initialTheme = storedTheme === 'dark' || storedTheme === 'light' ? storedTheme : systemTheme;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'theme-toggle-btn';
+    button.setAttribute('aria-label', 'Toggle dark mode');
+    document.body.appendChild(button);
+
+    const applyTheme = (theme) => {
+        document.documentElement.dataset.theme = theme;
+        localStorage.setItem('theme', theme);
+        const isDark = theme === 'dark';
+        button.innerHTML = `<i class="fas fa-${isDark ? 'sun' : 'moon'}"></i><span>${isDark ? 'Light mode' : 'Dark mode'}</span>`;
+        button.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+    };
+
+    applyTheme(initialTheme);
+    button.addEventListener('click', () => {
+        applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+    });
+}
