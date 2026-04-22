@@ -10,8 +10,8 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>Profile Completion</th>
-                    <th>Skills</th>
-                    <th>Joined On</th>
+                    <th style="min-width: 260px;">Skills</th>
+                    <th style="min-width: 120px;">Passing Year</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -27,7 +27,7 @@
                                 </div>
                                 <span class="badge bg-light"><%= student.studentProfile?.profileCompletion || 0 %>%</span>
                             </td>
-                            <td>
+                            <td style="padding-right: 1.25rem;">
                                 <% if (student.studentProfile && student.studentProfile.skills && student.studentProfile.skills.length > 0) { %>
                                     <% student.studentProfile.skills.slice(0, 3).forEach(skill => { %>
                                         <span class="badge bg-secondary"><%= skill %></span>
@@ -39,7 +39,7 @@
                                     <span class="badge bg-warning">No skills</span>
                                 <% } %>
                             </td>
-                            <td><%= new Date(student.createdAt).toLocaleDateString() %></td>
+                            <td style="white-space: nowrap;"><%= student.studentProfile?.graduationYear || '—' %></td>
                             <td>
                                 <a href="/admin/students/<%= student._id %>" class="btn btn-sm btn-info" title="View Profile">
                                     <i class="fas fa-eye"></i>

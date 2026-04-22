@@ -42,6 +42,23 @@ const validateMonthsRange = (months) => {
 	return Math.min(Math.max(isNaN(parsed) ? 6 : parsed, ALLOWED_MONTHS_RANGE[0]), ALLOWED_MONTHS_RANGE[1]);
 };
 
+const calculateAdminProfileCompletion = (profile) => {
+	if (!profile) return 0;
+	const fields = ['college', 'course', 'graduationYear', 'cgpa', 'phone', 'skills', 'resume'];
+	let completedFields = 0;
+
+	fields.forEach((field) => {
+		const value = profile[field];
+		if (Array.isArray(value)) {
+			if (value.length > 0) completedFields += 1;
+		} else if (value !== null && value !== undefined && value !== '') {
+			completedFields += 1;
+		}
+	});
+
+	return Math.round((completedFields / fields.length) * 100);
+};
+
 const ADMIN_REVIEW_ROUTE = '/admin/jobs/review';
 const ADMIN_MAIL_ROUTE = '/admin/mail-manager';
 const JOB_ACTIVATION_WEBHOOK_URL =
@@ -743,9 +760,65 @@ exports.removeApprovedJob = async (req, res) => {
 exports.getStudentsPage = async (req, res) => {
 	try {
 		const students = await User.find({ role: 'student' })
-			.populate('studentProfile')
 			.sort({ createdAt: -1 })
 			.lean();
+
+		const studentIds = students.map((student) => student._id);
+
+		const [studentProfiles, studentApplicationResumes] = await Promise.all([
+			StudentProfile.find({ user: { $in: studentIds } }).lean(),
+			Application.find({
+				student: { $in: studentIds },
+				resume: { $exists: true, $ne: '' },
+			})
+				.select('student resume appliedDate')
+				.sort({ appliedDate: -1 })
+				.lean(),
+		]);
+
+		const profileMap = new Map(
+			studentProfiles.map((profile) => [profile.user.toString(), profile])
+		);
+
+		const applicationResumeMap = new Map();
+		for (const application of studentApplicationResumes) {
+			const studentId = application.student?.toString();
+			if (!studentId || applicationResumeMap.has(studentId)) continue;
+			applicationResumeMap.set(studentId, application.resume);
+		}
+
+		const enrichedStudents = students.map((student) => {
+			const studentId = student._id.toString();
+			const embeddedProfile = student.studentProfile || {};
+			const collectionProfile = profileMap.get(studentId) || {};
+
+			const mergedProfile = {
+				...embeddedProfile,
+				...collectionProfile,
+				skills:
+					(Array.isArray(collectionProfile.skills) && collectionProfile.skills.length > 0)
+						? collectionProfile.skills
+						: (Array.isArray(embeddedProfile.skills) ? embeddedProfile.skills : []),
+				resume:
+					collectionProfile.resume ||
+					embeddedProfile.resume ||
+					applicationResumeMap.get(studentId) ||
+					'',
+			};
+
+			const completion =
+				typeof mergedProfile.profileCompletion === 'number' && !Number.isNaN(mergedProfile.profileCompletion)
+					? mergedProfile.profileCompletion
+					: calculateAdminProfileCompletion(mergedProfile);
+
+			return {
+				...student,
+				studentProfile: {
+					...mergedProfile,
+					profileCompletion: completion,
+				},
+			};
+		});
 
 		const status = (req.query.status || '').toString();
 		const error = (req.query.error || '').toString();
@@ -773,7 +846,7 @@ exports.getStudentsPage = async (req, res) => {
 			title: 'Manage Students',
 			subtitle: 'View and manage all student users.',
 			user: req.session.user,
-			students,
+			students: enrichedStudents,
 			message,
 			messageType,
 			isDemo: isDemo(req),
