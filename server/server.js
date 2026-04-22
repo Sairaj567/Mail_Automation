@@ -16,6 +16,9 @@ require('dotenv').config(); // Load environment variables from .env file
 
 const app = express();
 
+// Trust reverse proxy headers (Cloudflare Tunnel / ingress proxies)
+app.set('trust proxy', 1);
+
 if (!process.env.SESSION_SECRET) {
     console.error('SESSION_SECRET is required. Set it in your environment or .env file.');
     process.exit(1);
@@ -54,11 +57,13 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/placem
 
 app.use(session({
     secret: process.env.SESSION_SECRET,
+    proxy: true,
     resave: false, // Don't save session if unmodified
     saveUninitialized: false, // Don't create session until something stored
     store: MongoStore.create({ mongoUrl: MONGODB_URI }), // Store session in MongoDB
     cookie: {
         secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (requires HTTPS)
+        sameSite: 'lax',
         httpOnly: true, // Prevent client-side JS from accessing the cookie
         maxAge: 24 * 60 * 60 * 1000 // Cookie expiry: 1 day
     }

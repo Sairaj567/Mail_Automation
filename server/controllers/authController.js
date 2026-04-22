@@ -58,10 +58,20 @@ const ensureCompanyProfile = async (userId, name, industry = '') => {
 
 const handleLoginSuccess = (req, res, user, redirectPath) => {
   req.session.user = buildSessionUser(user);
-  res.json({
-    success: true,
-    message: 'Login successful!',
-    redirectTo: redirectPath,
+  req.session.save((error) => {
+    if (error) {
+      console.error('Session save error during login:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Login succeeded but session could not be established. Please try again.',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Login successful!',
+      redirectTo: redirectPath,
+    });
   });
 };
 
