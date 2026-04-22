@@ -40,7 +40,7 @@ const STATUS_DISPLAY = Object.values(STATUS_VIEW);
 const APPLICATION_WEBHOOK_URL = process.env.N8N_JOB_APPLICATION_WEBHOOK_URL || '';
 const RESUME_DRIVE_WEBHOOK_URL = process.env.N8N_RESUME_DRIVE_WEBHOOK_URL || '';
 const AI_RESUME_KEY = process.env.ai_resume_key || process.env.AI_RESUME_KEY || '';
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free';
 const DEFAULT_PUBLIC_BASE_URL = 'http://140.245.23.142:3345';
 
 
@@ -371,6 +371,8 @@ const formatApplication = (application) => {
       formatted.status = 'under_review';
     }
     formatted.appliedDate = formatted.appliedDate || new Date();
+    formatted.resumeTitle =
+      pickFirstText(formatted.resumeTitle, formatted.resumeRef?.title, formatted.resumeRef?.name, formatted.resume) || 'Resume';
     // Ensure nested job is also formatted
     const hasPopulatedJobObject =
       formatted.job &&
@@ -785,6 +787,7 @@ exports.applyForJob = async (req, res) => {
 
     // Use uploaded resume first, then selected/primary profile resume fallback.
     let resumeFilename = selectedResumeDoc?.filename || studentProfile?.resume || '';
+    let resumeTitle = selectedResumeDoc?.title || 'Resume';
     let coverLetterFilename = '';
     let resumeRef = selectedResumeDoc?._id || null;
 
@@ -802,6 +805,7 @@ exports.applyForJob = async (req, res) => {
                  isPrimary: allResumes.length === 0,
                });
                resumeRef = createdResume._id;
+               resumeTitle = createdResume.title;
              }
 
            // Keep latest uploaded resume as quick-apply default
@@ -900,6 +904,7 @@ exports.applyForJob = async (req, res) => {
       projects,
       extracurricular,
       resume: resumeFilename, // Filename from upload or profile
+      resumeTitle,
       resumeRef,
       coverLetterFile: coverLetterFilename || null, // Optional filename
       coverLetterText: coverLetterText || null, // Optional text
@@ -1054,7 +1059,8 @@ exports.getApplications = async (req, res) => {
             _id: `app${job._id}`,
             job: formatJob(job), // Format the demo job
             status: STATUS_DISPLAY[Math.floor(Math.random() * STATUS_DISPLAY.length)],
-            appliedDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000)
+          appliedDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
+          resumeTitle: 'Demo Resume'
        }));
 
 
@@ -1071,6 +1077,7 @@ exports.getApplications = async (req, res) => {
     // Use Mongoose find with populate
     const applications = await Application.find({ student: studentId })
       .populate('job') // Populate the referenced Job document
+      .populate({ path: 'resumeRef', select: 'title filename isPrimary' })
       .sort({ appliedDate: -1 });
 
     res.render('pages/student/applications', {
@@ -1631,5 +1638,45 @@ exports.aiResumeBuild = async (req, res) => {
   } catch (error) {
     logger.error('AI resume builder failed', { error: error.message, stack: error.stack });
     return res.status(500).json({ success: false, message: error.message || 'AI resume generation failed.' });
+  }
+};
+
+exports.renameResume = async (req, res) => {
+  try {
+    if (isDemo(req)) {
+      return res.status(403).json({ success: false, message: 'Demo users cannot rename resumes.' });
+    }
+
+    const studentId = req.session.user.id;
+    const resumeId = pickFirstText(req.body.resumeId);
+    const newTitle = pickFirstText(req.body.title);
+
+    if (!isValidObjectId(resumeId)) {
+      return res.status(400).json({ success: false, message: 'Invalid resume selected.' });
+    }
+
+    if (!newTitle) {
+      return res.status(400).json({ success: false, message: 'Please enter a resume name.' });
+    }
+
+    const resume = await StudentResume.findOneAndUpdate(
+      { _id: resumeId, user: studentId },
+      { $set: { title: newTitle } },
+      { new: true }
+    );
+
+    if (!resume) {
+      return res.status(404).json({ success: false, message: 'Resume not found.' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Resume renamed successfully.',
+      title: resume.title,
+      resumeId: resume._id,
+    });
+  } catch (error) {
+    logger.error('Resume rename failed', { error: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, message: 'Failed to rename resume.' });
   }
 };

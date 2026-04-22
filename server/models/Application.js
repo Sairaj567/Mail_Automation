@@ -41,6 +41,10 @@ const applicationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    resumeTitle: {
+        type: String,
+        default: 'Resume',
+    },
     resumeRef: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'StudentResume',

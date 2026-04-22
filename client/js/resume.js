@@ -324,6 +324,39 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    const renameButtons = document.querySelectorAll('.rename-resume-btn');
+    renameButtons.forEach((btn) => {
+        btn.addEventListener('click', async function() {
+            const resumeId = this.dataset.resumeId;
+            const currentTitle = this.dataset.resumeTitle || 'Resume';
+            const nextTitle = window.prompt('Rename this resume', currentTitle);
+
+            if (!nextTitle || !nextTitle.trim() || nextTitle.trim() === currentTitle) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/student/rename-resume', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ resumeId, title: nextTitle.trim() }),
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    showAlert(data.message || 'Failed to rename resume.', 'error');
+                    return;
+                }
+                showAlert(data.message || 'Resume renamed.', 'success');
+                setTimeout(() => window.location.reload(), 700);
+            } catch (error) {
+                console.error('Rename resume error:', error);
+                showAlert('Failed to rename resume.', 'error');
+            }
+        });
+    });
     
     // Resume Builder Actions
     const aiBuilderBtn = document.getElementById('aiBuilderBtn');
@@ -356,21 +389,57 @@ document.addEventListener('DOMContentLoaded', function() {
     const runAiBuildBtn = document.getElementById('runAiBuildBtn');
     const aiReviewOutput = document.getElementById('aiReviewOutput');
     const aiBuildOutput = document.getElementById('aiBuildOutput');
+    const resumeReviewFile = document.getElementById('resumeReviewFile');
+
+    async function extractTextFromPdfData(pdfData) {
+        if (!window.pdfjsLib) {
+            throw new Error('PDF reader is not available.');
+        }
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+        const pdf = await loadingTask.promise;
+        let fullText = '';
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+            const page = await pdf.getPage(pageNumber);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map((item) => item.str).join(' ');
+            fullText += `${pageText}\n`;
+        }
+
+        return fullText.trim();
+    }
+
+    async function getResumeTextForReview() {
+        if (resumeReviewFile && resumeReviewFile.files && resumeReviewFile.files[0]) {
+            const file = resumeReviewFile.files[0];
+            if (file.type !== 'application/pdf') {
+                throw new Error('Please upload a PDF file for review.');
+            }
+            return extractTextFromPdfData(await file.arrayBuffer());
+        }
+
+        if (resumeUrl) {
+            const response = await fetch(resumeUrl);
+            if (!response.ok) {
+                throw new Error('Could not fetch the saved resume PDF.');
+            }
+            return extractTextFromPdfData(await response.arrayBuffer());
+        }
+
+        throw new Error('Please upload a PDF file or keep a saved resume in your profile.');
+    }
 
     if (runAiReviewBtn) {
         runAiReviewBtn.addEventListener('click', async () => {
-            const resumeText = document.getElementById('resumeReviewText')?.value || '';
             const targetRole = document.getElementById('reviewTargetRole')?.value || '';
-
-            if (!resumeText.trim()) {
-                showAlert('Please paste resume text for review.', 'error');
-                return;
-            }
 
             runAiReviewBtn.disabled = true;
             runAiReviewBtn.textContent = 'Reviewing...';
 
             try {
+                const resumeText = await getResumeTextForReview();
                 const response = await fetch('/student/ai/resume-review', {
                     method: 'POST',
                     headers: {

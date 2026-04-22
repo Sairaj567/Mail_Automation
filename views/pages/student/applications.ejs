@@ -113,6 +113,11 @@
                                         <div class="application-date">
                                             Applied: <%= application.appliedDate.toLocaleDateString() %>
                                         </div>
+                                        <% if (application.resumeTitle) { %>
+                                            <div class="application-date" style="margin-top:0.35rem;">
+                                                Resume: <strong><%= application.resumeTitle %></strong>
+                                            </div>
+                                        <% } %>
                                     </div>
                                 </div>
                                 

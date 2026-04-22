@@ -158,6 +158,7 @@
                                         <% } else { %>
                                             <button type="button" class="btn-secondary set-primary-btn" data-resume-id="<%= item._id %>">Set Primary</button>
                                         <% } %>
+                                        <button type="button" class="btn-secondary rename-resume-btn" data-resume-id="<%= item._id %>" data-resume-title="<%= item.title %>">Rename</button>
                                         <a class="btn-secondary" href="/uploads/resumes/<%= encodeURIComponent(item.filename) %>" target="_blank" rel="noopener noreferrer">View</a>
                                     </div>
                                 </div>
@@ -272,8 +273,9 @@
                                 <input id="reviewTargetRole" type="text" placeholder="e.g., Frontend Developer">
                             </div>
                             <div class="input-group full-width" style="margin-bottom:0.8rem;">
-                                <label for="resumeReviewText">Paste Resume Text</label>
-                                <textarea id="resumeReviewText" rows="7" placeholder="Paste resume text for detailed review..."></textarea>
+                                <label for="resumeReviewFile">Resume PDF</label>
+                                <input id="resumeReviewFile" type="file" accept="application/pdf">
+                                <small>Select a PDF to review, or leave it empty to review your saved primary resume.</small>
                             </div>
                             <button class="btn-primary" id="runAiReviewBtn">Run AI Review</button>
                             <pre id="aiReviewOutput" style="white-space:pre-wrap; margin-top:0.8rem; background:#f8fafc; padding:0.75rem; border-radius:8px; display:none;"></pre>

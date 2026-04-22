@@ -192,6 +192,7 @@ router.post('/upload-profile-image',
     studentController.uploadProfileImage
 );
 
+router.post('/rename-resume', requireStudent, studentController.renameResume);
 router.post('/set-primary-resume', requireStudent, studentController.setPrimaryResume);
 router.get('/resume/recommendation/:jobId', requireStudent, studentController.getRecommendedResumeForJob);
 router.post('/ai/resume-review', requireStudent, studentController.aiResumeReview);
