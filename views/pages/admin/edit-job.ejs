@@ -1,0 +1,106 @@
+<section class="section-card">
+    <div class="section-header" style="margin-bottom:1rem; align-items:flex-start;">
+        <div>
+            <a href="/admin/jobs/<%= job._id %>" class="view-all" style="display:inline-flex; align-items:center; gap:0.45rem; margin-bottom:0.65rem;">
+                <i class="fas fa-arrow-left"></i> Back to Job Details
+            </a>
+            <h2>Edit Job</h2>
+            <p>Update the posting details if changes are needed.</p>
+        </div>
+        <div>
+            <span class="status-badge"><%= job.isActive ? 'Active' : 'Inactive' %></span>
+        </div>
+    </div>
+
+    <% if (isDemo) { %>
+        <div class="alert alert-danger" style="margin-bottom:1rem;">Demo admins cannot update jobs.</div>
+    <% } %>
+
+    <form action="/admin/jobs/<%= job._id %>/update" method="POST" class="job-form-container">
+        <div class="form-group">
+            <label for="title">Job Title</label>
+            <input type="text" id="title" name="title" class="form-control" value="<%= job.title %>" required>
+        </div>
+
+        <div class="form-group">
+            <label for="company">Company</label>
+            <input type="text" id="company" name="company" class="form-control" value="<%= job.company %>" required>
+        </div>
+
+        <div class="form-group">
+            <label for="location">Location</label>
+            <input type="text" id="location" name="location" class="form-control" value="<%= job.location %>" required>
+        </div>
+
+        <div class="form-group">
+            <label for="jobType">Job Type</label>
+            <select id="jobType" name="jobType" class="form-control" required>
+                <option value="internship" <%= job.jobType === 'internship' ? 'selected' : '' %>>Internship</option>
+                <option value="full-time" <%= job.jobType === 'full-time' ? 'selected' : '' %>>Full Time</option>
+                <option value="part-time" <%= job.jobType === 'part-time' ? 'selected' : '' %>>Part Time</option>
+                <option value="remote" <%= job.jobType === 'remote' ? 'selected' : '' %>>Remote</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="experienceLevel">Experience Level</label>
+            <select id="experienceLevel" name="experienceLevel" class="form-control">
+                <option value="fresher" <%= job.experienceLevel === 'fresher' ? 'selected' : '' %>>Fresher</option>
+                <option value="0-2" <%= job.experienceLevel === '0-2' ? 'selected' : '' %>>0-2 Years</option>
+                <option value="2-5" <%= job.experienceLevel === '2-5' ? 'selected' : '' %>>2-5 Years</option>
+                <option value="5+" <%= job.experienceLevel === '5+' ? 'selected' : '' %>>5+ Years</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="salary">Salary</label>
+            <input type="text" id="salary" name="salary" class="form-control" value="<%= job.salary %>" required>
+        </div>
+
+        <div class="form-group">
+            <label for="applicationDeadline">Application Deadline</label>
+            <input type="date" id="applicationDeadline" name="applicationDeadline" class="form-control" value="<%= job.applicationDeadline ? new Date(job.applicationDeadline).toISOString().slice(0, 10) : '' %>">
+        </div>
+
+        <div class="form-group">
+            <label for="externalApplyLink">External Apply Link</label>
+            <input type="url" id="externalApplyLink" name="externalApplyLink" class="form-control" value="<%= job.externalApplyLink || '' %>" placeholder="https://...">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" class="form-control" rows="6" required><%= job.description %></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="requirements">Requirements</label>
+            <textarea id="requirements" name="requirements" class="form-control" rows="4" placeholder="Enter each requirement on a new line"><%= Array.isArray(job.requirements) ? job.requirements.join('\n') : '' %></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="responsibilities">Responsibilities</label>
+            <textarea id="responsibilities" name="responsibilities" class="form-control" rows="4" placeholder="Enter each responsibility on a new line"><%= Array.isArray(job.responsibilities) ? job.responsibilities.join('\n') : '' %></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="skills">Skills</label>
+            <textarea id="skills" name="skills" class="form-control" rows="4" placeholder="Enter each skill on a new line or separated by commas"><%= Array.isArray(job.skills) ? job.skills.join('\n') : '' %></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-container" style="display:flex; align-items:center; gap:0.75rem; font-weight:600;">
+                <input type="checkbox" name="isActive" value="true" <%= job.isActive ? 'checked' : '' %>>
+                <span>Keep job active</span>
+            </label>
+        </div>
+
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1.5rem;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+            <a href="/admin/jobs/<%= job._id %>" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</section>

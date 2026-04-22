@@ -210,6 +210,50 @@ const normalizeAdminJob = (job) => {
 	return formatted;
 };
 
+const normalizeEditArray = (value) => {
+	if (Array.isArray(value)) {
+		return value.map((item) => String(item).trim()).filter(Boolean);
+	}
+
+	if (typeof value === 'string' && value.trim()) {
+		return value
+			.split(/\n|,/)
+			.map((item) => item.trim())
+			.filter(Boolean);
+	}
+
+	return [];
+};
+
+const ALLOWED_ADMIN_JOB_TYPES = ['internship', 'full-time', 'part-time', 'remote'];
+const ALLOWED_ADMIN_EXPERIENCE_LEVELS = ['fresher', '0-2', '2-5', '5+'];
+
+const buildAdminJobUpdate = (body) => ({
+	title: firstMeaningfulString(body.title) || 'Untitled Opportunity',
+	company: firstMeaningfulString(body.company) || 'Unknown Company',
+	location: firstMeaningfulString(body.location) || 'Location not specified',
+	jobType: (() => {
+		const normalized = firstMeaningfulString(body.jobType).toLowerCase();
+		return ALLOWED_ADMIN_JOB_TYPES.includes(normalized) ? normalized : 'full-time';
+	})(),
+	salary: firstMeaningfulString(body.salary) || 'Not specified',
+	description: firstMeaningfulString(body.description) || 'No description available.',
+	requirements: normalizeEditArray(body.requirements),
+	responsibilities: normalizeEditArray(body.responsibilities),
+	skills: normalizeEditArray(body.skills),
+	experienceLevel: (() => {
+		const normalized = firstMeaningfulString(body.experienceLevel).toLowerCase();
+		return ALLOWED_ADMIN_EXPERIENCE_LEVELS.includes(normalized) ? normalized : 'fresher';
+	})(),
+	applicationDeadline: (() => {
+		if (!body.applicationDeadline) return null;
+		const parsedDate = new Date(body.applicationDeadline);
+		return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+	})(),
+	externalApplyLink: firstMeaningfulString(body.externalApplyLink) || null,
+	isActive: body.isActive === 'true' || body.isActive === true || body.isActive === 'on',
+});
+
 const buildJobActivationUpdate = (job) => {
 	const normalizedJob = normalizeAdminJob(job);
 	return {
@@ -572,6 +616,112 @@ exports.getJobsForReview = async (req, res) => {
 			user: req.session.user,
 			layout: 'layouts/main',
 		});
+	}
+};
+
+exports.getJobDetailsPage = async (req, res) => {
+	try {
+		const jobId = req.params.id;
+
+		if (!isValidObjectId(jobId)) {
+			return res.status(404).render('404', { title: 'Job Not Found', layout: 'layouts/main' });
+		}
+
+		const job = await Job.findById(jobId).populate({ path: 'postedBy', select: 'name email role' }).lean();
+		if (!job) {
+			return res.status(404).render('404', { title: 'Job Not Found', layout: 'layouts/main' });
+		}
+
+		const applications = await Application.find({ job: jobId })
+			.populate({ path: 'student', select: 'name email college skills' })
+			.sort({ appliedDate: -1 })
+			.lean();
+
+		return res.render('pages/admin/job-details', {
+			title: `${job.title || 'Job'} - Admin Job Details`,
+			subtitle: 'Review full posting information and applicant activity.',
+			user: req.session.user,
+			job: normalizeAdminJob(job),
+			applications,
+			isDemo: isDemo(req),
+			layout: 'layouts/admin',
+		});
+	} catch (error) {
+		console.error('Admin job details error:', error);
+		return res.status(500).render('error', {
+			title: 'Server Error',
+			message: 'Failed to load job details.',
+			user: req.session.user,
+			layout: 'layouts/main',
+		});
+	}
+};
+
+exports.getEditJobPage = async (req, res) => {
+	try {
+		const jobId = req.params.id;
+
+		if (!isValidObjectId(jobId)) {
+			return res.status(404).render('404', { title: 'Job Not Found', layout: 'layouts/main' });
+		}
+
+		const job = await Job.findById(jobId).lean();
+		if (!job) {
+			return res.status(404).render('404', { title: 'Job Not Found', layout: 'layouts/main' });
+		}
+
+		return res.render('pages/admin/edit-job', {
+			title: `${job.title || 'Job'} - Edit Job`,
+			subtitle: 'Update the job information as needed.',
+			user: req.session.user,
+			job: normalizeAdminJob(job),
+			isDemo: isDemo(req),
+			layout: 'layouts/admin',
+		});
+	} catch (error) {
+		console.error('Admin edit job page error:', error);
+		return res.status(500).render('error', {
+			title: 'Server Error',
+			message: 'Failed to load edit job page.',
+			user: req.session.user,
+			layout: 'layouts/main',
+		});
+	}
+};
+
+exports.updateJob = async (req, res) => {
+	const jobId = req.params.id;
+
+	const respond = (statusCode, payload, redirectQuery) => {
+		if (wantsJson(req)) {
+			return res.status(statusCode).json(payload);
+		}
+		const suffix = redirectQuery ? `?${redirectQuery}` : '';
+		return res.redirect(`/admin/jobs/${jobId}${suffix}`);
+	};
+
+	if (!isValidObjectId(jobId)) {
+		return respond(400, { success: false, message: 'Invalid job id.' }, 'error=invalid-id');
+	}
+
+	if (isDemo(req)) {
+		return respond(403, { success: false, message: 'Demo admins cannot update jobs.' }, 'error=demo');
+	}
+
+	try {
+		const job = await Job.findById(jobId);
+		if (!job) {
+			return respond(404, { success: false, message: 'Job not found.' }, 'error=not-found');
+		}
+
+		const updateData = buildAdminJobUpdate(req.body);
+		Object.assign(job, updateData);
+		await job.save();
+
+		return respond(200, { success: true, message: 'Job updated successfully.', jobId: job._id }, 'status=updated');
+	} catch (error) {
+		console.error('Admin update job error:', error);
+		return respond(500, { success: false, message: 'Failed to update job.' }, 'error=server');
 	}
 };
 

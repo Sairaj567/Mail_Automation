@@ -73,6 +73,12 @@
                             <td><%= job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—' %></td>
                             <td>
                                 <div class="review-actions">
+                                    <a href="/admin/jobs/<%= job._id %>" class="btn btn-info">
+                                        <i class="fas fa-eye"></i> Details
+                                    </a>
+                                    <a href="/admin/jobs/<%= job._id %>/edit" class="btn btn-secondary">
+                                        <i class="fas fa-pen"></i> Edit
+                                    </a>
                                     <% if (job.isActive) { %>
                                         <form action="/admin/jobs/<%= job._id %>/remove-approved" method="POST">
                                             <button type="submit" class="btn btn-danger" onclick="return confirm('Remove this approved job listing?');">

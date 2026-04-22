@@ -1,0 +1,106 @@
+<section class="section-card">
+    <div class="section-header" style="margin-bottom:1rem; align-items:flex-start;">
+        <div>
+            <a href="/admin/jobs/review" class="view-all" style="display:inline-flex; align-items:center; gap:0.45rem; margin-bottom:0.65rem;">
+                <i class="fas fa-arrow-left"></i> Back to Review Queue
+            </a>
+            <h2><%= job.title %></h2>
+            <p>Detailed view of the job posting and applications.</p>
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <a href="/admin/jobs/<%= job._id %>/edit" class="btn btn-secondary">
+                <i class="fas fa-pen"></i> Edit Job
+            </a>
+            <form action="/admin/jobs/<%= job._id %>/activate" method="POST" style="display:inline;">
+                <button type="submit" class="btn btn-success" <%= job.isActive ? 'disabled' : '' %>>
+                    <i class="fas fa-check"></i> <%= job.isActive ? 'Activated' : 'Activate' %>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="summary-table" style="margin-bottom:1.25rem; padding:1rem; border-radius:14px; background:rgba(255,255,255,0.6);">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.85rem;">
+            <div><strong>Company</strong><br><%= job.company %></div>
+            <div><strong>Location</strong><br><%= job.location %></div>
+            <div><strong>Type</strong><br><%= job.jobType %></div>
+            <div><strong>Experience</strong><br><%= job.experienceLevel %></div>
+            <div><strong>Salary</strong><br><%= job.salary %></div>
+            <div><strong>Status</strong><br><%= job.isActive ? 'Active' : 'Pending / Inactive' %></div>
+        </div>
+    </div>
+
+    <div class="section-card" style="margin-bottom:1rem;">
+        <h3 style="margin-bottom:0.75rem; color:#7E57C2;">Description</h3>
+        <p style="white-space:pre-wrap;"><%= job.description %></p>
+    </div>
+
+    <div class="section-card" style="margin-bottom:1rem;">
+        <h3 style="margin-bottom:0.75rem; color:#7E57C2;">Requirements</h3>
+        <% if (Array.isArray(job.requirements) && job.requirements.length) { %>
+            <ul class="bulleted-list">
+                <% job.requirements.forEach(function(item) { %>
+                    <li><%= item %></li>
+                <% }) %>
+            </ul>
+        <% } else { %>
+            <p class="empty-note">No requirements listed.</p>
+        <% } %>
+    </div>
+
+    <div class="section-card" style="margin-bottom:1rem;">
+        <h3 style="margin-bottom:0.75rem; color:#7E57C2;">Responsibilities</h3>
+        <% if (Array.isArray(job.responsibilities) && job.responsibilities.length) { %>
+            <ul class="bulleted-list">
+                <% job.responsibilities.forEach(function(item) { %>
+                    <li><%= item %></li>
+                <% }) %>
+            </ul>
+        <% } else { %>
+            <p class="empty-note">No responsibilities listed.</p>
+        <% } %>
+    </div>
+
+    <div class="section-card" style="margin-bottom:1rem;">
+        <h3 style="margin-bottom:0.75rem; color:#7E57C2;">Skills</h3>
+        <% if (Array.isArray(job.skills) && job.skills.length) { %>
+            <div class="skills-wrap">
+                <% job.skills.forEach(function(skill) { %>
+                    <span class="skill-tag"><%= skill %></span>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <p class="empty-note">No skills listed.</p>
+        <% } %>
+    </div>
+
+    <div class="section-card">
+        <h3 style="margin-bottom:0.75rem; color:#7E57C2;">Applicants</h3>
+        <% if (Array.isArray(applications) && applications.length) { %>
+            <table class="summary-table review-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Resume</th>
+                        <th>Applied On</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% applications.forEach(function(application) { %>
+                        <tr>
+                            <td><%= application.student?.name || 'Unknown' %></td>
+                            <td><%= application.student?.email || 'N/A' %></td>
+                            <td><%= application.resumeTitle || 'Resume' %></td>
+                            <td><%= application.appliedDate ? new Date(application.appliedDate).toLocaleDateString() : 'N/A' %></td>
+                            <td><span class="status-badge"><%= application.status || 'applied' %></span></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        <% } else { %>
+            <p class="empty-note">No applicants yet.</p>
+        <% } %>
+    </div>
+</section>
