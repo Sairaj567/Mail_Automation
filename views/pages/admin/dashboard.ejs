@@ -43,26 +43,6 @@
                 <p>Total Applications</p>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fas fa-user-check"></i></div>
-            <div class="stat-info">
-                <h3><%= stats.placedStudents || 0 %></h3>
-                <p>Students Placed</p>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fas fa-rupee-sign"></i></div>
-            <div class="stat-info">
-                <h3>
-                    <% if (typeof stats.averagePackage === 'number' && !Number.isNaN(stats.averagePackage)) { %>
-                        <%= stats.averagePackage.toFixed(1) %> LPA
-                    <% } else { %>
-                        —
-                    <% } %>
-                </h3>
-                <p>Average Package</p>
-            </div>
-        </div>
     </div>
 
     <!-- Quick Links -->

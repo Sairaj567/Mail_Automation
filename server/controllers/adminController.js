@@ -345,8 +345,6 @@ exports.getDashboard = async (req, res) => {
 				activeJobs: 118,
 				pendingJobs: 24,
 				totalApplications: 5430,
-				placedStudents: 286,
-				averagePackage: 6.5,
 			};
 
 			const demoPendingJobs = [
@@ -436,8 +434,6 @@ exports.getDashboard = async (req, res) => {
 			recentApplicationsRaw,
 			recentStudents,
 			recentCompanies,
-			placedStudentIds,
-			jobSalaryDocs,
 		] = await Promise.all([
 			User.countDocuments({ role: 'student' }),
 			User.countDocuments({ role: 'company' }),
@@ -470,8 +466,6 @@ exports.getDashboard = async (req, res) => {
 				.sort({ createdAt: -1 })
 				.limit(5)
 				.lean(),
-			Application.distinct('student', { status: 'accepted' }),
-			Job.find({ salary: { $exists: true, $ne: '' } }).select('salary').lean(),
 		]);
 
 		const stats = {
@@ -482,17 +476,6 @@ exports.getDashboard = async (req, res) => {
 			totalJobs: activeJobsCount + pendingJobsCount,
 			totalApplications: totalApplicationsCount,
 		};
-
-		const placedStudentsCount = Array.isArray(placedStudentIds) ? placedStudentIds.length : 0;
-		const salaryValues = (jobSalaryDocs || [])
-			.map((doc) => parseSalaryToLakhs(doc.salary))
-			.filter((value) => typeof value === 'number' && !Number.isNaN(value));
-		const averagePackageValue = salaryValues.length
-			? Number((salaryValues.reduce((sum, value) => sum + value, 0) / salaryValues.length).toFixed(2))
-			: null;
-
-		stats.placedStudents = placedStudentsCount;
-		stats.averagePackage = averagePackageValue;
 
 		const [recentJobs, pendingJobs] = await Promise.all([
 			attachCompanyMeta(recentJobsRaw),
@@ -938,8 +921,6 @@ exports.getReportsPage = async (req, res) => {
 					activeJobs: 118,
 					pendingJobs: 24,
 					totalApplications: 5430,
-					acceptedApplications: 286,
-					acceptanceRate: 5.27,
 				},
 				monthlyTrend,
 				applicationStatusBreakdown: [
@@ -997,7 +978,6 @@ exports.getReportsPage = async (req, res) => {
 			activeJobs,
 			pendingJobs,
 			totalApplications,
-			acceptedApplications,
 			monthlyJobsRaw,
 			monthlyApplicationsRaw,
 			applicationStatusBreakdown,
@@ -1013,7 +993,6 @@ exports.getReportsPage = async (req, res) => {
 			Job.countDocuments({ isActive: true }),
 			Job.countDocuments({ $or: [{ isActive: false }, { isActive: { $exists: false } }] }),
 			Application.countDocuments({}),
-			Application.countDocuments({ status: 'accepted' }),
 			Job.aggregate([
 				{ $match: { createdAt: { $gte: sinceDate } } },
 				{
@@ -1090,10 +1069,6 @@ exports.getReportsPage = async (req, res) => {
 			};
 		});
 
-		const acceptanceRate = totalApplications
-			? Number(((acceptedApplications / totalApplications) * 100).toFixed(2))
-			: 0;
-
 		res.render('pages/admin/reports', {
 			title: 'Reports',
 			subtitle: 'Analytics and placement performance overview.',
@@ -1106,8 +1081,6 @@ exports.getReportsPage = async (req, res) => {
 				activeJobs,
 				pendingJobs,
 				totalApplications,
-				acceptedApplications,
-				acceptanceRate,
 			},
 			monthlyTrend,
 			applicationStatusBreakdown,

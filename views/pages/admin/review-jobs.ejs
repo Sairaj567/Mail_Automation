@@ -36,13 +36,12 @@
         <form method="GET" action="/admin/jobs/review" style="display:flex; align-items:flex-end; gap:0.5rem;">
             <div>
                 <label for="status" style="font-size:0.85rem; color:#475569;">Show</label>
-                <select id="status" name="status" class="search-input" style="min-width:140px;">
+                <select id="status" name="status" class="search-input" style="min-width:140px;" onchange="this.form.submit()">
                     <option value="pending" <%= selectedStatus === 'pending' ? 'selected' : '' %>>Pending</option>
                     <option value="active" <%= selectedStatus === 'active' ? 'selected' : '' %>>Active</option>
                     <option value="all" <%= selectedStatus === 'all' ? 'selected' : '' %>>All</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-success"><i class="fas fa-filter"></i> Filter</button>
         </form>
     </div>
 

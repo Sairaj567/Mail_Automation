@@ -3,13 +3,12 @@
         <form method="GET" action="/admin/reports" class="report-filter-form" style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
             <div>
                 <label for="months" style="display:block; margin-bottom:4px; font-weight:600;">Trend Window</label>
-                <select id="months" name="months" class="form-control">
+                <select id="months" name="months" class="form-control" onchange="this.form.submit()">
                     <% [3, 6, 9, 12, 18, 24].forEach(option => { %>
                         <option value="<%= option %>" <%= selectedMonths === option ? 'selected' : '' %>><%= option %> months</option>
                     <% }) %>
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary">Apply</button>
         </form>
     </div>
 
@@ -20,7 +19,7 @@
         </article>
         <article class="stat-card">
             <div class="stat-icon"><i class="fas fa-building"></i></div>
-            <div class="stat-info"><h3><%= metrics.totalCompanies %></h3><p>Total Companies</p></div>
+            <div class="stat-info"><h3><%= metrics.totalCompanies %></h3><p>Registered Companies</p></div>
         </article>
         <article class="stat-card">
             <div class="stat-icon"><i class="fas fa-briefcase"></i></div>
@@ -37,14 +36,6 @@
         <article class="stat-card">
             <div class="stat-icon"><i class="fas fa-file-signature"></i></div>
             <div class="stat-info"><h3><%= metrics.totalApplications %></h3><p>Total Applications</p></div>
-        </article>
-        <article class="stat-card">
-            <div class="stat-icon"><i class="fas fa-trophy"></i></div>
-            <div class="stat-info"><h3><%= metrics.acceptedApplications %></h3><p>Accepted Applications</p></div>
-        </article>
-        <article class="stat-card">
-            <div class="stat-icon"><i class="fas fa-percent"></i></div>
-            <div class="stat-info"><h3><%= metrics.acceptanceRate %>%</h3><p>Acceptance Rate</p></div>
         </article>
     </div>
 
