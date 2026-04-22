@@ -9,7 +9,6 @@ const helmet = require('helmet'); // For security headers
 const morgan = require('morgan'); // For request logging
 const cookieParser = require('cookie-parser'); // If needed, though session handles cookies
 const expressLayouts = require('express-ejs-layouts'); // Import express-ejs-layouts
-const rateLimit = require('express-rate-limit'); // Rate limiting
 const csrf = require('csurf'); // CSRF protection
 const xss = require('xss'); // XSS protection
 const User = require('./models/User');
